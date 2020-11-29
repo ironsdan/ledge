@@ -1,0 +1,15 @@
+[package]
+name = "winit_vulkan_anim"
+version = "0.1.0"
+authors = ["Daniel Irons <daniel.w.irons@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+vulkano = "0.19"
+vulkano-shaders = "0.19"
+vulkano-win = "0.19"
+winit = "0.22"
+winit_input_helper = "0.7"
+png = "*"
