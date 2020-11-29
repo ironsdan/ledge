@@ -25,7 +25,7 @@ impl Entity {
             velocity: [0.0, 0.0],
             sprite: sprite,
             grounded: false,
-            jump_cleared: true,
+            jump_cleared: false,
             horizontal_move: false,
             direction: true,
         }
