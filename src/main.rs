@@ -202,6 +202,7 @@ fn main() {
     let mut collision_world = CollisionWorld::<Entity, Entity>::new();
 
     let player = Entity::new("Dan".to_string(), 1, [0.0, 0.0], texture.clone(), [0.0, 0.0], [16.0,22.0]);
+    let player2 = Entity::new("Dan2".to_string(), 1, [0.0, 0.0], texture.clone(), [0.0, 0.0], [16.0,22.0]);
     let player_ref = Rc::new(RefCell::new(player));
 
     collision_world.entities.push(Rc::clone(&player_ref));
@@ -210,7 +211,7 @@ fn main() {
 
     let mut timestep: f32 = 0.0;
 
-    event_loop.run(move |event, _, control_flow| {      
+    event_loop.run(move |event, _, control_flow| {
         player_ref.borrow_mut().horizontal_move = false;
         if input.update(&event) {
             let key_w_released = input.key_released(winit::event::VirtualKeyCode::W);
@@ -315,30 +316,50 @@ fn main() {
                     recreate_swapchain = true;
                 }
         
-                let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
+                // let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
         
+                let mut sprites_to_render: Vec<vulkano::buffer::cpu_pool::CpuBufferPoolChunk<lib::Vertex, std::sync::Arc<_>>> = Vec::new();
                 let data = &player_ref.borrow().sprite.rect;
+                let data2 = &player2.sprite.rect;
+
         
                 // Allocate a new chunk from buffer_pool
                 let vertex_buffer = buffer_pool.chunk(data.to_vec()).unwrap();
-                // let vertex_buffer2 = buffer_pool.chunk(data2.to_vec()).unwrap();
+                let vertex_buffer2 = buffer_pool.chunk(data2.to_vec()).unwrap();
+
+                sprites_to_render.push(vertex_buffer);
+                sprites_to_render.push(vertex_buffer2);
         
                 let mut builder =
                     AutoCommandBufferBuilder::primary_one_time_submit(device.clone(), queue.family())
                         .unwrap();
-                builder
-                    .begin_render_pass(framebuffers[image_num].clone(), false, clear_values)
-                    .unwrap()
-                    .draw(
+
+                let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
+                builder.begin_render_pass(framebuffers[image_num].clone(), false, clear_values).unwrap();
+                        
+                for sprite in sprites_to_render.iter() {
+                    builder.draw(
                         pipeline.clone(),
                         &dynamic_state,
-                        vertex_buffer.clone(),
+                        sprite.clone(),
                         set.clone(),
                         (),
-                    )
-                    .unwrap()
-                    .end_render_pass()
-                    .unwrap();
+                    ).unwrap();
+                }
+                builder.end_render_pass().unwrap();
+                // builder
+                //     .begin_render_pass(framebuffers[image_num].clone(), false, clear_values)
+                //     .unwrap()
+                //     .draw(
+                //         pipeline.clone(),
+                //         &dynamic_state,
+                //         sprites_to_render[0].clone(),
+                //         set.clone(),
+                //         (),
+                //     )
+                //     .unwrap()
+                //     .end_render_pass()
+                //     .unwrap();
                 let command_buffer = builder.build().unwrap();
         
                 let future = previous_frame_end
