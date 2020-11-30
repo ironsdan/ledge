@@ -1,6 +1,7 @@
 use crate::lib::*;
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct Sprite {
     texture: Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>,
     pub rect: [Vertex; 4],

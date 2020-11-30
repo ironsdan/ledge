@@ -1,10 +1,12 @@
 use crate::sprite::*;
 use crate::lib::*;
+use crate::physics::*;
 
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct Entity {
-    name: String,
+    pub name: String,
     id: u8,
     pub position: [f32; 2],
     pub velocity: [f32; 2],
@@ -13,6 +15,7 @@ pub struct Entity {
     jump_cleared: bool,
     pub horizontal_move: bool,
     direction: bool,
+    gravity_multiplier: f32,
 }
 
 impl Entity {
@@ -28,22 +31,8 @@ impl Entity {
             jump_cleared: false,
             horizontal_move: false,
             direction: true,
+            gravity_multiplier: 1.0,
         }
-    }
-    pub fn set_pos(&mut self, position: [f32;2]) {
-        let default = [
-            [          0.0,                          0.0           ],
-            [          0.0,              self.sprite.screen_size[1]],
-            [self.sprite.screen_size[0],             0.0           ],
-            [self.sprite.screen_size[0], self.sprite.screen_size[1]],
-        ];
-
-        for i in 0..4 {
-            for j in 0..2 {
-                self.sprite.rect[i].position[j] = default[i][j] + position[j];
-            }            
-        }
-        self.position = position;
     }
 
     pub fn set_texture_coords(&mut self) {
@@ -103,5 +92,52 @@ impl Entity {
             // _ => ()
         }
         self.set_texture_coords();
+    }
+}
+
+impl Collidable for Entity {
+    fn get_velocity(&self) -> [f32; 2] {
+        return self.velocity;
+    }
+    fn set_velocity(&mut self, velocity: [f32; 2]) {
+        self.velocity = velocity;
+    }
+    fn get_position(&self) -> [f32; 2] {
+        return self.position
+    }
+    fn get_grounded(&self) -> bool {
+        return self.grounded;
+    }
+    fn set_grounded(&mut self, is_grounded: bool) {
+        self.grounded = is_grounded;
+    }
+    fn set_pos(&mut self, pos: [f32; 2]) {
+        self.position = pos;
+    }
+    fn get_sprite(&self) -> &Sprite {
+        return &self.sprite;
+    }
+    fn get_horizontal_move(&self) -> bool {
+        return self.horizontal_move;
+    }
+    fn update_pos(&mut self, position: [f32;2]) {
+        // println!("Update position: {:?}", position);
+        let default = [
+            [          0.0,                          0.0           ],
+            [          0.0,              self.sprite.screen_size[1]],
+            [self.sprite.screen_size[0],             0.0           ],
+            [self.sprite.screen_size[0], self.sprite.screen_size[1]],
+        ];
+
+        for i in 0..4 {
+            for j in 0..2 {
+                self.sprite.rect[i].position[j] = default[i][j] + position[j];
+            }            
+        }
+        // self.position = position;
+    }
+
+    fn get_name(&self) -> String {
+        return self.name.clone();
     }
 }

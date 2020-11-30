@@ -24,6 +24,8 @@ use winit_input_helper::WinitInputHelper;
 use png;
 use std::io::Cursor;
 use std::sync::Arc;
+use std::rc::Rc;
+use std::cell::RefCell;
 use std::time::SystemTime;
 // use std::thread;
 
@@ -197,20 +199,19 @@ fn main() {
     let mut recreate_swapchain = false;
     let mut previous_frame_end = Some(tex_future.boxed());
 
-    let mut player = Entity::new("Dan".to_string(), 1, [0.0, 0.0], texture.clone(), [0.0, 0.0], [16.0,22.0]);
-    let player2 = Entity::new("Dan".to_string(), 1, [0.0, 0.0], texture.clone(), [0.0, 0.0], [16.0,22.0]);
+    let mut collision_world = CollisionWorld::<Entity, Entity>::new();
+
+    let player = Entity::new("Dan".to_string(), 1, [0.0, 0.0], texture.clone(), [0.0, 0.0], [16.0,22.0]);
+    let player_ref = Rc::new(RefCell::new(player));
+
+    collision_world.entities.push(Rc::clone(&player_ref));
 
     let mut input = WinitInputHelper::new();
 
-    let mut total_time: f32 = 0.0;
     let mut timestep: f32 = 0.0;
-    let mut position: [f32; 2] = [0.0, 0.0];
-    let a: Vec<f32> = vec![0.0, -0.00003];
 
-    event_loop.run(move |event, _, control_flow| {
-        // let start_entire = SystemTime::now();
-        
-        player.horizontal_move = false;
+    event_loop.run(move |event, _, control_flow| {      
+        player_ref.borrow_mut().horizontal_move = false;
         if input.update(&event) {
             let key_w_released = input.key_released(winit::event::VirtualKeyCode::W);
             let key_w_pressed = input.key_pressed(winit::event::VirtualKeyCode::W);
@@ -218,16 +219,16 @@ fn main() {
             let key_d = input.key_held(winit::event::VirtualKeyCode::D);
 
             if key_w_pressed {
-                player.take_input(MovementInput::UpPress);
+                player_ref.borrow_mut().take_input(MovementInput::UpPress);
             }
             if key_w_released {
-                player.take_input(MovementInput::UpRelease);
+                player_ref.borrow_mut().take_input(MovementInput::UpRelease);
             }
             if key_a {
-                player.take_input(MovementInput::Left);
+                player_ref.borrow_mut().take_input(MovementInput::Left);
             }
             if key_d {
-                player.take_input(MovementInput::Right);
+                player_ref.borrow_mut().take_input(MovementInput::Right);
             }
         }
         
@@ -245,37 +246,37 @@ fn main() {
                 recreate_swapchain = true;
             }
             Event::MainEventsCleared => {
-    
-                if player.velocity[0] > 0.001 {
-                    player.velocity[0] = 0.001;
-                } else if player.velocity[0] < -0.001 {
-                    player.velocity[0] = -0.001;
-                }
+                collision_world.step(timestep);
+                // if player.velocity[0] > 0.001 {
+                //     player.velocity[0] = 0.001;
+                // } else if player.velocity[0] < -0.001 {
+                //     player.velocity[0] = -0.001;
+                // }
         
-                position[0] += timestep * (player.velocity[0] + timestep * a[0]/2.0);
-                player.velocity[0] += timestep * a[0];
+                // position[0] += timestep * (player.velocity[0] + timestep * a[0]/2.0);
+                // player.velocity[0] += timestep * a[0];
         
-                if !player.grounded {
-                    total_time += timestep;
+                // if !player.grounded {
+                //     // total_time += timestep;
                     
-                    position[1] -= timestep * (player.velocity[1] + timestep * a[1]/2.0);
+                //     position[1] -= timestep * (player.velocity[1] + timestep * a[1]/2.0);
                     
-                    player.velocity[1] += timestep * a[1];
-                    if player.velocity[1] < -0.05 {
-                        player.velocity[1] = -0.05;
-                    }
-                }
+                //     player.velocity[1] += timestep * a[1];
+                //     if player.velocity[1] < -0.05 {
+                //         player.velocity[1] = -0.05;
+                //     }
+                // }
 
-                player.set_pos(position);
+                // player.set_pos(position);
         
-                if player.position[1] + player.sprite.screen_size[1] > 1.0 {
-                    player.grounded = true;
-                    player.set_pos([position[0], 1.0 - player.sprite.screen_size[1]]);
-                }
+                // if player.position[1] + player.sprite.screen_size[1] > 1.0 {
+                //     player.grounded = true;
+                //     player.set_pos([position[0], 1.0 - player.sprite.screen_size[1]]);
+                // }
             
-                if !player.horizontal_move {
-                    player.velocity[0] = 0.0;
-                }
+                // if !player.horizontal_move {
+                //     player.velocity[0] = 0.0;
+                // }
                 // print!("Main: ");
             }
             Event::RedrawRequested(_) => {
@@ -316,12 +317,11 @@ fn main() {
         
                 let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
         
-                let data = &player.sprite.rect;
-                let data2 = &player2.sprite.rect;
+                let data = &player_ref.borrow().sprite.rect;
         
                 // Allocate a new chunk from buffer_pool
                 let vertex_buffer = buffer_pool.chunk(data.to_vec()).unwrap();
-                let vertex_buffer2 = buffer_pool.chunk(data2.to_vec()).unwrap();
+                // let vertex_buffer2 = buffer_pool.chunk(data2.to_vec()).unwrap();
         
                 let mut builder =
                     AutoCommandBufferBuilder::primary_one_time_submit(device.clone(), queue.family())
@@ -337,13 +337,6 @@ fn main() {
                         (),
                     )
                     .unwrap()
-                    .draw(
-                        pipeline.clone(),
-                        &dynamic_state,
-                        vertex_buffer2.clone(),
-                        set.clone(),
-                        (),
-                    ).unwrap()
                     .end_render_pass()
                     .unwrap();
                 let command_buffer = builder.build().unwrap();
@@ -371,12 +364,6 @@ fn main() {
                     }
                 };
                 
-                // if start.elapsed().unwrap() < Duration::from_millis(16) {
-                    // println!("{:?} {:?}", Duration::from_millis(16), start.elapsed().unwrap());
-                    // println!("{:?}", Duration::from_millis(16) - start.elapsed().unwrap());
-                    // thread::sleep(Duration::from_millis(15));
-                // }
-                // println!("{:?}", start.elapsed().unwrap());
                 timestep = start.elapsed().unwrap().as_millis() as f32;
                 // print!("Redraw: ");
                 surface.window().request_redraw();
