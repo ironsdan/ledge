@@ -83,7 +83,7 @@ impl Game {
         .unwrap();
         let queue = queues.next().unwrap(); 
 
-        let (mut swapchain, images) = {
+        let (swapchain, images) = {
             let caps = surface.capabilities(physical).unwrap();
             let alpha = caps.supported_composite_alpha.iter().next().unwrap();
             let format = caps.supported_formats[0].0;
@@ -171,7 +171,7 @@ impl Game {
             reference: None,
         };
 
-        let mut framebuffers =
+        let framebuffers =
             window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
 
         Self {
