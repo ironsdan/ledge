@@ -32,8 +32,27 @@ use crate::lib::*;
 use crate::entity::*;
 use crate::physics::*;
 
-pub struct Game {
+pub struct LedgeWindow {
     pub event_loop: Option<winit::event_loop::EventLoop<()>>,
+    pub size: winit::dpi::Size,
+}
+
+impl LedgeWindow {
+    pub fn new() -> Self {
+        let size_h_w = PhysicalSize::new(800, 600);
+        let size: Size = Size::Physical(size_h_w);
+
+        let event_loop = EventLoop::new();
+
+        Self {
+            event_loop: Some(event_loop),
+            size: size,
+        }
+    }
+}
+
+pub struct LedgeVulkanInstance {
+
     pub queue: std::sync::Arc<vulkano::device::Queue>,
     pub surface: std::sync::Arc<vulkano::swapchain::Surface<winit::window::Window>>,
     pub device: std::sync::Arc<vulkano::device::Device>,
@@ -46,8 +65,8 @@ pub struct Game {
     pub pipeline: std::sync::Arc<dyn vulkano::pipeline::GraphicsPipelineAbstract + std::marker::Send + std::marker::Sync>
 }
 
-impl Game {
-    pub fn initialize_vulkan() -> Self {
+impl LedgeVulkanInstance {
+    pub fn new(event_loop: &winit::event_loop::EventLoop<()>, size: winit::dpi::Size) -> Self {
         let required_extensions = vulkano_win::required_extensions();
         let instance = Instance::new(None, &required_extensions, None).unwrap();
         let physical = PhysicalDevice::enumerate(&instance).next().unwrap();
@@ -57,12 +76,9 @@ impl Game {
             physical.ty()
         );
 
-        let size_h_w = PhysicalSize::new(800, 600);
-        let size: Size = Size::Physical(size_h_w);
 
-        let event_loop = EventLoop::new();
         let surface = WindowBuilder::new().with_inner_size(size)
-            .build_vk_surface(&event_loop, instance.clone())
+            .build_vk_surface(event_loop, instance.clone())
             .unwrap();
 
         let queue_family = physical
@@ -175,7 +191,6 @@ impl Game {
             window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
 
         Self {
-            event_loop: Some(event_loop),
             queue: queue,
             surface: surface,
             device: device,
@@ -186,6 +201,22 @@ impl Game {
             dynamic_state: dynamic_state,
             buffer_pool: buffer_pool,
             pipeline: pipeline,
+        }
+    }
+}
+
+pub struct Game {
+    window: LedgeWindow,
+    vulkan_instance: LedgeVulkanInstance,
+}
+
+impl Game {
+    pub fn new() -> Self{
+        let window = LedgeWindow::new();
+        let vulkan_instance = LedgeVulkanInstance::new(window.event_loop.as_ref().unwrap(), window.size);
+        Self {
+            window: window,
+            vulkan_instance: vulkan_instance,
         }
     }
 
@@ -207,12 +238,12 @@ impl Game {
                 image_data.iter().cloned(),
                 dimensions,
                 Format::R8G8B8A8Srgb,
-                self.queue.clone(),
+                self.vulkan_instance.queue.clone(),
             )
             .unwrap()
         };
 
-        let handler = self.event_loop.take().unwrap();
+        let handler = self.window.event_loop.take().unwrap();
         let mut recreate_swapchain = false;
         let mut previous_frame_end = Some(tex_future.boxed());
     
@@ -226,11 +257,11 @@ impl Game {
     
         let mut input = WinitInputHelper::new();
 
-        let layout = self.pipeline.descriptor_set_layout(0).unwrap();
+        let layout = self.vulkan_instance.pipeline.descriptor_set_layout(0).unwrap();
 
         let set = Arc::new(
             PersistentDescriptorSet::start(layout.clone())
-                .add_sampled_image(texture.clone(), self.sampler.clone())
+                .add_sampled_image(texture.clone(), self.vulkan_instance.sampler.clone())
                 .unwrap()
                 .build()
                 .unwrap(),
@@ -280,25 +311,25 @@ impl Game {
                     previous_frame_end.as_mut().unwrap().cleanup_finished();
     
                     if recreate_swapchain {
-                        let dimensions: [u32; 2] = self.surface.window().inner_size().into();
+                        let dimensions: [u32; 2] = self.vulkan_instance.surface.window().inner_size().into();
                         let (new_swapchain, new_images) =
-                            match self.swapchain.recreate_with_dimensions(dimensions) {
+                            match self.vulkan_instance.swapchain.recreate_with_dimensions(dimensions) {
                                 Ok(r) => r,
                                 Err(SwapchainCreationError::UnsupportedDimensions) => return,
                                 Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
                             };
             
-                        self.swapchain = new_swapchain;
-                        self.framebuffers = window_size_dependent_setup(
+                        self.vulkan_instance.swapchain = new_swapchain;
+                        self.vulkan_instance.framebuffers = window_size_dependent_setup(
                             &new_images,
-                            self.render_pass.clone(),
-                            &mut self.dynamic_state,
+                            self.vulkan_instance.render_pass.clone(),
+                            &mut self.vulkan_instance.dynamic_state,
                         );
                         recreate_swapchain = false;
                     }
             
                     let (image_num, suboptimal, acquire_future) =
-                        match swapchain::acquire_next_image(self.swapchain.clone(), None) {
+                        match swapchain::acquire_next_image(self.vulkan_instance.swapchain.clone(), None) {
                             Ok(r) => r,
                             Err(AcquireError::OutOfDate) => {
                                 recreate_swapchain = true;
@@ -310,32 +341,30 @@ impl Game {
                     if suboptimal {
                         recreate_swapchain = true;
                     }
-            
-                    // let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
-            
+                        
                     let mut sprites_to_render: Vec<vulkano::buffer::cpu_pool::CpuBufferPoolChunk<Vertex, std::sync::Arc<_>>> = Vec::new();
                     let data = &player_ref.borrow().sprite.rect;
                     let data2 = &player2.sprite.rect;
     
             
                     // Allocate a new chunk from buffer_pool
-                    let vertex_buffer = self.buffer_pool.chunk(data.to_vec()).unwrap();
-                    let vertex_buffer2 = self.buffer_pool.chunk(data2.to_vec()).unwrap();
+                    let vertex_buffer = self.vulkan_instance.buffer_pool.chunk(data.to_vec()).unwrap();
+                    let vertex_buffer2 = self.vulkan_instance.buffer_pool.chunk(data2.to_vec()).unwrap();
     
                     sprites_to_render.push(vertex_buffer);
                     sprites_to_render.push(vertex_buffer2);
             
                     let mut builder =
-                        AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queue.family())
+                        AutoCommandBufferBuilder::primary_one_time_submit(self.vulkan_instance.device.clone(), self.vulkan_instance.queue.family())
                             .unwrap();
     
                     let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
-                    builder.begin_render_pass(self.framebuffers[image_num].clone(), false, clear_values).unwrap();
+                    builder.begin_render_pass(self.vulkan_instance.framebuffers[image_num].clone(), false, clear_values).unwrap();
                             
                     for sprite in sprites_to_render.iter() {
                         builder.draw(
-                            self.pipeline.clone(),
-                            &self.dynamic_state,
+                            self.vulkan_instance.pipeline.clone(),
+                            &self.vulkan_instance.dynamic_state,
                             vec!(Arc::new(sprite.clone())),
                             set.clone(),
                             (),
@@ -348,9 +377,9 @@ impl Game {
                         .take()
                         .unwrap()
                         .join(acquire_future)
-                        .then_execute(self.queue.clone(), command_buffer)
+                        .then_execute(self.vulkan_instance.queue.clone(), command_buffer)
                         .unwrap()
-                        .then_swapchain_present(self.queue.clone(), self.swapchain.clone(), image_num)
+                        .then_swapchain_present(self.vulkan_instance.queue.clone(), self.vulkan_instance.swapchain.clone(), image_num)
                         .then_signal_fence_and_flush();
             
                     match future {
@@ -359,17 +388,17 @@ impl Game {
                         }
                         Err(FlushError::OutOfDate) => {
                             recreate_swapchain = true;
-                            previous_frame_end = Some(sync::now(self.device.clone()).boxed());
+                            previous_frame_end = Some(sync::now(self.vulkan_instance.device.clone()).boxed());
                         }
                         Err(e) => {
                             println!("Failed to flush future: {:?}", e);
-                            previous_frame_end = Some(sync::now(self.device.clone()).boxed());
+                            previous_frame_end = Some(sync::now(self.vulkan_instance.device.clone()).boxed());
                         }
                     };
                     
                     timestep = start.elapsed().unwrap().as_millis() as f32;
                     // print!("Redraw: ");
-                    self.surface.window().request_redraw();
+                    self.vulkan_instance.surface.window().request_redraw();
                 }
                 Event::RedrawEventsCleared => {
                     // print!("Cleared: ");
