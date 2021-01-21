@@ -7,6 +7,11 @@ mod game;
 use game::*;
 
 fn main() {
-    let game = Game::new();
+    let mut game = Game::new();
+    game.add_sprite("rock".to_string(), [-1.0, -1.0], include_bytes!("rock.png"), [400,300], [2, 2]);
+    game.add_sprite("test".to_string(), [0.0, -1.0], include_bytes!("test.png"), [400,300], [2, 2]);
+    game.add_sprite("pokeball".to_string(), [-1.0, 0.0], include_bytes!("pokeball.png"), [400,300], [2, 2]);
+    game.add_sprite("background".to_string(), [0.0, 0.0], include_bytes!("background.png"), [400,300], [2, 2]);
+    game.add_sprite("Dan".to_string(), [0.0, 0.0], include_bytes!("SweaterGuy.png"), [16,22], [2, 2]);
     game.run();
 }

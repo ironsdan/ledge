@@ -10,7 +10,7 @@ use winit::window::Window;
 pub struct Entity {
     pub name: String,
     id: u8,
-    pub size: [f32; 2],
+    pub size: [u32; 2],
     pub position: [f32; 2],
     pub velocity: [f32; 2],
     pub sprite: Sprite,
@@ -23,15 +23,15 @@ pub struct Entity {
 }
 
 impl Entity {
-    pub fn new(name: String, id: u8, position: [f32; 2], texture: Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>, size: [f32; 2], gravity_multiplier: f32) -> Self {
-        let sprite = Sprite::new(name.clone(), texture, position, size);
+    pub fn new(name: String, id: u8, position: [f32; 2], texture: Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>, matrix_dims: [u32; 2], size: [u32; 2], gravity_multiplier: f32) -> Self {
+        let sprite = Sprite::new(name.clone(), texture, position, size, matrix_dims);
         let texture_coord = [
             [0.0, 0.0],
             [0.0, 0.0],
             [0.0, 0.0],
             [0.0, 0.0],
         ];
-        let screen_size = convert_to_screen_space([size[0] - 5.0, size[1]], [600, 800]);
+        let screen_size = convert_to_screen_space([size[0] - 5, size[1]], [600, 800]);
         let bounding_box = Rect::new(screen_size[0], screen_size[1], position, texture_coord);
 
         Self {
@@ -112,7 +112,7 @@ impl Entity {
     pub fn resize(&mut self, images: &[Arc<SwapchainImage<Window>>]) {
         let dimensions = images[0].dimensions();
 
-        let mut screen_size = convert_to_screen_space([self.size[0] - 5.0, self.size[1]], dimensions);
+        let mut screen_size = convert_to_screen_space([self.size[0] - 5, self.size[1]], dimensions);
         self.bounding_box.update_size(screen_size);
         screen_size = convert_to_screen_space([self.size[0], self.size[1]], dimensions);
         self.sprite.update_size(screen_size);

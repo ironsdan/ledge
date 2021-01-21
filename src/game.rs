@@ -38,7 +38,7 @@ pub struct Game {
     window: LedgeWindow,
     vulkan_instance: LedgeVulkanInstance,
     collision_world: CollisionWorld<Entity, Entity>,
-    sprites: Vec<Rc<RefCell<Sprite>>>,
+    pub sprites: Vec<Rc<RefCell<Sprite>>>,
 }
 
 impl Game {
@@ -59,7 +59,7 @@ impl Game {
 
     // }
 
-    pub fn add_sprite(&mut self, name: String, position: [f32; 2], file_bytes: &[u8], size: [f32; 2]) -> Rc<RefCell<Sprite>> {
+    pub fn add_sprite(&mut self, name: String, position: [f32; 2], file_bytes: &[u8], size: [u32; 2], matrix_dims: [u32; 2]) -> Rc<RefCell<Sprite>> {
         let (texture, _) = {
             let image = image::load_from_memory_with_format(file_bytes,
                 ImageFormat::Png).unwrap().to_rgba8();
@@ -75,10 +75,14 @@ impl Game {
             .unwrap()
         };
 
-        let sprite_ref = Rc::new(RefCell::new(Sprite::new(name, texture.clone(), position, size)));
+        let sprite_ref = Rc::new(RefCell::new(Sprite::new(name, texture.clone(), position, size, matrix_dims)));
         self.sprites.push(Rc::clone(&sprite_ref));
 
         return Rc::clone(&sprite_ref);
+    }
+
+    pub fn animate_sprite() {
+        
     }
 
     pub fn run(mut self) {
@@ -107,13 +111,11 @@ impl Game {
         let handler = self.window.event_loop.take().unwrap();
         let mut recreate_swapchain = false;
         let mut previous_frame_end = Some(tex_future.boxed()); // TODO do not use this tex_future.
-
-        self.add_sprite("Dan2".to_string(), [-1.0, -1.0], include_bytes!("rock.png"), [256.0,256.0]);
-        self.add_sprite("Dan".to_string(), [0.0, 0.0], include_bytes!("SweaterGuy.png"), [16.0,22.0]);
-    
         let mut input = WinitInputHelper::new();
-    
+        
+        // let mut frame_num = 0;
         let mut timestep: f32 = 0.0;
+        // let mut sprite_anim_mat = [0,0];
         handler.run(move |event, _, control_flow| { // TODO: move window related run tasks to LedgeWindow
             // player_ref.borrow_mut().horizontal_move = false;
             // if input.update(&event) {
@@ -190,7 +192,30 @@ impl Game {
                     }
                     let layout = self.vulkan_instance.pipeline.descriptor_set_layout(0).unwrap();
                     let mut sprites_to_render: Vec<(std::sync::Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>, vulkano::buffer::cpu_pool::CpuBufferPoolChunk<Vertex, std::sync::Arc<_>>)> = Vec::new();
-                    
+
+                    // if frame_num == 25 {
+                    //     if sprite_anim_mat[0] == 1 {
+                    //         if sprite_anim_mat[1] == 1{
+                    //             sprite_anim_mat[0] = 0;
+                    //         } else {
+                    //             sprite_anim_mat[1] = 1;
+                    //         }
+                    //     } else {
+                    //         if sprite_anim_mat[1] == 1 {
+                    //             sprite_anim_mat[1] = 0;
+                    //         } else {
+                    //             sprite_anim_mat[0] = 1;
+                    //         }
+                    //     }
+                    //     println!("{:?}", sprite_anim_mat);
+                    //     for i in 0..self.sprites.len() {
+                    //         self.sprites[i].borrow_mut().update_animation(sprite_anim_mat);
+                    //     }
+                        
+                    //     frame_num = 0;
+                    // }
+                    // frame_num = frame_num + 1;
+
                     for sprite in self.sprites.iter() {
                         let data = &sprite.borrow().rect;
                         // Allocate a new chunk from buffer_pool

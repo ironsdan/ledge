@@ -110,23 +110,23 @@ pub fn window_size_dependent_setup(
         .collect::<Vec<_>>()
 }
 
-pub fn convert_to_screen_space(size: [f32;2], dimensions: [u32; 2]) -> [f32; 2] {
+pub fn convert_to_screen_space(size: [u32;2], dimensions: [u32; 2]) -> [f32; 2] {
     let window_width = dimensions[0];
     let window_height = dimensions[1];
 
-    let scale;
+    let aspect_ratio;
 
     if window_height > window_width {
-        scale = window_height as f32 / window_width as f32;
+        aspect_ratio = window_height as f32 / window_width as f32;
     } else {
-        scale = window_width as f32 / window_height as f32;
+        aspect_ratio = window_width as f32 / window_height as f32;
     }
 
     let pixel_size_y = 1.0/window_height as f32;
     let pixel_size_x = 1.0/window_width as f32;
 
-    let screen_width = 5.0*scale*pixel_size_x*size[0];
-    let screen_height = 5.0*scale*pixel_size_y*size[1];
+    let screen_width = 2.0*pixel_size_x*size[0] as f32;
+    let screen_height = 2.0*pixel_size_y*size[1] as f32;
 
     let screen_size = [screen_width, screen_height];
     return screen_size;
