@@ -8,7 +8,7 @@ pub struct Sprite {
     pub rect: Rect,
     pub size: [u32; 2],
     pub screen_size: [f32; 2],
-    matrix_dims: [u32; 2], 
+    pub matrix_dims: [u32; 2], 
 }
 
 impl Sprite {

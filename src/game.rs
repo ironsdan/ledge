@@ -113,9 +113,9 @@ impl Game {
         let mut previous_frame_end = Some(tex_future.boxed()); // TODO do not use this tex_future.
         let mut input = WinitInputHelper::new();
         
-        // let mut frame_num = 0;
+        let mut frame_num = 0;
         let mut timestep: f32 = 0.0;
-        // let mut sprite_anim_mat = [0,0];
+        let mut sprite_anim_mat = [0,0];
         handler.run(move |event, _, control_flow| { // TODO: move window related run tasks to LedgeWindow
             // player_ref.borrow_mut().horizontal_move = false;
             // if input.update(&event) {
@@ -193,28 +193,26 @@ impl Game {
                     let layout = self.vulkan_instance.pipeline.descriptor_set_layout(0).unwrap();
                     let mut sprites_to_render: Vec<(std::sync::Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>, vulkano::buffer::cpu_pool::CpuBufferPoolChunk<Vertex, std::sync::Arc<_>>)> = Vec::new();
 
-                    // if frame_num == 25 {
-                    //     if sprite_anim_mat[0] == 1 {
-                    //         if sprite_anim_mat[1] == 1{
-                    //             sprite_anim_mat[0] = 0;
-                    //         } else {
-                    //             sprite_anim_mat[1] = 1;
-                    //         }
-                    //     } else {
-                    //         if sprite_anim_mat[1] == 1 {
-                    //             sprite_anim_mat[1] = 0;
-                    //         } else {
-                    //             sprite_anim_mat[0] = 1;
-                    //         }
-                    //     }
-                    //     println!("{:?}", sprite_anim_mat);
-                    //     for i in 0..self.sprites.len() {
-                    //         self.sprites[i].borrow_mut().update_animation(sprite_anim_mat);
-                    //     }
-                        
-                    //     frame_num = 0;
-                    // }
-                    // frame_num = frame_num + 1;
+                    if frame_num == 10 {
+                        if sprite_anim_mat[0] == 2 {
+                                sprite_anim_mat[0] = 0;
+                                if sprite_anim_mat[1] < 2 {
+                                    sprite_anim_mat[1] = sprite_anim_mat[1] + 1;
+                                } else {
+                                    sprite_anim_mat[1] = 0;
+                                }
+                        } else {
+                            sprite_anim_mat[0] = sprite_anim_mat[0] + 1;
+                        }
+                        println!("{:?}", sprite_anim_mat);
+
+                        if sprite_anim_mat == [2,2] {
+                            sprite_anim_mat = [0,0];
+                        }
+                        self.sprites[4].borrow_mut().update_animation(sprite_anim_mat);
+                        frame_num = 0;
+                    }
+                    frame_num = frame_num + 1;
 
                     for sprite in self.sprites.iter() {
                         let data = &sprite.borrow().rect;
