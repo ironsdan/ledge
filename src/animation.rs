@@ -5,7 +5,6 @@ pub struct AnimationStateMachine {
     rules: Vec<Vec<StateChangeRule>>
 }
 
-
 impl AnimationStateMachine {
     pub fn new(states: Vec<AnimationState>, rules: Vec<Vec<StateChangeRule>>) -> Self {
         Self {
@@ -30,31 +29,53 @@ impl AnimationStateMachine {
 
 #[derive(Clone, PartialEq)]
 pub struct AnimationState {
-    pub current_frame: usize,
     pub name: String,
     pub id: u8,
-    pub texture_order: Vec<[u8; 2]>
+    pub animation_info: AnimationInterTransitionInfo,
+    pub current_frame: usize,
+    pub time_since_frame_change: f32,
 }
 
 impl AnimationState {
-
-    pub fn new(name: String, id: u8,  texture_order: Vec<[u8; 2]>) -> Self {
+    pub fn new(name: String, id: u8,  texture_order: Vec<[u8; 2]>, timings: Vec<f32>) -> Self {
+        let animation_info = AnimationInterTransitionInfo::new(texture_order, timings);
         Self {
             name,
             id,
-            texture_order,
-            current_frame: 0
+            animation_info,
+            current_frame: 0,
+            time_since_frame_change: 0.0,
         }
     }
 
-    pub fn update(&mut self) -> [u8; 2] {
-        if self.current_frame < self.texture_order.len() - 1{
-            self.current_frame = self.current_frame + 1;
+    pub fn update_frame(&mut self, time_elapsed: f32) -> Option<[u8; 2]> {
+        if self.time_since_frame_change > self.animation_info.timings[self.current_frame] {
+            if self.current_frame < self.animation_info.order.len() - 1{
+                self.current_frame = self.current_frame + 1;
+            } else {
+                self.current_frame = 0;
+            }
+            self.time_since_frame_change = 0.0;
+            return Some(self.animation_info.order[self.current_frame]);
         } else {
-            self.current_frame = 0;
+            self.time_since_frame_change = self.time_since_frame_change + time_elapsed;
+            return None
         }
+    }
+}
 
-        return self.texture_order[self.current_frame];
+#[derive(Clone, PartialEq)]
+pub struct AnimationInterTransitionInfo {
+    pub order: Vec<[u8; 2]>,
+    pub timings: Vec<f32>,
+}
+
+impl AnimationInterTransitionInfo {
+    pub fn new(order: Vec<[u8; 2]>, timings: Vec<f32>) -> Self {
+        Self {
+            order,
+            timings
+        }
     }
 }
 

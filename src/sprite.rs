@@ -36,12 +36,17 @@ impl Sprite {
         }
     }
 
-    pub fn update_animation_frame(&mut self) {
+    pub fn update_animation_frame(&mut self, time_elapsed: f32) {
         let animation_machine = self.animation_machine.as_mut();
         match animation_machine {
             Some(machine) => {
-                let new_position = machine.current_state.update();
-                self.update_animation_position(new_position);
+                let updated_position = machine.current_state.update_frame(time_elapsed);
+                match updated_position {
+                    Some(texture_position) => {
+                        self.update_animation_position(texture_position);
+                    },
+                    None => {}
+                }
             }
             None => {}
         }

@@ -19,7 +19,7 @@ use winit::event::{Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit::{dpi::Size,dpi::PhysicalSize};
-// use winit_input_helper::WinitInputHelper;
+use winit_input_helper::WinitInputHelper;
 
 // use png;
 use image::ImageFormat;
@@ -30,31 +30,52 @@ use std::sync::Arc;
 // use std::time::SystemTime;
 
 use crate::lib::*;
-// use crate::entity::*;
+use crate::entity::*;
 // use crate::physics::*;
+use crate::input::*;
 use crate::sprite::*;
 use crate::animation::*;
 
-pub struct Game {
-    window: LedgeWindow,
-    vulkan_instance: LedgeVulkanInstance,
-    // collision_world: CollisionWorld<Entity, Entity>,
-    pub sprites: Vec<Sprite>,
+#[derive(Debug)]
+pub enum ContextCreationError {
+    // TODO Implement.
 }
 
-impl Game {
-    pub fn new() -> Self{
+pub struct ContextBuilder {
+    // TODO Implement.
+}
+
+impl ContextBuilder {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn build(&self) -> Result<(InterfaceContext, winit::event_loop::EventLoop<()>), ContextCreationError> {
+        let event_loop = EventLoop::new();
+        Ok((InterfaceContext::new(Some(&event_loop)), event_loop))
+    }
+}
+
+pub struct InterfaceContext {
+    window: LedgeWindow,
+    vulkan_instance: LedgeVulkanInstance,
+}
+
+impl InterfaceContext {
+    pub fn new(event_loop: Option<&winit::event_loop::EventLoop<()>>) -> Self{
         let window = LedgeWindow::new();
-        let vulkan_instance = LedgeVulkanInstance::new(window.event_loop.as_ref().unwrap(), window.size);
-        let sprites = Vec::new();
+        let vulkan_instance = LedgeVulkanInstance::new(event_loop.as_ref().unwrap(), window.size);
         Self {
             window: window,
             vulkan_instance: vulkan_instance,
-            sprites: sprites,
         }
     }
 
-    pub fn add_sprite(&mut self, name: String, position: [f32; 2], file_bytes: &[u8], size: [u32; 2], matrix_dims: [u32; 2], animation_machine: Option<AnimationStateMachine>) {
+    pub fn add_physics_object(&mut self, name: String, position: [f32;2], file_bytes: &[u8], size: [u32;2], matrix_dims:[u32;2], animation_machine: Option<AnimationStateMachine>) {
+        let sprite = self.create_sprite(name, position, file_bytes, size, matrix_dims, animation_machine);
+    }
+
+    pub fn create_sprite(&self, name: String, position: [f32; 2], file_bytes: &[u8], size: [u32; 2], matrix_dims: [u32; 2], animation_machine: Option<AnimationStateMachine>) -> Sprite {
         let (texture, _) = {
             let image = image::load_from_memory_with_format(file_bytes,
                 ImageFormat::Png).unwrap().to_rgba8();
@@ -71,7 +92,9 @@ impl Game {
         };
 
         let sprite = Sprite::new(name, texture.clone(), position, size, matrix_dims, animation_machine);
-        self.sprites.push(sprite);
+        // self.sprites.push(sprite);
+
+        return sprite;
     }
 
     // The main game loop where quite literally everything happens, once this is run there is no going back, this function hijacks the thread.
@@ -85,45 +108,46 @@ impl Game {
             ).unwrap()
         };
 
-        let handler = self.window.event_loop.take().unwrap();
+        // let handler = self.window.event_loop.take().unwrap();
         
-        let mut recreate_swapchain = false;
-        let mut previous_frame_end = Some(tex_future.boxed());
+        // let mut recreate_swapchain = false;
+        // let mut previous_frame_end = Some(tex_future.boxed());
 
-        // let mut input = WinitInputHelper::new();
-        // let timestep: f32 = 0.0;
-        let mut frame_num = 0;
-        handler.run(move |event, _, control_flow| {
-            // physical_input.update(input);
+        // let input = WinitInputHelper::new();
+        // // let physical_input = InputHelper::new(self.player.unwrap());
+        // // let timestep: f32 = 0.0;
+        // let mut frame_num = 0;
+        // handler.run(move |event, _, control_flow| {
+        //     // physical_input.execute_input(input.clone(), &event);
             
-            match event {
-                Event::WindowEvent {
-                    event: WindowEvent::CloseRequested,
-                    ..
-                } => {
-                    *control_flow = ControlFlow::Exit;
-                }
-                Event::WindowEvent {
-                    event: WindowEvent::Resized(_),
-                    ..
-                } => {
-                    recreate_swapchain = true;
-                }
-                Event::MainEventsCleared => {
-                    // self.collision_world.step(timestep);
-                }
-                Event::RedrawRequested(_) => {
-                    self.draw(&mut previous_frame_end, &mut recreate_swapchain, &mut frame_num);
-                }
-                Event::RedrawEventsCleared => {
-                    // print!("Cleared: ");
-                }
-                _ => {
-                    // print!("Other: ");
-                },
-            }
-            // println!("{:?}", start_entire.elapsed().unwrap());
-        });
+        //     match event {
+        //         Event::WindowEvent {
+        //             event: WindowEvent::CloseRequested,
+        //             ..
+        //         } => {
+        //             *control_flow = ControlFlow::Exit;
+        //         }
+        //         Event::WindowEvent {
+        //             event: WindowEvent::Resized(_),
+        //             ..
+        //         } => {
+        //             recreate_swapchain = true;
+        //         }
+        //         Event::MainEventsCleared => {
+        //             // self.collision_world.step(timestep);
+        //         }
+        //         Event::RedrawRequested(_) => {
+        //             self.draw(&mut previous_frame_end, &mut recreate_swapchain, &mut frame_num);
+        //         }
+        //         Event::RedrawEventsCleared => {
+        //             // print!("Cleared: ");
+        //         }
+        //         _ => {
+        //             // print!("Other: ");
+        //         },
+        //     }
+        //     // println!("{:?}", start_entire.elapsed().unwrap());
+        // });
     }
 
     // Uses Vulkano magic to draw the selected sprites to the screen.
@@ -165,19 +189,17 @@ impl Game {
         let layout = self.vulkan_instance.pipeline.descriptor_set_layout(0).unwrap();
         let mut sprites_to_render: Vec<(std::sync::Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>, vulkano::buffer::cpu_pool::CpuBufferPoolChunk<Vertex, std::sync::Arc<_>>)> = Vec::new();
 
-        if *frame_num % 15 == 0 {
-            for sprite in self.sprites.iter_mut() {
-                sprite.update_animation_frame();
-            }
-        }
+        // // for sprite in self.sprites.iter_mut() {
+        //     self.player.as_mut().unwrap().sprite.update_animation_frame(16.67); // TODO change from hard coded 60Hz
+        // // }
 
-        for sprite in self.sprites.iter() {
-            let data = &sprite.rect;
-            // Allocate a new chunk from buffer_pool
+        // // for sprite in self.sprites.iter() {
+        //     let data = &self.player.as_ref().unwrap().sprite.rect;
+        //     // Allocate a new chunk from buffer_pool
 
-            let vertex_buffer = self.vulkan_instance.buffer_pool.chunk(data.vertices.to_vec()).unwrap();
-            sprites_to_render.push((sprite.texture.clone(), vertex_buffer));    
-        }
+        //     let vertex_buffer = self.vulkan_instance.buffer_pool.chunk(data.vertices.to_vec()).unwrap();
+        //     sprites_to_render.push((self.player.as_ref().unwrap().sprite.texture.clone(), vertex_buffer));    
+        // // }
 
         let mut builder =
             AutoCommandBufferBuilder::primary_one_time_submit(self.vulkan_instance.device.clone(), self.vulkan_instance.queue.family())
@@ -241,7 +263,7 @@ impl Game {
  Purpose: Holds window specific information and controls the operation of the Winit window
 ************************/
 pub struct LedgeWindow {
-    pub event_loop: Option<winit::event_loop::EventLoop<()>>,
+    // pub event_loop: Option<winit::event_loop::EventLoop<()>>,
     pub size: winit::dpi::Size,
 }
 
@@ -250,10 +272,10 @@ impl LedgeWindow {
         let size_h_w = PhysicalSize::new(800, 600);
         let size: Size = Size::Physical(size_h_w);
 
-        let event_loop = EventLoop::new();
+        // let event_loop = EventLoop::new();
 
         Self {
-            event_loop: Some(event_loop),
+            // event_loop: Some(event_loop),
             size: size,
         }
     }
@@ -284,12 +306,12 @@ impl LedgeVulkanInstance {
         let required_extensions = vulkano_win::required_extensions();
         let instance = Instance::new(None, &required_extensions, None).unwrap();
         let physical = PhysicalDevice::enumerate(&instance).next().unwrap();
+        
         println!(
             "Using device: {} (type: {:?})",
             physical.name(),
             physical.ty()
         );
-
 
         let surface = WindowBuilder::new().with_inner_size(size)
             .build_vk_surface(event_loop, instance.clone())
