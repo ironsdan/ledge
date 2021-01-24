@@ -19,14 +19,14 @@ use winit::event::{Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit::{dpi::Size,dpi::PhysicalSize};
-use winit_input_helper::WinitInputHelper;
+// use winit_input_helper::WinitInputHelper;
 
 // use png;
 use image::ImageFormat;
-use std::io::Cursor;
+// use std::io::Cursor;
 use std::sync::Arc;
-use std::rc::Rc;
-use std::cell::RefCell;
+// use std::rc::Rc;
+// use std::cell::RefCell;
 // use std::time::SystemTime;
 
 use crate::lib::*;
@@ -39,28 +39,22 @@ pub struct Game {
     window: LedgeWindow,
     vulkan_instance: LedgeVulkanInstance,
     // collision_world: CollisionWorld<Entity, Entity>,
-    pub sprites: Vec<Rc<RefCell<Sprite>>>,
+    pub sprites: Vec<Sprite>,
 }
 
 impl Game {
     pub fn new() -> Self{
         let window = LedgeWindow::new();
         let vulkan_instance = LedgeVulkanInstance::new(window.event_loop.as_ref().unwrap(), window.size);
-        // let collision_world = CollisionWorld::<Entity, Entity>::new();
         let sprites = Vec::new();
         Self {
             window: window,
             vulkan_instance: vulkan_instance,
-            // collision_world: collision_world,
             sprites: sprites,
         }
     }
 
-    // pub fn add_physics_object(&mut self, name: String, position: [f32; 2], file_byte_vec: std::vec::Vec<u8>, size: [f32; 2]) -> Rc<RefCell<Sprite>> {
-
-    // }
-
-    pub fn add_sprite(&mut self, name: String, position: [f32; 2], file_bytes: &[u8], size: [u32; 2], matrix_dims: [u32; 2], animation_machine: Option<AnimationStateMachine>) -> Rc<RefCell<Sprite>> {
+    pub fn add_sprite(&mut self, name: String, position: [f32; 2], file_bytes: &[u8], size: [u32; 2], matrix_dims: [u32; 2], animation_machine: Option<AnimationStateMachine>) {
         let (texture, _) = {
             let image = image::load_from_memory_with_format(file_bytes,
                 ImageFormat::Png).unwrap().to_rgba8();
@@ -76,14 +70,8 @@ impl Game {
             .unwrap()
         };
 
-        let sprite_ref = Rc::new(RefCell::new(Sprite::new(name, texture.clone(), position, size, matrix_dims, animation_machine)));
-        self.sprites.push(Rc::clone(&sprite_ref));
-
-        return Rc::clone(&sprite_ref);
-    }
-
-    pub fn animate_sprite() {
-        
+        let sprite = Sprite::new(name, texture.clone(), position, size, matrix_dims, animation_machine);
+        self.sprites.push(sprite);
     }
 
     // The main game loop where quite literally everything happens, once this is run there is no going back, this function hijacks the thread.
@@ -102,9 +90,9 @@ impl Game {
         let mut recreate_swapchain = false;
         let mut previous_frame_end = Some(tex_future.boxed());
 
-        let mut input = WinitInputHelper::new();
-        
+        // let mut input = WinitInputHelper::new();
         // let timestep: f32 = 0.0;
+        let mut frame_num = 0;
         handler.run(move |event, _, control_flow| {
             // physical_input.update(input);
             
@@ -125,7 +113,7 @@ impl Game {
                     // self.collision_world.step(timestep);
                 }
                 Event::RedrawRequested(_) => {
-                    self.draw(&mut previous_frame_end, &mut recreate_swapchain);
+                    self.draw(&mut previous_frame_end, &mut recreate_swapchain, &mut frame_num);
                 }
                 Event::RedrawEventsCleared => {
                     // print!("Cleared: ");
@@ -139,7 +127,7 @@ impl Game {
     }
 
     // Uses Vulkano magic to draw the selected sprites to the screen.
-    pub fn draw(&mut self, previous_frame_end: &mut std::option::Option<std::boxed::Box<dyn vulkano::sync::GpuFuture>>, recreate_swapchain: &mut bool) {
+    pub fn draw(&mut self, previous_frame_end: &mut std::option::Option<std::boxed::Box<dyn vulkano::sync::GpuFuture>>, recreate_swapchain: &mut bool, frame_num: &mut u32) {
         // let start = SystemTime::now();
         previous_frame_end.as_mut().unwrap().cleanup_finished();
 
@@ -177,22 +165,18 @@ impl Game {
         let layout = self.vulkan_instance.pipeline.descriptor_set_layout(0).unwrap();
         let mut sprites_to_render: Vec<(std::sync::Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>, vulkano::buffer::cpu_pool::CpuBufferPoolChunk<Vertex, std::sync::Arc<_>>)> = Vec::new();
 
-        for sprite in self.sprites.iter() {
-            sprite.borrow_mut().update_animation_frame();
-            // match sprite.borrow_mut().animation_machine.as_mut() {
-            //     Some(machine) => {
-            //         sprite.borrow_mut().update_animation(machine.current_state.update());
-            //     }
-            //     None => {}
-            // }
+        if *frame_num % 15 == 0 {
+            for sprite in self.sprites.iter_mut() {
+                sprite.update_animation_frame();
+            }
         }
 
         for sprite in self.sprites.iter() {
-            let data = &sprite.borrow().rect;
+            let data = &sprite.rect;
             // Allocate a new chunk from buffer_pool
 
             let vertex_buffer = self.vulkan_instance.buffer_pool.chunk(data.vertices.to_vec()).unwrap();
-            sprites_to_render.push((sprite.borrow().texture.clone(), vertex_buffer));    
+            sprites_to_render.push((sprite.texture.clone(), vertex_buffer));    
         }
 
         let mut builder =
@@ -233,6 +217,7 @@ impl Game {
         match future {
             Ok(future) => {
                 *previous_frame_end = Some(future.boxed());
+                *frame_num = *frame_num + 1;
             }
             Err(FlushError::OutOfDate) => {
                 *recreate_swapchain = true;
@@ -249,7 +234,6 @@ impl Game {
         self.vulkan_instance.surface.window().request_redraw();
     }
 }
-
 
 /***********************
  LedgeWindow

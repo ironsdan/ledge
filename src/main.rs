@@ -14,13 +14,13 @@ fn main() {
     let walking_texture_order = Vec::from(
         [[0, 0], [1, 0], [2, 0],
         [0, 1], [1, 1], [2, 1],
-        [0, 2], [1, 2], [2, 2]]
+        [0, 2], [1, 2]]
     );
 
     let standing_texture_order = Vec::from(
         [[0, 0], [1, 0], [2, 0],
         [0, 1], [1, 1], [2, 1],
-        [0, 2], [1, 2], [2, 2]]
+        [0, 2], [1, 2]]
     );
 
     let pokeball_order = Vec::from(
