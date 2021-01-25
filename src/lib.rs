@@ -5,6 +5,7 @@ use vulkano::pipeline::viewport::Viewport;
 use winit::window::Window;
 use std::sync::Arc;
 
+
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Rect {
     pub height: f32,

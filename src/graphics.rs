@@ -30,35 +30,12 @@ use std::sync::Arc;
 // use std::time::SystemTime;
 
 use crate::lib::*;
-use crate::entity::*;
-// use crate::physics::*;
-use crate::input::*;
 use crate::sprite::*;
 use crate::animation::*;
 
-#[derive(Debug)]
-pub enum ContextCreationError {
-    // TODO Implement.
-}
-
-pub struct ContextBuilder {
-    // TODO Implement.
-}
-
-impl ContextBuilder {
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    pub fn build(&self) -> Result<(InterfaceContext, winit::event_loop::EventLoop<()>), ContextCreationError> {
-        let event_loop = EventLoop::new();
-        Ok((InterfaceContext::new(Some(&event_loop)), event_loop))
-    }
-}
-
 pub struct InterfaceContext {
-    window: LedgeWindow,
-    vulkan_instance: LedgeVulkanInstance,
+    pub window: LedgeWindow,
+    pub vulkan_instance: LedgeVulkanInstance,
 }
 
 impl InterfaceContext {
@@ -99,14 +76,14 @@ impl InterfaceContext {
 
     // The main game loop where quite literally everything happens, once this is run there is no going back, this function hijacks the thread.
     pub fn run(mut self) {
-        let (_, tex_future) = {
-            ImmutableImage::from_iter(
-                [0,0,0,0].to_vec().iter().cloned(),
-                Dimensions::Dim2d {width: 1, height: 1},
-                Format::R8G8B8A8Srgb,
-                self.vulkan_instance.queue.clone(),
-            ).unwrap()
-        };
+        // let (_, tex_future) = {
+        //     ImmutableImage::from_iter(
+        //         [0,0,0,0].to_vec().iter().cloned(),
+        //         Dimensions::Dim2d {width: 1, height: 1},
+        //         Format::R8G8B8A8Srgb,
+        //         self.vulkan_instance.queue.clone(),
+        //     ).unwrap()
+        // };
 
         // let handler = self.window.event_loop.take().unwrap();
         
