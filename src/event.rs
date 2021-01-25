@@ -6,6 +6,7 @@ use winit::event::{Event, WindowEvent};
 use vulkano::image::{Dimensions, ImmutableImage};
 use vulkano::format::Format;
 use vulkano::sync::GpuFuture;
+use crate::error::*;
 
 pub fn run<S: 'static>(mut ctx: Interface, event_loop: EventLoop<()>, mut state: S) -> !
 where
@@ -16,7 +17,7 @@ where
             [0,0,0,0].to_vec().iter().cloned(),
             Dimensions::Dim2d {width: 1, height: 1},
             Format::R8G8B8A8Srgb,
-            ctx.graphics_ctx.vulkan_instance.queue.clone(),
+            ctx.graphics_ctx.queue.clone(),
         ).unwrap()
     };
 

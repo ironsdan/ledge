@@ -6,12 +6,16 @@ mod graphics;
 mod animation;
 mod input;
 mod interface;
+mod error;
+mod conf;
 
 use event::*;
 use interface::*;
+use error::*;
+use conf::*;
 
 fn main() {
-    let (ctx, event_loop) = InterfaceBuilder::new().build().unwrap();
+    let (ctx, event_loop) = InterfaceBuilder::new("test", "Dan").build().unwrap();
 
     let game = Game {};
 
