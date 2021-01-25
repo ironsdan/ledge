@@ -1324,7 +1324,6 @@ name = "winit_vulkan_anim"
 version = "0.1.0"
 dependencies = [
  "image",
- "png",
  "vulkano",
  "vulkano-shaders",
  "vulkano-win",

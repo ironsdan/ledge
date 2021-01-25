@@ -1,5 +1,5 @@
-use crate::interfacecontext::*;
-use crate::graphics::*;
+use crate::interface::*;
+use crate::graphics::context::*;
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit_input_helper::WinitInputHelper;
 use winit::event::{Event, WindowEvent};
@@ -7,7 +7,7 @@ use vulkano::image::{Dimensions, ImmutableImage};
 use vulkano::format::Format;
 use vulkano::sync::GpuFuture;
 
-pub fn run<S: 'static>(mut ctx: InterfaceContext, event_loop: EventLoop<()>, mut state: S) -> !
+pub fn run<S: 'static>(mut ctx: Interface, event_loop: EventLoop<()>, mut state: S) -> !
 where
     S: EventHandler,
 {
@@ -16,7 +16,7 @@ where
             [0,0,0,0].to_vec().iter().cloned(),
             Dimensions::Dim2d {width: 1, height: 1},
             Format::R8G8B8A8Srgb,
-            ctx.vulkan_instance.queue.clone(),
+            ctx.graphics_ctx.vulkan_instance.queue.clone(),
         ).unwrap()
     };
 
@@ -47,7 +47,7 @@ where
                 // self.collision_world.step(timestep);
             }
             Event::RedrawRequested(_) => {
-                ctx.draw(&mut previous_frame_end, &mut recreate_swapchain, &mut frame_num);
+                // ctx.draw(&mut previous_frame_end, &mut recreate_swapchain, &mut frame_num);
             }
             Event::RedrawEventsCleared => {
                 // print!("Cleared: ");

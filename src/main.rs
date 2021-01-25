@@ -5,13 +5,13 @@ mod event;
 mod graphics;
 mod animation;
 mod input;
-mod interfacecontext;
+mod interface;
 
 use event::*;
-use interfacecontext::*;
+use interface::*;
 
 fn main() {
-    let (ctx, event_loop) = ContextBuilder::new().build().unwrap();
+    let (ctx, event_loop) = InterfaceBuilder::new().build().unwrap();
 
     let game = Game {};
 

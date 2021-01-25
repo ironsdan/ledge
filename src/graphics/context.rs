@@ -33,12 +33,12 @@ use crate::lib::*;
 use crate::sprite::*;
 use crate::animation::*;
 
-pub struct InterfaceContext {
+pub struct GraphicsContext {
     pub window: LedgeWindow,
     pub vulkan_instance: LedgeVulkanInstance,
 }
 
-impl InterfaceContext {
+impl GraphicsContext {
     pub fn new(event_loop: Option<&winit::event_loop::EventLoop<()>>) -> Self{
         let window = LedgeWindow::new();
         let vulkan_instance = LedgeVulkanInstance::new(event_loop.as_ref().unwrap(), window.size);
