@@ -133,20 +133,6 @@ pub fn convert_to_screen_space(size: [u32;2], dimensions: [u32; 2]) -> [f32; 2] 
     return screen_size;
 }
 
-pub mod vs {
-    vulkano_shaders::shader! {
-        ty: "vertex",
-        path: "src/shader.vert"
-    }
-}
-
-pub mod fs {
-    vulkano_shaders::shader! {
-        ty: "fragment",
-        path: "src/shader.frag"
-    }
-}
-
 pub enum MovementInput {
     UpPress,
     UpRelease,

@@ -33,6 +33,7 @@ use crate::lib::*;
 use crate::sprite::*;
 use crate::animation::*;
 use crate::conf::*;
+use crate::graphics::{vs, fs};
 
 pub struct GraphicsContext {
     pub queue: std::sync::Arc<vulkano::device::Queue>,

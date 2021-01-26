@@ -9,10 +9,11 @@ pub struct InterfaceBuilder {
 
 impl InterfaceBuilder {
     pub fn new(game_name: &str, author: &str) -> Self {
+        let configuration = Conf::new(game_name);
         Self {
             game_name: game_name.to_string(),
             author: author.to_string(),
-            configuration: Conf::default(),
+            configuration: configuration,
         }
     }
 
@@ -36,16 +37,6 @@ pub struct Interface {
 }
 
 impl Interface {
-    // pub fn new(event_loop: &winit::event_loop::EventLoop<()>) -> Self {
-    //     Self {
-    //         graphics_ctx: crate::graphics::context::GraphicsContext::new(Some(event_loop)),
-    //     }
-    // }
-
-    // pub fn new() -> Self {
-
-    // }
-
     pub fn from_conf(instance_conf: Conf) -> GameResult<(Self, winit::event_loop::EventLoop<()>)> {
         let event_loop = winit::event_loop::EventLoop::new();
         let interface_ctx = Interface {
@@ -53,5 +44,9 @@ impl Interface {
         };
 
         Ok((interface_ctx, event_loop))
+    }
+
+    pub fn process_event(&mut self, event: &winit::event::Event<()>) {
+
     }
 }

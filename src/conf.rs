@@ -59,8 +59,10 @@ pub struct Conf {
 }
 
 impl Conf {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(title: &str) -> Self {
+        let mut conf = Self::default();
+        conf.window_setup.title = title.to_string();
+        conf
     }
 
     pub fn default() -> Self {

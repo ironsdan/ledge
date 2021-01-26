@@ -1,5 +1,4 @@
 mod lib;
-mod entity;
 mod sprite;
 mod event;
 mod graphics;
@@ -8,7 +7,9 @@ mod input;
 mod interface;
 mod error;
 mod conf;
+mod game;
 
+use game::*;
 use event::*;
 use interface::*;
 use error::*;
@@ -21,15 +22,3 @@ fn main() {
     event::run(ctx, event_loop, game);
 }
 
-struct Game {
-
-}
-
-impl EventHandler for Game {
-    fn update() -> GameResult {
-        return Ok(());
-    }
-    fn draw() -> GameResult {
-        return Ok(());
-    }
-}

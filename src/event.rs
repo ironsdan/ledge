@@ -8,28 +8,17 @@ use vulkano::format::Format;
 use vulkano::sync::GpuFuture;
 use crate::error::*;
 
-pub fn run<S: 'static>(mut ctx: Interface, event_loop: EventLoop<()>, mut state: S) -> !
+pub fn run<S: 'static>(mut interface: Interface, event_loop: EventLoop<()>, mut game_state: S) -> !
 where
     S: EventHandler,
 {
-    let (_, tex_future) = {
-        ImmutableImage::from_iter(
-            [0,0,0,0].to_vec().iter().cloned(),
-            Dimensions::Dim2d {width: 1, height: 1},
-            Format::R8G8B8A8Srgb,
-            ctx.graphics_ctx.queue.clone(),
-        ).unwrap()
-    };
-
-    let mut recreate_swapchain = false;
-    let mut previous_frame_end = Some(tex_future.boxed());
-
-    let input = WinitInputHelper::new();
-
-    let mut frame_num = 0;
     event_loop.run(move |event, _, control_flow| {
 
         // Execute Input processing for the context.
+
+        let interface = &mut interface;
+
+        interface.process_event(&event);
         
         match event {
             Event::WindowEvent {
@@ -42,13 +31,16 @@ where
                 event: WindowEvent::Resized(_),
                 ..
             } => {
-                recreate_swapchain = true;
             }
             Event::MainEventsCleared => {
-                // self.collision_world.step(timestep);
+                if let Err(e) = game_state.update(interface) {
+                    println!("Error on EventHandler::update(): {:?}", e);
+                }
             }
             Event::RedrawRequested(_) => {
-                // ctx.draw(&mut previous_frame_end, &mut recreate_swapchain, &mut frame_num);
+                if let Err(e) = game_state.draw(interface) {
+                    println!("Error on EventHandler::update(): {:?}", e);
+                }
             }
             Event::RedrawEventsCleared => {
                 // print!("Cleared: ");
@@ -62,6 +54,6 @@ where
 }
 
 pub trait EventHandler {
-    fn update() -> GameResult;
-    fn draw() -> GameResult;
+    fn update(&mut self, interface: &mut Interface) -> GameResult;
+    fn draw(&self, interface: &mut Interface) -> GameResult;
 }
