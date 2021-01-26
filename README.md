@@ -17,8 +17,8 @@ Project is created with:
 This section will be finished once the graphics context is finalized.
 
 ```
-$ git clone <this repo>
-$ cd ../ledge
+$ git clone <this repo> ledge
+$ cd ./ledge
 $ cargo build
 $ cargo run
 ```
