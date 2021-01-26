@@ -1,4 +1,3 @@
-use winit::event_loop::EventLoop;
 use crate::error::*;
 use crate::conf::*;
 

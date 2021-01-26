@@ -12,7 +12,6 @@ mod conf;
 use event::*;
 use interface::*;
 use error::*;
-use conf::*;
 
 fn main() {
     let (ctx, event_loop) = InterfaceBuilder::new("test", "Dan").build().unwrap();
