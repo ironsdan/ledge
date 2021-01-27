@@ -1,11 +1,6 @@
 use crate::interface::*;
-use crate::graphics::context::*;
 use winit::event_loop::{ControlFlow, EventLoop};
-use winit_input_helper::WinitInputHelper;
 use winit::event::{Event, WindowEvent};
-use vulkano::image::{Dimensions, ImmutableImage};
-use vulkano::format::Format;
-use vulkano::sync::GpuFuture;
 use crate::error::*;
 
 pub fn run<S: 'static>(mut interface: Interface, event_loop: EventLoop<()>, mut game_state: S) -> !

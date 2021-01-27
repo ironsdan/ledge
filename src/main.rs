@@ -21,4 +21,3 @@ fn main() {
 
     event::run(ctx, event_loop, game);
 }
-

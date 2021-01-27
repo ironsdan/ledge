@@ -33,14 +33,16 @@ impl InterfaceBuilder {
 }
 
 pub struct Interface {
-    pub(crate) graphics_ctx: crate::graphics::context::GraphicsContext,
+    pub(crate) graphics_interface: crate::graphics::context::GraphicsContext,
+    pub(crate) keyboard_interface: crate::input::keyboard::KeyboardInterface, 
 }
 
 impl Interface {
     pub fn from_conf(instance_conf: Conf) -> GameResult<(Self, winit::event_loop::EventLoop<()>)> {
         let event_loop = winit::event_loop::EventLoop::new();
         let interface_ctx = Interface {
-            graphics_ctx: crate::graphics::context::GraphicsContext::new(&event_loop, instance_conf),
+            graphics_interface: crate::graphics::context::GraphicsContext::new(&event_loop, instance_conf),
+            keyboard_interface: crate::input::keyboard::KeyboardInterface::new(),
         };
 
         Ok((interface_ctx, event_loop))
