@@ -98,8 +98,4 @@ impl StateChangeRule {
 
 #[derive(Clone, PartialEq)]
 pub enum PhysicalInput {
-    W,
-    A,
-    S,
-    D
 }
