@@ -2,6 +2,8 @@ use crate::interface::*;
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::event::{Event, WindowEvent};
 use crate::error::*;
+use crate::sprite::Sprite;
+use crate::graphics::DrawSettings;
 
 pub fn run<S: 'static>(mut interface: Interface, event_loop: EventLoop<()>, mut game_state: S) -> !
 where

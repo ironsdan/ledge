@@ -20,7 +20,7 @@ use winit::{dpi::Size,dpi::PhysicalSize};
 
 // use png;
 use image::ImageFormat;
-// use std::io::Cursor;
+use std::io::Cursor;
 use std::sync::Arc;
 // use std::rc::Rc;
 // use std::cell::RefCell;
@@ -45,16 +45,14 @@ pub struct GraphicsContext {
     pub pipeline: std::sync::Arc<dyn vulkano::pipeline::GraphicsPipelineAbstract + std::marker::Send + std::marker::Sync>,
     pub previous_frame_end: std::option::Option<std::boxed::Box<dyn vulkano::sync::GpuFuture>>, 
     pub recreate_swapchain: bool, 
-    pub frame_num: u32
+    pub clear_value: std::vec::Vec<vulkano::format::ClearValue>,
+    pub command_buffer: Option<vulkano::command_buffer::AutoCommandBufferBuilder>,
+    pub acquire_future: Option<vulkano::swapchain::SwapchainAcquireFuture<winit::window::Window>>,
+    pub image_num: Option<usize>,
+    pub layout: std::sync::Arc<vulkano::descriptor::descriptor_set::UnsafeDescriptorSetLayout>,
 }
 
 impl GraphicsContext {
-    // pub fn new(event_loop: Option<&winit::event_loop::EventLoop<()>>) -> Self{
-    //     let vulkan_instance = LedgeVulkanInstance::new(event_loop.as_ref().unwrap(), window.size);
-    //     Self {
-    //         vulkan_instance: vulkan_instance,
-    //     }
-    // }
     pub fn new(event_loop: &winit::event_loop::EventLoop<()>, conf: Conf) -> Self {
         let required_extensions = vulkano_win::required_extensions();
         let instance = Instance::new(None, &required_extensions, None).unwrap();
@@ -90,8 +88,8 @@ impl GraphicsContext {
             physical.supported_features(),
             &device_ext,
             [(queue_family, 0.5)].iter().cloned(),
-        )
-        .unwrap();
+        ).unwrap();
+        
         let queue = queues.next().unwrap(); 
 
         let (swapchain, images) = {
@@ -194,6 +192,8 @@ impl GraphicsContext {
             ).unwrap()
         };
 
+        let layout = pipeline.clone().descriptor_set_layout(0).unwrap().clone();
+
         Self {
             queue: queue,
             surface: surface,
@@ -206,8 +206,12 @@ impl GraphicsContext {
             buffer_pool: buffer_pool,
             pipeline: pipeline,
             previous_frame_end: Some(empty_future.boxed()),
-            recreate_swapchain: true,
-            frame_num: 0,
+            recreate_swapchain: false,
+            clear_value: vec![[0.2, 0.2, 0.2, 1.0].into()],
+            command_buffer: None,
+            acquire_future: None,
+            image_num: None,
+            layout: layout,
         }
     }
 
@@ -237,63 +241,9 @@ impl GraphicsContext {
         return sprite;
     }
 
-    // The main game loop where quite literally everything happens, once this is run there is no going back, this function hijacks the thread.
-    pub fn run(mut self) {
-        // let (_, tex_future) = {
-        //     ImmutableImage::from_iter(
-        //         [0,0,0,0].to_vec().iter().cloned(),
-        //         Dimensions::Dim2d {width: 1, height: 1},
-        //         Format::R8G8B8A8Srgb,
-        //         self.vulkan_instance.queue.clone(),
-        //     ).unwrap()
-        // };
-
-        // let handler = self.window.event_loop.take().unwrap();
-        
-        // let mut recreate_swapchain = false;
-        // let mut previous_frame_end = Some(tex_future.boxed());
-
-        // let input = WinitInputHelper::new();
-        // // let physical_input = InputHelper::new(self.player.unwrap());
-        // // let timestep: f32 = 0.0;
-        // let mut frame_num = 0;
-        // handler.run(move |event, _, control_flow| {
-        //     // physical_input.execute_input(input.clone(), &event);
-            
-        //     match event {
-        //         Event::WindowEvent {
-        //             event: WindowEvent::CloseRequested,
-        //             ..
-        //         } => {
-        //             *control_flow = ControlFlow::Exit;
-        //         }
-        //         Event::WindowEvent {
-        //             event: WindowEvent::Resized(_),
-        //             ..
-        //         } => {
-        //             recreate_swapchain = true;
-        //         }
-        //         Event::MainEventsCleared => {
-        //             // self.collision_world.step(timestep);
-        //         }
-        //         Event::RedrawRequested(_) => {
-        //             self.draw(&mut previous_frame_end, &mut recreate_swapchain, &mut frame_num);
-        //         }
-        //         Event::RedrawEventsCleared => {
-        //             // print!("Cleared: ");
-        //         }
-        //         _ => {
-        //             // print!("Other: ");
-        //         },
-        //     }
-        //     // println!("{:?}", start_entire.elapsed().unwrap());
-        // });
-    }
-
-    // Uses Vulkano magic to draw the selected sprites to the screen.
-    pub fn draw(&mut self) {
+    pub fn begin_frame(&mut self, previous_frame_end: &mut std::option::Option<std::boxed::Box<dyn vulkano::sync::GpuFuture>>) {
         // let start = SystemTime::now();
-        self.previous_frame_end.as_mut().unwrap().cleanup_finished();
+        previous_frame_end.as_mut().unwrap().cleanup_finished();
 
         if self.recreate_swapchain {
             let dimensions: [u32; 2] = self.surface.window().inner_size().into();
@@ -326,56 +276,65 @@ impl GraphicsContext {
         if suboptimal {
             self.recreate_swapchain = true;
         }
-        let layout = self.pipeline.descriptor_set_layout(0).unwrap();
-        // let mut sprites_to_render: Vec<(std::sync::Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>, vulkano::buffer::cpu_pool::CpuBufferPoolChunk<Vertex, std::sync::Arc<_>>)> = Vec::new();
+
+        self.image_num = Some(image_num);
+        self.acquire_future = Some(acquire_future);
 
         let mut builder =
             AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queue.family())
                 .unwrap();
 
-        let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
-        builder.begin_render_pass(self.framebuffers[image_num].clone(), false, clear_values).unwrap();
-                
-        // for sprite in sprites_to_render.iter() {
-        //     let set = Arc::new(
-        //         PersistentDescriptorSet::start(layout.clone())
-        //             .add_sampled_image(sprite.0.clone(), self.sampler.clone())
-        //             .unwrap()
-        //             .build()
-        //             .unwrap(),
-        //     );
-        //     builder.draw(
-        //         self.pipeline.clone(),
-        //         &self.dynamic_state,
-        //         vec!(Arc::new(sprite.1.clone())),
-        //         set.clone(),
-        //         (),
-        //     ).unwrap();
-        // }
-        builder.end_render_pass().unwrap();
-        let command_buffer = builder.build().unwrap();
+        self.command_buffer = Some(builder);
 
-        let future = self.previous_frame_end
+        let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
+        self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[image_num].clone(), false, clear_values).unwrap();
+                        
+    }
+
+    // Uses Vulkano magic to draw the selected sprites to the screen.
+    pub fn draw(&mut self, sprite: Sprite) {
+        let data = &sprite.rect;
+        let vertex_buffer = self.buffer_pool.chunk(data.vertices.to_vec()).unwrap();
+        let set = Arc::new(
+            PersistentDescriptorSet::start(self.layout.clone())
+                .add_sampled_image(sprite.texture.clone(), self.sampler.clone())
+                .unwrap()
+                .build()
+                .unwrap(),
+        );
+        self.command_buffer.as_mut().unwrap().draw(
+            self.pipeline.clone(),
+            &self.dynamic_state,
+            vec!(Arc::new(vertex_buffer.clone())),
+            set.clone(),
+            (),
+        ).unwrap();
+    }
+
+    pub fn present(&mut self, previous_frame_end: &mut std::option::Option<std::boxed::Box<dyn vulkano::sync::GpuFuture>>) {
+        self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
+        let command_buffer = self.command_buffer.take().unwrap().build().unwrap();
+
+        let future = previous_frame_end
             .take()
             .unwrap()
-            .join(acquire_future)
+            .join(self.acquire_future.take().unwrap())
             .then_execute(self.queue.clone(), command_buffer)
             .unwrap()
-            .then_swapchain_present(self.queue.clone(), self.swapchain.clone(), image_num)
+            .then_swapchain_present(self.queue.clone(), self.swapchain.clone(), self.image_num.unwrap())
             .then_signal_fence_and_flush();
 
         match future {
             Ok(future) => {
-                self.previous_frame_end = Some(future.boxed());
-                self.frame_num = self.frame_num + 1;
+                *previous_frame_end = Some(future.boxed());
             }
             Err(FlushError::OutOfDate) => {
                 self.recreate_swapchain = true;
-                self.previous_frame_end = Some(sync::now(self.device.clone()).boxed());
+                *previous_frame_end = Some(sync::now(self.device.clone()).boxed());
             }
             Err(e) => {
                 println!("Failed to flush future: {:?}", e);
-                self.previous_frame_end = Some(sync::now(self.device.clone()).boxed());
+                *previous_frame_end = Some(sync::now(self.device.clone()).boxed());
             }
         };
         
@@ -383,19 +342,4 @@ impl GraphicsContext {
         // print!("Redraw: ");
         self.surface.window().request_redraw();
     }
-}
-
-/***********************
- LedgeVulkanInstance
- Auhtor: Daniel Irons
- Purpose: Holds settings and details about the Vulkan Instance, 
-          used to simplify creating a new instance.
-************************/
-pub struct LedgeVulkanInstance {
-
-
-}
-
-impl LedgeVulkanInstance {
-    
 }
