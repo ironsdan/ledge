@@ -1,5 +1,6 @@
 use crate::lib::*;
 use std::sync::Arc;
+use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use crate::animation::*;
 
 #[derive(Clone, PartialEq)]
@@ -11,6 +12,7 @@ pub struct Sprite {
     pub screen_size: [f32; 2],
     pub matrix_dims: [u32; 2],
     pub animation_machine: Option<AnimationStateMachine>, 
+    pub set: std::option::Option<std::sync::Arc<vulkano::descriptor::descriptor_set::PersistentDescriptorSet<(((), vulkano::descriptor::descriptor_set::PersistentDescriptorSetImg<std::sync::Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>>), vulkano::descriptor::descriptor_set::PersistentDescriptorSetSampler)>>>,
 }
 
 impl Sprite {
@@ -33,6 +35,7 @@ impl Sprite {
             screen_size: screen_size,
             matrix_dims: matrix_dims,
             animation_machine: animation_machine,
+            set: None,
         }
     }
 
@@ -72,5 +75,18 @@ impl Sprite {
         for i in 0..self.rect.vertices.len() {
             self.rect.vertices[i].tex_coords = texture_coord[i];
         }
+    }
+
+    pub fn draw(&mut self, graphics_ctx: &mut crate::graphics::context::GraphicsContext) {
+        
+        self.set = Some(Arc::new(
+            PersistentDescriptorSet::start(graphics_ctx.layout.clone())
+                .add_sampled_image(self.texture.clone(), graphics_ctx.sampler.clone())
+                .unwrap()
+                .build()
+                .unwrap(),
+        ));
+
+        graphics_ctx.draw(&self, self.set.as_ref().unwrap());
     }
 }

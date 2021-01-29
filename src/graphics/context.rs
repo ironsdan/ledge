@@ -1,6 +1,5 @@
 use vulkano::buffer::CpuBufferPool;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
-use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::device::{Device, DeviceExtensions};
 use vulkano::format::Format;
 use vulkano::framebuffer::{Subpass, RenderPassAbstract};
@@ -12,6 +11,7 @@ use vulkano::swapchain::{
     self, AcquireError, ColorSpace, FullscreenExclusive, PresentMode, SurfaceTransform, Swapchain,
     SwapchainCreationError,
 };
+use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::sync::{self, FlushError, GpuFuture};
 use vulkano_win::VkSurfaceBuild;
 
@@ -22,6 +22,7 @@ use winit::{dpi::Size,dpi::PhysicalSize};
 use image::ImageFormat;
 use std::io::Cursor;
 use std::sync::Arc;
+use crate::graphics::Drawable;
 // use std::rc::Rc;
 // use std::cell::RefCell;
 // use std::time::SystemTime;
@@ -292,16 +293,10 @@ impl GraphicsContext {
     }
 
     // Uses Vulkano magic to draw the selected sprites to the screen.
-    pub fn draw(&mut self, sprite: Sprite) {
+    pub fn draw(&mut self, sprite: &Sprite, set: &std::sync::Arc<vulkano::descriptor::descriptor_set::PersistentDescriptorSet<(((), vulkano::descriptor::descriptor_set::PersistentDescriptorSetImg<std::sync::Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>>), vulkano::descriptor::descriptor_set::PersistentDescriptorSetSampler)>>) {
         let data = &sprite.rect;
         let vertex_buffer = self.buffer_pool.chunk(data.vertices.to_vec()).unwrap();
-        let set = Arc::new(
-            PersistentDescriptorSet::start(self.layout.clone())
-                .add_sampled_image(sprite.texture.clone(), self.sampler.clone())
-                .unwrap()
-                .build()
-                .unwrap(),
-        );
+
         self.command_buffer.as_mut().unwrap().draw(
             self.pipeline.clone(),
             &self.dynamic_state,
