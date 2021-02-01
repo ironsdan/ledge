@@ -77,16 +77,16 @@ impl Sprite {
         }
     }
 
-    pub fn draw(&mut self, graphics_ctx: &mut crate::graphics::context::GraphicsContext) {
+    pub fn draw(self, graphics_ctx: &mut crate::graphics::context::GraphicsContext) {
         
-        self.set = Some(Arc::new(
-            PersistentDescriptorSet::start(graphics_ctx.layout.clone())
-                .add_sampled_image(self.texture.clone(), graphics_ctx.sampler.clone())
-                .unwrap()
-                .build()
-                .unwrap(),
-        ));
+        // self.set = Some(Arc::new(
+        //     PersistentDescriptorSet::start(graphics_ctx.layout.clone())
+        //         .add_sampled_image(self.texture.clone(), graphics_ctx.sampler.clone())
+        //         .unwrap()
+        //         .build()
+        //         .unwrap(),
+        // ));
 
-        graphics_ctx.draw(&self, self.set.as_ref().unwrap());
+        graphics_ctx.draw(self);
     }
 }

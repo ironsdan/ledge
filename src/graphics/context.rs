@@ -51,6 +51,7 @@ pub struct GraphicsContext {
     pub acquire_future: Option<vulkano::swapchain::SwapchainAcquireFuture<winit::window::Window>>,
     pub image_num: Option<usize>,
     pub layout: std::sync::Arc<vulkano::descriptor::descriptor_set::UnsafeDescriptorSetLayout>,
+    pub sprites: Vec<Sprite>,
 }
 
 impl GraphicsContext {
@@ -213,6 +214,7 @@ impl GraphicsContext {
             acquire_future: None,
             image_num: None,
             layout: layout,
+            sprites: Vec::new(),
         }
     }
 
@@ -242,7 +244,11 @@ impl GraphicsContext {
         return sprite;
     }
 
-    pub fn begin_frame(&mut self, previous_frame_end: &mut std::option::Option<std::boxed::Box<dyn vulkano::sync::GpuFuture>>) {
+    pub fn draw(&mut self, sprite: Sprite) {
+        self.sprites.push(sprite);
+    }
+
+    pub fn present(&mut self, previous_frame_end: &mut std::option::Option<std::boxed::Box<dyn vulkano::sync::GpuFuture>>) {
         // let start = SystemTime::now();
         previous_frame_end.as_mut().unwrap().cleanup_finished();
 
@@ -277,46 +283,50 @@ impl GraphicsContext {
         if suboptimal {
             self.recreate_swapchain = true;
         }
+        let layout = self.pipeline.descriptor_set_layout(0).unwrap();
+        let mut sprites_to_render: Vec<(std::sync::Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>, vulkano::buffer::cpu_pool::CpuBufferPoolChunk<Vertex, std::sync::Arc<_>>)> = Vec::new();
 
-        self.image_num = Some(image_num);
-        self.acquire_future = Some(acquire_future);
+        for sprite in self.sprites.iter() {
+            let data = &sprite.rect;
+            // Allocate a new chunk from buffer_pool
+
+            let vertex_buffer = self.buffer_pool.chunk(data.vertices.to_vec()).unwrap();
+            sprites_to_render.push((sprite.texture.clone(), vertex_buffer));    
+        }
 
         let mut builder =
             AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queue.family())
                 .unwrap();
 
-        self.command_buffer = Some(builder);
-
         let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
-        self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[image_num].clone(), false, clear_values).unwrap();
-                        
-    }
-
-    // Uses Vulkano magic to draw the selected sprites to the screen.
-    pub fn draw(&mut self, sprite: &Sprite, set: &std::sync::Arc<vulkano::descriptor::descriptor_set::PersistentDescriptorSet<(((), vulkano::descriptor::descriptor_set::PersistentDescriptorSetImg<std::sync::Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>>), vulkano::descriptor::descriptor_set::PersistentDescriptorSetSampler)>>) {
-        let data = &sprite.rect;
-        let vertex_buffer = self.buffer_pool.chunk(data.vertices.to_vec()).unwrap();
-
-        self.command_buffer.as_mut().unwrap().draw(
-            self.pipeline.clone(),
-            &self.dynamic_state,
-            vec!(Arc::new(vertex_buffer.clone())),
-            set.clone(),
-            (),
-        ).unwrap();
-    }
-
-    pub fn present(&mut self, previous_frame_end: &mut std::option::Option<std::boxed::Box<dyn vulkano::sync::GpuFuture>>) {
-        self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
-        let command_buffer = self.command_buffer.take().unwrap().build().unwrap();
+        builder.begin_render_pass(self.framebuffers[image_num].clone(), false, clear_values).unwrap();
+                
+        for sprite in sprites_to_render.iter() {
+            let set = Arc::new(
+                PersistentDescriptorSet::start(layout.clone())
+                    .add_sampled_image(sprite.0.clone(), self.sampler.clone())
+                    .unwrap()
+                    .build()
+                    .unwrap(),
+            );
+            builder.draw(
+                self.pipeline.clone(),
+                &self.dynamic_state,
+                vec!(Arc::new(sprite.1.clone())),
+                set.clone(),
+                (),
+            ).unwrap();
+        }
+        builder.end_render_pass().unwrap();
+        let command_buffer = builder.build().unwrap();
 
         let future = previous_frame_end
             .take()
             .unwrap()
-            .join(self.acquire_future.take().unwrap())
+            .join(acquire_future)
             .then_execute(self.queue.clone(), command_buffer)
             .unwrap()
-            .then_swapchain_present(self.queue.clone(), self.swapchain.clone(), self.image_num.unwrap())
+            .then_swapchain_present(self.queue.clone(), self.swapchain.clone(), image_num)
             .then_signal_fence_and_flush();
 
         match future {
@@ -337,4 +347,100 @@ impl GraphicsContext {
         // print!("Redraw: ");
         self.surface.window().request_redraw();
     }
+
+    // pub fn begin_frame(&mut self, previous_frame_end: &mut std::option::Option<std::boxed::Box<dyn vulkano::sync::GpuFuture>>) {
+    //     // let start = SystemTime::now();
+    //     previous_frame_end.as_mut().unwrap().cleanup_finished();
+
+    //     if self.recreate_swapchain {
+    //         let dimensions: [u32; 2] = self.surface.window().inner_size().into();
+    //         let (new_swapchain, new_images) =
+    //             match self.swapchain.recreate_with_dimensions(dimensions) {
+    //                 Ok(r) => r,
+    //                 Err(SwapchainCreationError::UnsupportedDimensions) => return,
+    //                 Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
+    //             };
+
+    //         self.swapchain = new_swapchain;
+    //         self.framebuffers = window_size_dependent_setup(
+    //             &new_images,
+    //             self.render_pass.clone(),
+    //             &mut self.dynamic_state,
+    //         );
+    //         self.recreate_swapchain = false;
+    //     }
+
+    //     let (image_num, suboptimal, acquire_future) =
+    //         match swapchain::acquire_next_image(self.swapchain.clone(), None) {
+    //             Ok(r) => r,
+    //             Err(AcquireError::OutOfDate) => {
+    //                 self.recreate_swapchain = true;
+    //                 return;
+    //             }
+    //             Err(e) => panic!("Failed to acquire next image: {:?}", e),
+    //         };
+
+    //     if suboptimal {
+    //         self.recreate_swapchain = true;
+    //     }
+
+    //     self.image_num = Some(image_num);
+    //     self.acquire_future = Some(acquire_future);
+
+    //     let mut builder =
+    //         AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queue.family())
+    //             .unwrap();
+
+    //     self.command_buffer = Some(builder);
+
+    //     let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
+    //     self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[image_num].clone(), false, clear_values).unwrap();
+                        
+    // }
+
+    // // Uses Vulkano magic to draw the selected sprites to the screen.
+    // pub fn draw(&mut self, sprite: &Sprite, set: &std::sync::Arc<vulkano::descriptor::descriptor_set::PersistentDescriptorSet<(((), vulkano::descriptor::descriptor_set::PersistentDescriptorSetImg<std::sync::Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>>), vulkano::descriptor::descriptor_set::PersistentDescriptorSetSampler)>>) {
+    //     let data = &sprite.rect;
+    //     let vertex_buffer = self.buffer_pool.chunk(data.vertices.to_vec()).unwrap();
+
+    //     self.command_buffer.as_mut().unwrap().draw(
+    //         self.pipeline.clone(),
+    //         &self.dynamic_state,
+    //         vec!(Arc::new(vertex_buffer.clone())),
+    //         set.clone(),
+    //         (),
+    //     ).unwrap();
+    // }
+
+    // pub fn present(&mut self, previous_frame_end: &mut std::option::Option<std::boxed::Box<dyn vulkano::sync::GpuFuture>>) {
+    //     self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
+    //     let command_buffer = self.command_buffer.take().unwrap().build().unwrap();
+
+    //     let future = previous_frame_end
+    //         .take()
+    //         .unwrap()
+    //         .join(self.acquire_future.take().unwrap())
+    //         .then_execute(self.queue.clone(), command_buffer)
+    //         .unwrap()
+    //         .then_swapchain_present(self.queue.clone(), self.swapchain.clone(), self.image_num.unwrap())
+    //         .then_signal_fence_and_flush();
+
+    //     match future {
+    //         Ok(future) => {
+    //             *previous_frame_end = Some(future.boxed());
+    //         }
+    //         Err(FlushError::OutOfDate) => {
+    //             self.recreate_swapchain = true;
+    //             *previous_frame_end = Some(sync::now(self.device.clone()).boxed());
+    //         }
+    //         Err(e) => {
+    //             println!("Failed to flush future: {:?}", e);
+    //             *previous_frame_end = Some(sync::now(self.device.clone()).boxed());
+    //         }
+    //     };
+        
+    //     // timestep = start.elapsed().unwrap().as_millis() as f32;
+    //     // print!("Redraw: ");
+    //     self.surface.window().request_redraw();
+    // }
 }
