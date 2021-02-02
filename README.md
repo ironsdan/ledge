@@ -5,20 +5,19 @@
 * [Setup](#setup)
 
 ## General info
-This project is a small game framework written in Rust using winit and vulkano. The goal is to get it to a point where it can be used to help develop 2D platformer PvP/PvE games, stretch goals include making it useful for game types outside this type of game.
+This project is simple Lorem ipsum dolor generator.
 	
 ## Technologies
 Project is created with:
-* Rust: *
-* Winit: 0.22
-* Vulkano: 0.19
+* Lorem version: 12.3
+* Ipsum version: 2.33
+* Ament library version: 999
 	
 ## Setup
-This section will be finished once the graphics context is finalized.
+To run this project, install it locally using npm:
 
 ```
-$ git clone <this repo> ledge
-$ cd ./ledge
-$ cargo build
-$ cargo run
+$ cd ../lorem
+$ npm install
+$ npm start
 ```
