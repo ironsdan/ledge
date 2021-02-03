@@ -289,7 +289,6 @@ impl GraphicsContext {
 
         let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
         self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[image_num].clone(), false, clear_values).unwrap();
-                        
     }
 
     // Uses Vulkano magic to draw the selected sprites to the screen.

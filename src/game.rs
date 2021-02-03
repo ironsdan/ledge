@@ -96,20 +96,24 @@ impl EventHandler for Game {
         };
 
         let mut sprite_test = Sprite::new("Dan".to_string(), texture.clone(), [0.0, 0.0], [16, 22], [1, 1], None);
-        let mut sprite_test2 = Sprite::new("Dan".to_string(), rock_texture.clone(), [0.1, 0.1], [16, 22], [1, 1], None);
+        let mut sprite_test2 = Sprite::new("Dan".to_string(), rock_texture.clone(), [0.1, 0.1], [200, 100], [1, 1], None);
         // let mut sprite_test3 = Sprite::new("Dan".to_string(), back_texture.clone(), [-0.1, 0.1], [16, 22], [1, 1], None);
         // let mut sprite_test4 = Sprite::new("Dan".to_string(), poke_texture.clone(), [0.1, -0.1], [16, 22], [1, 1], None);
         // let mut sprite_test5 = Sprite::new("Dan".to_string(), test_texture.clone(), [-0.1, -0.1], [16, 22], [1, 1], None);
-        let mut previous_frame_end = Some(empty_future.boxed());
-
+        let mut previous_frame_end = Some(tex_future.boxed());
         interface.graphics_interface.begin_frame(&mut previous_frame_end);
         sprite_test.draw(&mut interface.graphics_interface);
+        interface.graphics_interface.present(&mut previous_frame_end);
+
+        let mut previous_frame_end = Some(rock_tex_future.boxed());
+        interface.graphics_interface.begin_frame(&mut previous_frame_end);
         sprite_test2.draw(&mut interface.graphics_interface);
+        interface.graphics_interface.present(&mut previous_frame_end);
         // sprite_test3.draw(&mut interface.graphics_interface);
         // sprite_test4.draw(&mut interface.graphics_interface);
         // sprite_test5.draw(&mut interface.graphics_interface);
 
-        interface.graphics_interface.present(&mut previous_frame_end);
+        
         return Ok(());
     }
 }
