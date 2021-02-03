@@ -1,7 +1,7 @@
 use crate::lib::*;
 use std::sync::Arc;
-use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use crate::animation::*;
+use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 
 #[derive(Clone, PartialEq)]
 pub struct Sprite {
@@ -11,8 +11,8 @@ pub struct Sprite {
     pub size: [u32; 2],
     pub screen_size: [f32; 2],
     pub matrix_dims: [u32; 2],
-    pub animation_machine: Option<AnimationStateMachine>, 
-    pub set: std::option::Option<std::sync::Arc<vulkano::descriptor::descriptor_set::PersistentDescriptorSet<(((), vulkano::descriptor::descriptor_set::PersistentDescriptorSetImg<std::sync::Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>>), vulkano::descriptor::descriptor_set::PersistentDescriptorSetSampler)>>>,
+    pub animation_machine: Option<AnimationStateMachine>,
+    pub set: Option<std::sync::Arc<vulkano::descriptor::descriptor_set::PersistentDescriptorSet<(((), vulkano::descriptor::descriptor_set::PersistentDescriptorSetImg<std::sync::Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>>), vulkano::descriptor::descriptor_set::PersistentDescriptorSetSampler)>>>,
 }
 
 impl Sprite {
@@ -39,17 +39,24 @@ impl Sprite {
         }
     }
 
-    pub fn update_animation_frame(&mut self, time_elapsed: f32) {
+    pub fn create_set(&mut self, sampler: &std::sync::Arc<vulkano::sampler::Sampler>, layout: &std::sync::Arc<vulkano::descriptor::descriptor_set::UnsafeDescriptorSetLayout>) {
+        let set = Arc::new(
+            PersistentDescriptorSet::start(layout.clone())
+                .add_sampled_image(self.texture.clone(), sampler.clone())
+                .unwrap()
+                .build()
+                .unwrap(),
+        );
+
+        self.set = Some(set);
+    }
+
+    pub fn update_animation_frame(&mut self) {
         let animation_machine = self.animation_machine.as_mut();
         match animation_machine {
             Some(machine) => {
-                let updated_position = machine.current_state.update_frame(time_elapsed);
-                match updated_position {
-                    Some(texture_position) => {
-                        self.update_animation_position(texture_position);
-                    },
-                    None => {}
-                }
+                let new_position = machine.current_state.update();
+                self.update_animation_position(new_position);
             }
             None => {}
         }
@@ -75,18 +82,5 @@ impl Sprite {
         for i in 0..self.rect.vertices.len() {
             self.rect.vertices[i].tex_coords = texture_coord[i];
         }
-    }
-
-    pub fn draw(&mut self, graphics_ctx: &mut crate::graphics::context::GraphicsContext) {
-        
-        self.set = Some(Arc::new(
-            PersistentDescriptorSet::start(graphics_ctx.layout.clone())
-                .add_sampled_image(self.texture.clone(), graphics_ctx.sampler.clone())
-                .unwrap()
-                .build()
-                .unwrap(),
-        ));
-
-        graphics_ctx.draw(&self, self.set.as_ref().unwrap());
     }
 }

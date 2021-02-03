@@ -18,7 +18,6 @@ pub mod fs {
 
 pub trait Drawable {
     fn draw(&self, interface: &mut Interface, draw_settings: DrawSettings);
-
 }
 
 pub struct DrawSettings {}

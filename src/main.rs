@@ -1,23 +1,27 @@
 mod lib;
+// mod entity;
 mod sprite;
-mod event;
+// mod physics;
 mod graphics;
 mod animation;
-mod input;
 mod interface;
-mod error;
 mod conf;
 mod game;
+mod event;
+mod error;
+mod world;
+mod system;
+mod component;
 
-use game::*;
-use event::*;
 use interface::*;
-use error::*;
+use game::*;
 
 fn main() {
-    let (ctx, event_loop) = InterfaceBuilder::new("test", "Dan").build().unwrap();
+    let (interface, event_loop) = InterfaceBuilder::new("test", "Dan").build().unwrap();
 
-    let game = Game {};
+    let game = Game {
+        world: Vec::new()
+    };
 
-    event::run(ctx, event_loop, game);
+    event::run(interface, event_loop, game);
 }

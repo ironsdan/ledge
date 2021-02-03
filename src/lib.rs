@@ -5,7 +5,6 @@ use vulkano::pipeline::viewport::Viewport;
 use winit::window::Window;
 use std::sync::Arc;
 
-
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Rect {
     pub height: f32,
@@ -17,7 +16,7 @@ pub struct Rect {
 
 impl Rect {
     pub fn new(width: f32, height: f32, pos: [f32; 2], texture_coord: [[f32; 2]; 4]) -> Self {
-        println!("pos X: {}, pos Y: {}, height: {}, width: {}", pos[0], pos[1], height, width);
+        // println!("pos X: {}, pos Y: {}, height: {}, width: {}", pos[0], pos[1], height, width);
         Self {
             height: height,
             width: width,
@@ -132,6 +131,8 @@ pub fn convert_to_screen_space(size: [u32;2], dimensions: [u32; 2]) -> [f32; 2] 
     let screen_size = [screen_width, screen_height];
     return screen_size;
 }
+
+
 
 pub enum MovementInput {
     UpPress,
