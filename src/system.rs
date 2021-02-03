@@ -6,8 +6,8 @@ pub trait System<'a> {
 
     // fn running_time(&self) -> RunningTime;
     // fn accessor(&'b self) -> AccessorCow<'a, 'b, Self>;
-    fn setup(&mut self, world: &mut World);
-    fn dispose(self, world: &mut World);
+    // fn setup(&mut self, world: &mut World);
+    // fn dispose(self, world: &mut World);
 }
 
 pub trait DynSystemData<'a> {
