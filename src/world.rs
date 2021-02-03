@@ -1,12 +1,18 @@
+use std::collections::HashMap;
+
 pub struct World {
     resources: HashMap<ResourseId, Vec<Box<dyn Resource>>>
 }
 
 pub struct ResourseId {
-    type: ResourceType,
+    res_type: ResourceType,
     id: u32
 }
 
-pub trait Resourse {
+pub trait Resource {
 
+}
+
+pub enum ResourceType {
+    
 }

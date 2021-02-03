@@ -65,4 +65,9 @@ pub trait EventHandler {
     fn update_world(&mut self, sprite: Sprite);
     fn update(&mut self, interface: &mut Interface) -> GameResult;
     fn draw(&self, interface: &mut Interface) -> GameResult;
+
+    // fn mouse_button_down_event(&mut self, interface: &mut Interface, button: MouseButton, x: f32, y: f32);
+    // fn mouse_button_up_event();
+    // fn mouse_motion_event();
+    // fn mouse_wheel_event();
 }

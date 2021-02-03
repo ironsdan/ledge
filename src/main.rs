@@ -9,6 +9,9 @@ mod conf;
 mod game;
 mod event;
 mod error;
+mod world;
+mod system;
+mod component;
 
 use interface::*;
 use game::*;
