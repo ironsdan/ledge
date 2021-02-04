@@ -1,6 +1,7 @@
 use std::collections::HashMap;
-use std::collections::hash_map::Iter;
 use std::any::{Any, TypeId};
+
+use crate::component::Component;
 
 
 pub struct World {
@@ -12,6 +13,13 @@ impl World {
         Self {
             resources: HashMap::new(),
         }
+    }
+
+    pub fn register<C>(&mut self) 
+    where
+        C: Component
+    {
+        // self.insert()
     }
 
     pub fn insert<R>(&mut self, resource: R)
@@ -43,6 +51,42 @@ impl World {
         resource_id.assert_type_id::<R>();
         self.resources.remove(&resource_id);
     }
+
+    pub fn fetch<T>(&self) -> &T 
+    where
+        T: Resource
+    {
+        self.try_fetch::<T>().unwrap()
+    }
+
+    pub fn try_fetch<T>(&self) -> Option<&T> 
+    where
+        T: Resource
+    {
+        let resource_type_id = ResourceId::new::<T>();
+        if let Some(b) = self.resources.get(&resource_type_id).map(|b| b.as_any().downcast_ref::<T>()) {
+            return b;
+        }
+        None
+    }
+
+    pub fn fetch_mut<T>(&mut self) -> &mut T 
+    where
+        T: Resource
+    {
+        self.try_fetch_mut::<T>().unwrap()
+    }
+
+    pub fn try_fetch_mut<T>(&mut self) -> Option<&mut T> 
+    where
+        T: Resource
+    {
+        let resource_type_id = ResourceId::new::<T>();
+        if let Some(b) = self.resources.get_mut(&resource_type_id).map(|b| b.as_any_mut().downcast_mut::<T>()) {
+            return b;
+        }
+        None
+    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -69,7 +113,8 @@ impl ResourceId {
 }
 
 pub trait Resource: Any + 'static {
-
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
 pub enum ResourceType {
