@@ -15,13 +15,33 @@ mod component;
 
 use interface::*;
 use game::*;
+use world::*;
 
 fn main() {
-    let (interface, event_loop) = InterfaceBuilder::new("test", "Dan").build().unwrap();
+    let test_resource = TestRes::new();
+    let mut test_world = World::new();
 
-    let game = Game {
-        world: Vec::new()
-    };
 
-    event::run(interface, event_loop, game);
+    test_world.insert(test_resource);
+    // let (interface, event_loop) = InterfaceBuilder::new("test", "Dan").build().unwrap();
+
+    // let game = Game {
+    //     world: Vec::new()
+    // };
+
+    // event::run(interface, event_loop, game);
 }
+
+pub struct TestRes {
+    test: u8
+}
+
+impl TestRes {
+    pub fn new() -> Self {
+        Self {
+            test: 0,
+        }
+    }
+}
+
+impl Resource for TestRes {}
