@@ -2,7 +2,7 @@ use crate::interface::*;
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::event::{Event, WindowEvent};
 use crate::error::*;
-use crate::sprite::*;
+use crate::graphics::sprite::*;
 use std::time::{Duration, SystemTime};
 use std::thread::sleep;
 

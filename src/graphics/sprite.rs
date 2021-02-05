@@ -1,6 +1,6 @@
 use crate::lib::*;
 use std::sync::Arc;
-use crate::animation::*;
+use crate::graphics::animation::*;
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 
 #[derive(Clone, PartialEq)]

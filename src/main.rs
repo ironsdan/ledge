@@ -1,17 +1,12 @@
 use std::any::Any;
 mod lib;
-// mod entity;
-mod sprite;
-// mod physics;
 mod graphics;
-mod animation;
 mod interface;
 mod conf;
 mod game;
 mod event;
 mod error;
 mod world;
-mod system;
 
 use interface::*;
 use game::*;

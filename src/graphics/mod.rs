@@ -1,4 +1,6 @@
 pub mod context;
+pub mod animation;
+pub mod sprite;
 
 use crate::interface::Interface;
 

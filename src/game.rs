@@ -1,7 +1,7 @@
 use crate::event::*;
 use crate::error::*;
 use crate::interface::Interface;
-use crate::sprite::*;
+use crate::graphics::sprite::*;
 
 pub struct Game {
     pub world: Vec<Sprite>,

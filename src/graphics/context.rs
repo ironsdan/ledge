@@ -23,8 +23,7 @@ use winit::dpi::PhysicalSize;
 use image::ImageFormat;
 use std::sync::Arc;
 use crate::lib::*;
-use crate::sprite::*;
-use crate::animation::*;
+use crate::graphics::{sprite::*, animation::*};
 use crate::conf::*;
 use crate::graphics::{vs, fs};
 
