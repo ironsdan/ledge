@@ -1,3 +1,5 @@
+use crate::world::World;
+
 pub struct EntityBuilder<'a> {
     pub entity: Entity,
     pub world: &'a World

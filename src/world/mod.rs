@@ -1,3 +1,6 @@
+pub mod entity;
+pub mod component;
+
 use std::collections::HashMap;
 use std::any::{Any, TypeId};
 use std::cell::RefCell;
@@ -71,23 +74,23 @@ impl World {
         create_entry(self.resources.entry(ResourceId::new::<R>()))
     }
 
-    pub fn fetch<T>(&self) -> &T 
-    where
-        T: Resource
-    {
-        self.try_fetch::<T>().unwrap()
-    }
+    // pub fn fetch<T>(&self) -> &T 
+    // where
+    //     T: Resource
+    // {
+    //     self.try_fetch::<T>().unwrap()
+    // }
 
-    pub fn try_fetch<T>(&self) -> Option<&T> 
-    where
-        T: Resource
-    {
-        let resource_type_id = ResourceId::new::<T>();
-        if let Some(b) = self.resources.get(&resource_type_id).map(|b| b.borrow().as_any().downcast_ref::<T>()) {
-            return b;
-        }
-        None
-    }
+    // pub fn try_fetch<T>(&self) -> Option<&T> 
+    // where
+    //     T: Resource
+    // {
+    //     let resource_type_id = ResourceId::new::<T>();
+    //     if let Some(b) = self.resources.get(&resource_type_id).map(|b| b.borrow().as_any().downcast_ref::<T>()) {
+    //         return b;
+    //     }
+    //     None
+    // }
 
     // pub fn fetch_mut<T>(&mut self) -> &mut T 
     // where
