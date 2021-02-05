@@ -7,17 +7,17 @@ use std::cell::RefCell;
 use std::marker::PhantomData;
 use crate::component::Component;
 use std::collections::hash_map::Entry;
-use std::borrow::BorrowMut;
-use std::cell::RefMut;
 
 pub struct World {
-    resources: HashMap<ResourceId, RefCell<Box<dyn Resource>>>
+    resources: HashMap<ResourceId, RefCell<Box<dyn Resource>>>,
+    components: HashMap<ComponentId, RefCell<Box<dyn Component<Storage = dyn AnyStorage>>>>,
 }
 
 impl World {
     pub fn new() -> Self {
         Self {
             resources: HashMap::new(),
+            components: HashMap::new(),
         }
     }
 
