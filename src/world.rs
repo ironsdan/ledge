@@ -15,12 +15,14 @@ impl World {
         }
     }
 
-    pub fn register<C>(&mut self) 
-    where
-        C: Component
-    {
-        // self.insert()
-    }
+    // pub fn register<C, R>(&mut self) 
+    // where
+    //     C: Component,
+    //     R: Resource,
+    // {
+        
+    //     self.insert::<CompTable>(empty)
+    // }
 
     pub fn insert<R>(&mut self, resource: R)
     where 
@@ -112,6 +114,11 @@ impl ResourceId {
     }
 }
 
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct ComponentId {
+    type_id: TypeId,
+}
+
 pub trait Resource: Any + 'static {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
@@ -119,4 +126,43 @@ pub trait Resource: Any + 'static {
 
 pub enum ResourceType {
     
+}
+
+pub struct CompTable {
+    components: HashMap<TypeId, Box<dyn Component<Storage = dyn AnyStorage>>>
+}
+
+impl CompTable {
+    // pub fn register<C>(&mut self) {
+    //     self.insert::<C>();
+    // }
+
+    pub fn insert<C>(&mut self, component: C)
+    where 
+        C: Component<Storage = dyn AnyStorage> + 'static,
+    {
+        self.insert_by_id(TypeId::of::<C>(), component)
+    }
+
+    pub fn insert_by_id<C>(&mut self, component_id: TypeId, component: C)
+    where 
+        C: Component<Storage = dyn AnyStorage> + 'static,
+    {
+        // component_id.assert_type_id::<C>();
+        self.components.insert(component_id, Box::new(component));
+    }
+}
+
+impl Resource for CompTable {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+pub trait AnyStorage {
+
 }
