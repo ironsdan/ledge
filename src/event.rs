@@ -3,6 +3,8 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::event::{Event, WindowEvent};
 use crate::error::*;
 use crate::sprite::*;
+use std::time::{Duration, SystemTime};
+use std::thread::sleep;
 
 pub fn run<S: 'static>(mut interface: Interface, event_loop: EventLoop<()>, mut game_state: S) -> !
 where
@@ -22,7 +24,7 @@ where
     game_state.update_world(dan);
 
     event_loop.run(move |event, _, control_flow| {
-
+        let now = SystemTime::now();
         let interface = &mut interface;
 
         interface.process_event(&event);
@@ -41,14 +43,15 @@ where
                 interface.graphics_ctx.recreate_swapchain = true;
             }
             Event::MainEventsCleared => {
-                if let Err(e) = game_state.update(interface) {
-                    println!("Error on EventHandler::update(): {:?}", e);
-                }
+                // if let Err(e) = game_state.update(interface) {
+                //     println!("Error on EventHandler::update(): {:?}", e);
+                // }
             }
             Event::RedrawRequested(_) => {
                 if let Err(e) = game_state.draw(interface) {
                     println!("Error on EventHandler::update(): {:?}", e);
                 }
+                sleep(Duration::from_millis(16 - now.elapsed().unwrap().as_secs_f64() as u64));
             }
             Event::RedrawEventsCleared => {
                 // print!("Cleared: ");
@@ -57,7 +60,8 @@ where
                 // print!("Other: ");
             },
         }
-        // println!("{:?}", start_entire.elapsed().unwrap());
+        
+        println!("{:?}", now.elapsed().unwrap());
     });
 }
 
