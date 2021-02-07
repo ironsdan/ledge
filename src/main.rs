@@ -1,4 +1,3 @@
-use std::any::Any;
 mod lib;
 mod graphics;
 mod interface;
@@ -8,25 +7,18 @@ mod event;
 mod error;
 mod world;
 
-use interface::*;
-use game::*;
-use world::*;
+// use interface::*;
+// use game::*;
+use world::World;
 use world::system::System;
 use world::component::Component;
 use world::storage::VecStorage;
 use world::storage::ReadStorage;
-use world::storage::Storage;
-use std::marker::PhantomData;
-use std::cell::RefCell;
-use world::entity::Entities;
-use world::Fetch;
-use std::collections::hash_map::OccupiedEntry;
-use std::collections::hash_map::Entry;
 
 fn main() {
     let mut test_world = World::new();
 
-    // let mut test_system = TestSystem{};
+    test_world.insert(8);
 
     test_world.register::<TestComp>();
     
@@ -44,33 +36,6 @@ fn main() {
             println!("{:?}", i);
         }
     }
-
-    // let test_entities = RefCell::new(Entities {});
-    // let test_f_entities = Fetch {
-    //     inner: test_entities.borrow(),
-    //     phantom: PhantomData
-    // };
-
-    // let test_storage_entry = test_world.entry::<TestComp>();
-    // let mut test_storage_value = None;
-    // match test_storage_entry.inner {
-    //     Entry::Occupied(value) => {
-    //         test_storage_value = Some(value.get());
-    //         let test_storage = Fetch {
-    //             inner: test_storage_value.unwrap().borrow(),
-    //             phantom: PhantomData
-    //         };
-        
-    //         let read_storage = Storage {
-    //             data: test_storage,
-    //             entities: test_f_entities,
-    //             phantom: PhantomData,
-    //         };
-        
-    //         test_system.run(read_storage);
-    //     },
-    //     _ => {}
-    // }
 
     // let (interface, event_loop) = InterfaceBuilder::new("test", "Dan").build().unwrap();
 

@@ -3,12 +3,13 @@ pub mod component;
 pub mod storage;
 pub mod system;
 
+use crate::world::component::Component;
+use crate::world::storage::TrackedStorage;
+
 use std::collections::HashMap;
 use std::any::{TypeId};
 use std::cell::RefCell;
 use std::marker::PhantomData;
-use crate::component::Component;
-use crate::storage::TrackedStorage;
 use std::collections::hash_map::Entry;
 use std::cell::Ref;
 use std::cell::RefMut;
@@ -44,7 +45,9 @@ impl World {
         F: FnOnce() -> C::Storage,
         C: Component,
     {
-        self.entry::<C>().inner.or_insert_with(move || RefCell::new(Box::new(TrackedStorage::<C>::new(storage()))));
+        self.entry::<C>().inner.or_insert_with(move || {
+            RefCell::new(Box::new(TrackedStorage::<C>::new(storage())))
+        });
     }
 
     pub fn fetch<R: Resource>(&self) -> Fetch<R> {
@@ -65,32 +68,20 @@ impl World {
         create_entry::<R>(self.resources.entry(ResourceId::new::<R>()))
     }
 
-    pub fn insert<R>(&mut self, resource: R)
-    where 
-        R: Resource,
-    {
+    pub fn insert<R: Resource>(&mut self, resource: R) {
         self.insert_by_id(ResourceId::new::<R>(), resource)
     }
 
-    pub fn insert_by_id<R>(&mut self, resource_id: ResourceId, resource: R)
-    where 
-        R: Resource,
-    {
+    pub fn insert_by_id<R: Resource>(&mut self, resource_id: ResourceId, resource: R) {
         resource_id.assert_type_id::<R>();
         self.resources.insert(resource_id, RefCell::new(Box::new(resource)));
     }
 
-    pub fn remove<R>(&mut self, resource: R)
-    where 
-        R: Resource,
-    {
+    pub fn remove<R: Resource>(&mut self) {
         self.remove_by_id::<R>(ResourceId::new::<R>());
     }
 
-    pub fn remove_by_id<R>(&mut self, resource_id: ResourceId)
-    where 
-        R: Resource, 
-    {
+    pub fn remove_by_id<R: Resource>(&mut self, resource_id: ResourceId) {
         resource_id.assert_type_id::<R>();
         self.resources.remove(&resource_id);
     }

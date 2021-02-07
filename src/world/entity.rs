@@ -1,6 +1,6 @@
 use crate::world::World;
-use crate::component::Component;
-use crate::storage::{
+use crate::world::component::Component;
+use crate::world::storage::{
     WriteStorage,
     SystemData,
 };
@@ -14,8 +14,8 @@ pub struct EntityBuilder<'a> {
 impl<'a> EntityBuilder<'a> {
     pub fn with<C: Component>(self, component: C) -> Self {
         {
-            let mut storage: WriteStorage<C> = SystemData::fetch(&self.world);
-            storage.insert(self.entity, c).unwrap();
+            // let mut storage: WriteStorage<C> = SystemData::fetch(&self.world);
+            // storage.insert(self.entity, c).unwrap();
         }
         self
     }

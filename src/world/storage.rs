@@ -1,7 +1,7 @@
 use crate::{
-    component::Component,
-    world::{World, Fetch, FetchMut},
-    entity::Entities,
+    world::component::Component,
+    world::{Fetch, FetchMut},
+    world::entity::Entities,
     // system::DynSystemData,
 };
 
@@ -89,17 +89,10 @@ pub struct SystemData {
 }
 
 impl SystemData {
-    pub fn fetch<T: Component>() -> WriteStorage<T> {
-        
-    }
+    // pub fn fetch<T: Component>() -> WriteStorage<T> {
+
+    // }
 }
-
-// impl<'a, T, D> DynSystemData<'a> for Storage<'a, T, D> {
-//     type Accessor = ;
-//     fn fetch(accessor: &Self::Accessor, world: &'a World) -> Self {
-
-//     }
-// }
 
 pub type ReadStorage<'a, T> = Storage<'a, T, Fetch<'a, TrackedStorage<T>>>;
 
