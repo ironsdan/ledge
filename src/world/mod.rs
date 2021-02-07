@@ -32,7 +32,10 @@ impl World {
         }
     }
 
-    pub fn register<C: Component>(&mut self) {
+    pub fn register<C: Component>(&mut self)
+    where
+        C::Storage: Default
+    {
         self.register_with_storage::<_, C>(Default::default);
     }
 
@@ -41,10 +44,10 @@ impl World {
         F: FnOnce() -> C::Storage,
         C: Component,
     {
-        self.insert(RefCell::new(Box::new(storage())));
+        self.insert(RefCell::new(Box::new(TrackedStorage::<C>::new(storage()))));
     }
 
-    pub fn fetch<R: Resource>(&mut self) -> Fetch<R> {
+    pub fn fetch<R: Resource>(&self) -> Fetch<R> {
         Fetch {
             inner: self.resources.get(&ResourceId::new::<R>()).unwrap().borrow(),
             phantom: PhantomData
@@ -56,6 +59,10 @@ impl World {
             inner: self.resources.get(&ResourceId::new::<R>()).unwrap().borrow_mut(),
             phantom: PhantomData
         }
+    }
+
+    pub fn entry<R: Resource>(&mut self) -> ResEntry<R> {
+        create_entry::<R>(self.resources.entry(ResourceId::new::<R>()))
     }
 
     pub fn insert<R>(&mut self, resource: R)
@@ -87,49 +94,6 @@ impl World {
         resource_id.assert_type_id::<R>();
         self.resources.remove(&resource_id);
     }
-
-    pub fn entry<R>(&mut self) -> ResEntry<R> 
-    where 
-        R: Resource
-    {
-        create_entry(self.resources.entry(ResourceId::new::<R>()))
-    }
-
-    // pub fn fetch<T>(&self) -> &T 
-    // where
-    //     T: Resource
-    // {
-    //     self.try_fetch::<T>().unwrap()
-    // }
-
-    // pub fn try_fetch<T>(&self) -> Option<&T> 
-    // where
-    //     T: Resource
-    // {
-    //     let resource_type_id = ResourceId::new::<T>();
-    //     if let Some(b) = self.resources.get(&resource_type_id).map(|b| b.borrow().as_any().downcast_ref::<T>()) {
-    //         return b;
-    //     }
-    //     None
-    // }
-
-    // pub fn fetch_mut<T>(&mut self) -> &mut T 
-    // where
-    //     T: Resource
-    // {
-    //     self.try_fetch_mut::<T>().unwrap()
-    // }
-
-    // pub fn try_fetch_mut<T>(&mut self) -> Option<&mut T> 
-    // where
-    //     T: Resource
-    // {
-    //     let resource_type_id = ResourceId::new::<T>();
-    //     if let Some(b) = self.resources.get_mut(&resource_type_id).map(|b| b.borrow_mut().as_any_mut().downcast_mut::<T>()) {
-    //         return b;
-    //     }
-    //     None
-    // }
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -155,35 +119,12 @@ impl ResourceId {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct ComponentId {
-    type_id: TypeId,
-}
-
-impl ComponentId {
-    pub fn new<T: Component>() -> Self {
-        Self {
-            type_id: TypeId::of::<T>()
-        }
-    }
-
-    pub fn assert_type_id<T: Component>(&self) {
-        let test_id = ComponentId::new::<T>();
-        assert_eq!(test_id.type_id, self.type_id);
-    }
-
-    pub fn check_type_id<T: Component>(&self) -> bool {
-        let test_id = ComponentId::new::<T>();
-        return test_id.type_id == self.type_id;
-    }
-}
-
 pub trait Resource: 'static + Any {}
 
 impl<T> Resource for T where T: Any {}
 
 pub struct ResEntry<'a, T: 'a> {
-    inner: Entry<'a, ResourceId, RefCell<Box<dyn Resource>>>,
+    pub inner: Entry<'a, ResourceId, RefCell<Box<dyn Resource>>>,
     phantom: PhantomData<T>,
 }
 
@@ -194,26 +135,26 @@ pub fn create_entry<T>(entry: Entry<ResourceId, RefCell<Box<dyn Resource>>>) -> 
     }
 }
 
-impl<'a, T> ResEntry<'a, T> 
-where
-    T: Resource + 'a
-{
-    // pub fn or_insert(self, v: T) -> &'a mut Box<T> {
-    //     self.or_insert_with(move || v)
-    // }
+// impl<'a, T> ResEntry<'a, T> 
+// where
+//     T: Resource + 'a
+// {
+//     pub fn or_insert(self, v: T) -> &'a mut Box<T> {
+//         self.or_insert_with(move || v)
+//     }
 
-    // pub fn or_insert_with<F>(self, f: F) -> &'a mut Box<T>
-    // where
-    //     F: FnOnce() -> T,
-    // {
-    //     let value = self
-    //         .inner
-    //         .or_insert_with(move || RefCell::new(Box::new(f())));
-    //     let inner = RefMut::map(value.borrow_mut(), Box::as_mut);
+//     pub fn or_insert_with<F>(self, f: F) -> &'a mut Box<T>
+//     where
+//         F: FnOnce() -> T,
+//     {
+//         let value = self
+//             .inner
+//             .or_insert_with(move || RefCell::new(Box::new(f())));
+//         let inner = RefMut::map(value.borrow_mut(), Box::as_mut);
 
-    //     inner
-    // }
-}
+//         inner
+//     }
+// }
 
 pub struct Fetch<'a, T: 'a> {
     pub inner: Ref<'a, dyn Resource>,

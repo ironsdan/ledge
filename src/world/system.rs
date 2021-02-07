@@ -5,13 +5,13 @@ pub trait System<'a> {
     fn run(&mut self, data: Self::SystemData);
 }
 
-pub trait DynSystemData<'a> {
-    // type Accessor: Accessor;
+// pub trait DynSystemData<'a> {
+//     type Accessor: Accessor;
 
-    // fn setup(accessor: &Self::Accessor, world: &mut World);
-    // fn fetch(accessor: &Self::Accessor, world: &'a World);
-}
+//     // fn setup(accessor: &Self::Accessor, world: &mut World);
+//     fn fetch(accessor: &Self::Accessor, world: &'a World) -> Self;
+// }
 
-pub trait Accessor {
+// pub trait Accessor {
 
-}
+// }

@@ -1,20 +1,28 @@
-use crate::component::Component;
-use crate::world::Resource;
-use crate::world::{Fetch, FetchMut};
-use crate::entity::Entities;
+use crate::{
+    component::Component,
+    world::{World, Fetch, FetchMut},
+    entity::Entities,
+    // system::DynSystemData,
+};
 
-use std::marker::PhantomData;
-
-// pub trait CompStorage<T> {
-// }
+use std::{marker::PhantomData};
 
 pub struct TrackedStorage<C: Component> {
     pub bitset: Bitset,
     pub inner: C::Storage,
 }
 
+impl<C: Component> TrackedStorage<C> {
+    pub fn new(storage: C::Storage) -> Self {
+        Self {
+            bitset: Bitset::new(),
+            inner: storage,
+        }
+    }
+}
+
 pub struct VecStorage<T> {
-    inner: Vec<T>,
+    pub inner: Vec<T>,
 }
 
 impl<T> Default for VecStorage<T> {
@@ -26,10 +34,8 @@ impl<T> Default for VecStorage<T> {
 }
 
 pub trait TryDefault: Sized {
-    /// Tries to create the default.
     fn try_default() -> Result<Self, String>;
 
-    /// Calls `try_default` and panics on an error case.
     fn unwrap_default() -> Self {
         match Self::try_default() {
             Ok(x) => x,
@@ -47,13 +53,9 @@ where
     }
 }
 
-pub trait DynamicStorage<T>: TryDefault {
+pub trait DynamicStorage<T>: TryDefault {}
 
-}
-
-impl<T> DynamicStorage<T> for VecStorage<T> {
-
-} 
+impl<T> DynamicStorage<T> for VecStorage<T> {} 
 
 impl<C: Component> Default for TrackedStorage<C>
 where
@@ -67,32 +69,27 @@ where
     }
 }
 
-impl<C: Component> AnyStorage for TrackedStorage<C> {
-
-}
-
 #[derive(Default)]
-pub struct Bitset {
-
-}
+pub struct Bitset {}
 
 impl Bitset {
     pub fn new() -> Self {
-        Self {
-
-        }
+        Self {}
     }
-}
-
-pub trait AnyStorage {
-
 }
 
 pub struct Storage<'a, T, D> {
     pub data: D,
-    entities: Fetch<'a, Entities>,
-    phantom: PhantomData<T>,
+    pub entities: Fetch<'a, Entities>,
+    pub phantom: PhantomData<T>,
 }
+
+// impl<'a, T, D> DynSystemData<'a> for Storage<'a, T, D> {
+//     type Accessor = ;
+//     fn fetch(accessor: &Self::Accessor, world: &'a World) -> Self {
+
+//     }
+// }
 
 pub type ReadStorage<'a, T> = Storage<'a, T, Fetch<'a, TrackedStorage<T>>>;
 

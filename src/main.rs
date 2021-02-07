@@ -15,17 +15,57 @@ use world::system::System;
 use world::component::Component;
 use world::storage::VecStorage;
 use world::storage::ReadStorage;
+use world::storage::Storage;
+use std::marker::PhantomData;
+use std::cell::RefCell;
+use world::entity::Entities;
+use world::Fetch;
+use std::collections::hash_map::OccupiedEntry;
+use std::collections::hash_map::Entry;
 
 fn main() {
     let mut test_world = World::new();
 
+    let mut test_system = TestSystem{};
+
     test_world.register::<TestComp>();
+    
+    // {
+        let mut test_comp = test_world.fetch_mut::<TestComp>();
+        // (*test_comp).test.push(10);
+        // (*test_comp).test.push(20);
+        // (*test_comp).test.push(30);
+        // (*test_comp).test.push(40);
+    // }
 
-    let mut test_comp = test_world.fetch_mut::<TestComp>();
+    // let test_entities = RefCell::new(Entities {});
+    // let test_f_entities = Fetch {
+    //     inner: test_entities.borrow(),
+    //     phantom: PhantomData
+    // };
 
-    (*test_comp).test.push(10);
+    // let test_storage_entry = test_world.entry::<TestComp>();
+    // let mut test_storage_value = None;
+    // match test_storage_entry.inner {
+    //     Entry::Occupied(value) => {
+    //         test_storage_value = Some(value.get());
+    //         let test_storage = Fetch {
+    //             inner: test_storage_value.unwrap().borrow(),
+    //             phantom: PhantomData
+    //         };
+        
+    //         let read_storage = Storage {
+    //             data: test_storage,
+    //             entities: test_f_entities,
+    //             phantom: PhantomData,
+    //         };
+        
+    //         test_system.run(read_storage);
+    //     },
+    //     _ => {}
+    // }
 
-    // test_world.::<TestComp>();
+
 
     // let mut test_resource = TestRes::new();
     // test_resource.test = 10;
@@ -77,16 +117,16 @@ impl TestRes {
     }
 }
 
-// struct TestSystem {
+struct TestSystem {
 
-// }
+}
 
-// impl<'a> System<'a> for TestSystem {
-//     type SystemData = (ReadStorage<'a, TestComp>, ReadStorage<'a, TestComp>);
+impl<'a> System<'a> for TestSystem {
+    type SystemData = ReadStorage<'a, TestComp>;
 
-//     fn run(&mut self, (data0, data1): Self::SystemData) {
-//         for test in data0.data.inner.inner.iter() {
-            
-//         }
-//     }
-// }
+    fn run(&mut self, data0: Self::SystemData) {
+        for test in (*data0.data).inner.inner.iter() {
+            println!("{:?}", test.test);
+        }
+    }
+}
