@@ -26,17 +26,24 @@ use std::collections::hash_map::Entry;
 fn main() {
     let mut test_world = World::new();
 
-    let mut test_system = TestSystem{};
+    // let mut test_system = TestSystem{};
 
     test_world.register::<TestComp>();
     
-    // {
+    {
         let mut test_comp = test_world.fetch_mut::<TestComp>();
-        // (*test_comp).test.push(10);
-        // (*test_comp).test.push(20);
-        // (*test_comp).test.push(30);
-        // (*test_comp).test.push(40);
-    // }
+        (*test_comp).test.push((0, 10));
+        (*test_comp).test.push((0, 20));
+        (*test_comp).test.push((0, 30));
+        (*test_comp).test.push((0, 40));
+    }
+
+    {
+        let test_comp = test_world.fetch::<TestComp>();
+        for i in (*test_comp).test.iter() {
+            println!("{:?}", i);
+        }
+    }
 
     // let test_entities = RefCell::new(Entities {});
     // let test_f_entities = Fetch {
@@ -65,28 +72,6 @@ fn main() {
     //     _ => {}
     // }
 
-
-
-    // let mut test_resource = TestRes::new();
-    // test_resource.test = 10;
-    // let mut test_resource_2 = TestRes::new();
-    // test_resource_2.test = 9;
-
-    // test_world.insert(test_resource);
-    // test_world.insert(test_resource_2);
-
-    // let test_fetch = test_world.fetch_mut::<TestRes>();
-
-    // println!("{}", test_fetch.test);
-    
-    // *test_fetch = TestRes {
-    //     test: 1,
-    // };
-
-    // let test_fetch = test_world.fetch::<TestRes>();
-
-    // println!("{}", test_fetch.test);
-    
     // let (interface, event_loop) = InterfaceBuilder::new("test", "Dan").build().unwrap();
 
     // let game = Game {
@@ -97,7 +82,7 @@ fn main() {
 }
 
 pub struct TestComp {
-    test: Vec<u8>,
+    test: Vec<(u8, u8)>,
 }
 
 impl Component for TestComp {

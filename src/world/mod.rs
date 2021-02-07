@@ -44,7 +44,7 @@ impl World {
         F: FnOnce() -> C::Storage,
         C: Component,
     {
-        self.insert(RefCell::new(Box::new(TrackedStorage::<C>::new(storage()))));
+        self.entry::<C>().inner.or_insert_with(move || RefCell::new(Box::new(TrackedStorage::<C>::new(storage()))));
     }
 
     pub fn fetch<R: Resource>(&self) -> Fetch<R> {

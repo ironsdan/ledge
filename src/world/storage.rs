@@ -84,6 +84,16 @@ pub struct Storage<'a, T, D> {
     pub phantom: PhantomData<T>,
 }
 
+pub struct SystemData {
+
+}
+
+impl SystemData {
+    pub fn fetch<T: Component>() -> WriteStorage<T> {
+        
+    }
+}
+
 // impl<'a, T, D> DynSystemData<'a> for Storage<'a, T, D> {
 //     type Accessor = ;
 //     fn fetch(accessor: &Self::Accessor, world: &'a World) -> Self {
