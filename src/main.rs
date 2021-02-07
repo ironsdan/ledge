@@ -11,9 +11,21 @@ mod world;
 use interface::*;
 use game::*;
 use world::*;
+use world::system::System;
+use world::component::Component;
+use world::storage::VecStorage;
+use world::storage::ReadStorage;
 
 fn main() {
-    // let mut test_world = World::new();
+    let mut test_world = World::new();
+
+    test_world.register::<TestComp>();
+
+    let mut test_comp = test_world.fetch_mut::<TestComp>();
+
+    (*test_comp).test.push(10);
+
+    // test_world.::<TestComp>();
 
     // let mut test_resource = TestRes::new();
     // test_resource.test = 10;
@@ -44,6 +56,14 @@ fn main() {
     // event::run(interface, event_loop, game);
 }
 
+pub struct TestComp {
+    test: Vec<u8>,
+}
+
+impl Component for TestComp {
+    type Storage = VecStorage<TestComp>;
+}
+
 #[derive(Debug)]
 pub struct TestRes {
     pub test: u8
@@ -57,12 +77,16 @@ impl TestRes {
     }
 }
 
-impl Resource for TestRes {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
+// struct TestSystem {
 
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-}
+// }
+
+// impl<'a> System<'a> for TestSystem {
+//     type SystemData = (ReadStorage<'a, TestComp>, ReadStorage<'a, TestComp>);
+
+//     fn run(&mut self, (data0, data1): Self::SystemData) {
+//         for test in data0.data.inner.inner.iter() {
+            
+//         }
+//     }
+// }

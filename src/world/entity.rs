@@ -10,4 +10,8 @@ pub struct Entity {
     generation: Generation,
 }
 
+pub struct Entities {
+    
+}
+
 pub struct Generation {}

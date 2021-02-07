@@ -1,40 +1,61 @@
 pub mod entity;
 pub mod component;
+pub mod storage;
+pub mod system;
 
 use std::collections::HashMap;
-use std::any::{Any, TypeId};
+use std::any::{TypeId};
 use std::cell::RefCell;
 use std::marker::PhantomData;
 use crate::component::Component;
+use crate::storage::TrackedStorage;
 use std::collections::hash_map::Entry;
+use std::cell::Ref;
+use std::cell::RefMut;
+use std::ops::{Deref, DerefMut};
+use mopa::Any;
+
+mod __resource_mopafy_scope {
+    use mopa::mopafy;
+    use super::Resource;
+    mopafy!(Resource);
+}
 
 pub struct World {
     resources: HashMap<ResourceId, RefCell<Box<dyn Resource>>>,
-    components: HashMap<ComponentId, RefCell<Box<dyn Component<Storage = dyn AnyStorage>>>>,
 }
 
 impl World {
     pub fn new() -> Self {
         Self {
             resources: HashMap::new(),
-            components: HashMap::new(),
         }
     }
 
-    pub fn register<T: Component>(&mut self) 
-    where
-        T::Storage: Default,
-    {
-        
-        self.register_with_storage::<_, T>(Default::default);
+    pub fn register<C: Component>(&mut self) {
+        self.register_with_storage::<_, C>(Default::default);
     }
 
-    pub fn register_with_storage<F, T>(&mut self, storage: F)
+    pub fn register_with_storage<F, C>(&mut self, storage: F)
     where
-        F: FnOnce() -> T::Storage,
-        T: Component,
+        F: FnOnce() -> C::Storage,
+        C: Component,
     {
-        // self.entry().or_insert_with(move || CompStorage::<T>::new(storage()));
+        self.insert(RefCell::new(Box::new(storage())));
+    }
+
+    pub fn fetch<R: Resource>(&mut self) -> Fetch<R> {
+        Fetch {
+            inner: self.resources.get(&ResourceId::new::<R>()).unwrap().borrow(),
+            phantom: PhantomData
+        }
+    }
+
+    pub fn fetch_mut<R: Resource>(&mut self) -> FetchMut<R> {
+        FetchMut {
+            inner: self.resources.get(&ResourceId::new::<R>()).unwrap().borrow_mut(),
+            phantom: PhantomData
+        }
     }
 
     pub fn insert<R>(&mut self, resource: R)
@@ -128,7 +149,7 @@ impl ResourceId {
         assert_eq!(test_id.type_id, self.type_id);
     }
 
-    pub fn check_type_id<T: Resource>(&self) -> bool{
+    pub fn check_type_id<T: Resource>(&self) -> bool {
         let test_id = ResourceId::new::<T>();
         return test_id.type_id == self.type_id;
     }
@@ -139,10 +160,27 @@ pub struct ComponentId {
     type_id: TypeId,
 }
 
-pub trait Resource: Any + 'static {
-    fn as_any(&self) -> &dyn Any;
-    fn as_any_mut(&mut self) -> &mut dyn Any;
+impl ComponentId {
+    pub fn new<T: Component>() -> Self {
+        Self {
+            type_id: TypeId::of::<T>()
+        }
+    }
+
+    pub fn assert_type_id<T: Component>(&self) {
+        let test_id = ComponentId::new::<T>();
+        assert_eq!(test_id.type_id, self.type_id);
+    }
+
+    pub fn check_type_id<T: Component>(&self) -> bool {
+        let test_id = ComponentId::new::<T>();
+        return test_id.type_id == self.type_id;
+    }
 }
+
+pub trait Resource: 'static + Any {}
+
+impl<T> Resource for T where T: Any {}
 
 pub struct ResEntry<'a, T: 'a> {
     inner: Entry<'a, ResourceId, RefCell<Box<dyn Resource>>>,
@@ -177,42 +215,43 @@ where
     // }
 }
 
-pub struct CompStorage<C: Component> {
-    bitset: Bitset,
-    storage: C::Storage,
+pub struct Fetch<'a, T: 'a> {
+    pub inner: Ref<'a, dyn Resource>,
+    pub phantom: PhantomData<&'a T>,
 }
 
-impl<'a, C: Component> CompStorage<C> {
-    pub fn new(storage: C::Storage) -> Self {
-        Self {
-            bitset: Bitset::new(),
-            storage
-        }
+impl<'a, T> Deref for Fetch<'a, T>
+where
+    T: Resource,
+{
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        unsafe { self.inner.downcast_ref_unchecked() }
     }
 }
 
-impl<'a, C: Component> Resource for CompStorage<C> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
+impl<'a, T> Deref for FetchMut<'a, T>
+where
+    T: Resource,
+{
+    type Target = T;
 
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-}
-
-pub struct Bitset {
-
-}
-
-impl Bitset {
-    pub fn new() -> Self {
-        Self {
-
-        }
+    fn deref(&self) -> &T {
+        unsafe { self.inner.downcast_ref_unchecked() }
     }
 }
 
-pub trait AnyStorage {
+impl<'a, T> DerefMut for FetchMut<'a, T>
+where
+    T: Resource,
+{
+    fn deref_mut(&mut self) -> &mut T {
+        unsafe { self.inner.downcast_mut_unchecked() }
+    }
+}
 
+pub struct FetchMut<'a, T: 'a> {
+    pub inner: RefMut<'a, dyn Resource>,
+    pub phantom: PhantomData<&'a T>,
 }
