@@ -35,4 +35,6 @@ pub struct Entities {
     
 }
 
+// impl Resource for Entities
+
 pub struct Generation {}

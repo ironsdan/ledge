@@ -5,6 +5,9 @@ pub mod system;
 
 use crate::world::component::Component;
 use crate::world::storage::TrackedStorage;
+use crate::world::storage::ReadStorage;
+use crate::world::storage::WriteStorage;
+use crate::world::entity::Entities;
 
 use std::collections::HashMap;
 use std::any::{TypeId};
@@ -63,6 +66,44 @@ impl World {
         }
     }
 
+    pub fn read_comp_storage<R>(&self) -> ReadStorage<R>
+    where
+    R: Resource + Component
+    {
+        ReadStorage {
+            data: Fetch { 
+                inner: self.resources.get(&ResourceId::new::<R>()).unwrap().borrow(), 
+                phantom: PhantomData,
+            },
+            entities: Fetch {
+                inner: self.entities().inner,
+                phantom: PhantomData,
+            },
+            phantom: PhantomData
+        }
+    }
+
+    pub fn write_comp_storage<R>(&self) -> WriteStorage<R>
+    where
+    R: Resource + Component
+    {
+        WriteStorage {
+            data: FetchMut { 
+                inner: self.resources.get(&ResourceId::new::<R>()).unwrap().borrow_mut(), 
+                phantom: PhantomData,
+            },
+            entities: Fetch {
+                inner: self.entities().inner,
+                phantom: PhantomData,
+            },
+            phantom: PhantomData
+        }
+    }
+
+    pub fn entities(&self) -> Fetch<Entities> {
+        self.fetch::<Entities>()
+    }
+
     pub fn entry<R: Resource>(&mut self) -> ResEntry<R> {
         create_entry::<R>(self.resources.entry(ResourceId::new::<R>()))
     }
@@ -113,8 +154,6 @@ impl ResourceId {
 pub trait Resource: Any + 'static {}
 
 impl<T> Resource for T where T: Any {}
-
-// impl Downcast for dyn Resource {}
 
 pub struct ResEntry<'a, T: 'a> {
     pub inner: Entry<'a, ResourceId, RefCell<Box<dyn Resource>>>,
