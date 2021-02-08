@@ -1,6 +1,6 @@
-use crate::world::World;
-use crate::world::component::Component;
-use crate::world::storage::{
+use crate::ecs::World;
+use crate::ecs::component::Component;
+use crate::ecs::storage::{
     // WriteStorage,
     Bitset,
     // SystemData,

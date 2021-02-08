@@ -1,7 +1,7 @@
 use crate::{
-    world::component::Component,
-    world::{Fetch, FetchMut},
-    world::entity::Entities,
+    ecs::component::Component,
+    ecs::{Fetch, FetchMut},
+    ecs::entity::Entities,
 };
 use std::{marker::PhantomData};
 

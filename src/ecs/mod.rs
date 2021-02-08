@@ -3,7 +3,7 @@ pub mod component;
 pub mod storage;
 pub mod system;
 
-use crate::world::{
+use crate::ecs::{
     component::Component,
     storage::{
         TrackedStorage,

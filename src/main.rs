@@ -5,22 +5,22 @@ mod conf;
 mod game;
 mod event;
 mod error;
-mod world;
+mod ecs;
 
 // use interface::*;
 // use game::*;
-use world::World;
-use world::system::System;
-use world::component::Component;
-use world::storage::VecStorage;
-use world::storage::ReadStorage;
-use world::storage::WriteStorage;
+use ecs::World;
+use ecs::system::System;
+use ecs::component::Component;
+use ecs::storage::VecStorage;
+use ecs::storage::ReadStorage;
+use ecs::storage::WriteStorage;
 // use std::any::type_name;
-use world::entity::Entities;
+use ecs::entity::Entities;
 
-fn print_type_of<T>(_: &T) {
-    println!("{}", std::any::type_name::<T>())
-}
+// fn print_type_of<T>(_: &T) {
+//     println!("{}", std::any::type_name::<T>())
+// }
 
 fn main() {
     let mut test_world = World::new();
