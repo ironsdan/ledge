@@ -1,5 +1,5 @@
 [package]
-name = "Ledge-Engine"
+name = "ledge_engine"
 version = "0.1.0"
 authors = ["Daniel Irons <daniel.w.irons@gmail.com>"]
 edition = "2018"

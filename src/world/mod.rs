@@ -48,7 +48,7 @@ impl World {
         F: FnOnce() -> C::Storage,
         C: Component,
     {
-        println!("Registering Component with Type Id: {:?}", ResourceId::new::<C>().type_id);
+        // println!("Registering Component with Type Id: {:?}", ResourceId::new::<C>().type_id);
         self.resources.insert(ResourceId::new::<C>(), RefCell::new(Box::new(TrackedStorage::<C>::new(storage()))));
     }
 
@@ -114,7 +114,7 @@ impl World {
 
     pub fn insert_by_id<R: Resource>(&mut self, resource_id: ResourceId, resource: R) {
         resource_id.assert_type_id::<R>();
-        println!("Inserting resource with Type Id: {:?}", ResourceId::new::<R>().type_id);
+        // println!("Inserting resource with Type Id: {:?}", ResourceId::new::<R>().type_id);
         self.resources.insert(resource_id, RefCell::new(Box::new(resource)));
     }
 
