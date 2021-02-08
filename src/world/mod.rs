@@ -3,20 +3,31 @@ pub mod component;
 pub mod storage;
 pub mod system;
 
-use crate::world::component::Component;
-use crate::world::storage::TrackedStorage;
-use crate::world::storage::ReadStorage;
-use crate::world::storage::WriteStorage;
-use crate::world::entity::Entities;
-
-use std::collections::HashMap;
-use std::any::{TypeId};
-use std::cell::RefCell;
-use std::marker::PhantomData;
-use std::collections::hash_map::Entry;
-use std::cell::Ref;
-use std::cell::RefMut;
-use std::ops::{Deref, DerefMut};
+use crate::world::{
+    component::Component,
+    storage::{
+        TrackedStorage,
+        ReadStorage,
+        WriteStorage,
+    },
+    entity::{
+        Entities,
+        EntityController,
+        EntityBuilder,
+    }
+};
+use std::{
+    collections::HashMap,
+    any::TypeId,
+    cell::{
+        RefCell,
+        Ref,
+        RefMut,
+    },
+    marker::PhantomData,
+    collections::hash_map::Entry,
+    ops::{Deref, DerefMut}
+};
 use mopa::Any;
 
 mod __resource_mopafy_scope {
@@ -80,9 +91,10 @@ pub struct World {
 
 impl World {
     pub fn new() -> Self {
-        Self {
-            resources: HashMap::new(),
-        }
+        let mut world = Self::default();
+        world.insert(EntityController::default());
+        
+        world
     }
 
     // Register is used to add component storage to the world.
@@ -152,11 +164,6 @@ impl World {
         }
     }
 
-    // Convenience function for getting all the entities.
-    pub fn entities(&self) -> Fetch<Entities> {
-        self.fetch::<Entities>()
-    }
-
     // Creates a wrapper around the raw hash_map::Entry.
     pub fn entry<R: Resource>(&mut self) -> ResEntry<R> {
         create_entry::<R>(self.resources.entry(ResourceId::new::<R>()))
@@ -180,6 +187,24 @@ impl World {
     pub fn remove_by_id<R: Resource>(&mut self, resource_id: ResourceId) {
         resource_id.assert_type_id::<R>();
         self.resources.remove(&resource_id);
+    }
+
+    // Convenience function for getting all the entities.
+    pub fn entities(&self) -> Fetch<Entities> {
+        self.fetch::<Entities>()
+    }
+
+    pub fn create_entity(&mut self) -> EntityBuilder {
+        let entity = self.fetch_mut::<EntityController>().create_entity();
+        EntityBuilder::new(entity, self)
+    }
+}
+
+impl Default for World {
+    fn default() -> Self {
+        Self {
+            resources: HashMap::new(),
+        }
     }
 }
 
