@@ -45,9 +45,8 @@ impl World {
         F: FnOnce() -> C::Storage,
         C: Component,
     {
-        self.entry::<C>().inner.or_insert_with(move || {
-            RefCell::new(Box::new(TrackedStorage::<C>::new(storage())))
-        });
+        println!("Registering Component with Type Id: {:?}", ResourceId::new::<C>().type_id);
+        self.resources.insert(ResourceId::new::<C>(), RefCell::new(Box::new(TrackedStorage::<C>::new(storage()))));
     }
 
     pub fn fetch<R: Resource>(&self) -> Fetch<R> {
@@ -74,6 +73,7 @@ impl World {
 
     pub fn insert_by_id<R: Resource>(&mut self, resource_id: ResourceId, resource: R) {
         resource_id.assert_type_id::<R>();
+        println!("Inserting resource with Type Id: {:?}", ResourceId::new::<R>().type_id);
         self.resources.insert(resource_id, RefCell::new(Box::new(resource)));
     }
 
@@ -110,9 +110,11 @@ impl ResourceId {
     }
 }
 
-pub trait Resource: 'static + Any {}
+pub trait Resource: Any + 'static {}
 
 impl<T> Resource for T where T: Any {}
+
+// impl Downcast for dyn Resource {}
 
 pub struct ResEntry<'a, T: 'a> {
     pub inner: Entry<'a, ResourceId, RefCell<Box<dyn Resource>>>,
@@ -126,30 +128,14 @@ pub fn create_entry<T>(entry: Entry<ResourceId, RefCell<Box<dyn Resource>>>) -> 
     }
 }
 
-// impl<'a, T> ResEntry<'a, T> 
-// where
-//     T: Resource + 'a
-// {
-//     pub fn or_insert(self, v: T) -> &'a mut Box<T> {
-//         self.or_insert_with(move || v)
-//     }
-
-//     pub fn or_insert_with<F>(self, f: F) -> &'a mut Box<T>
-//     where
-//         F: FnOnce() -> T,
-//     {
-//         let value = self
-//             .inner
-//             .or_insert_with(move || RefCell::new(Box::new(f())));
-//         let inner = RefMut::map(value.borrow_mut(), Box::as_mut);
-
-//         inner
-//     }
-// }
-
 pub struct Fetch<'a, T: 'a> {
-    pub inner: Ref<'a, dyn Resource>,
+    pub inner: Ref<'a, Box<dyn Resource>>,
     pub phantom: PhantomData<&'a T>,
+}
+
+pub struct FetchMut<'a, T: 'a> {
+    pub inner: RefMut<'a, Box<dyn Resource>>,
+    pub phantom: PhantomData<&'a mut T>,
 }
 
 impl<'a, T> Deref for Fetch<'a, T>
@@ -158,8 +144,8 @@ where
 {
     type Target = T;
 
-    fn deref(&self) -> &T {
-        unsafe { self.inner.downcast_ref_unchecked() }
+    fn deref(&self) -> &Self::Target {
+        unsafe{ self.inner.downcast_ref_unchecked() }
     }
 }
 
@@ -169,8 +155,8 @@ where
 {
     type Target = T;
 
-    fn deref(&self) -> &T {
-        unsafe { self.inner.downcast_ref_unchecked() }
+    fn deref(&self) -> &Self::Target {
+        unsafe{ self.inner.downcast_ref_unchecked() }
     }
 }
 
@@ -178,12 +164,7 @@ impl<'a, T> DerefMut for FetchMut<'a, T>
 where
     T: Resource,
 {
-    fn deref_mut(&mut self) -> &mut T {
-        unsafe { self.inner.downcast_mut_unchecked() }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe{ self.inner.downcast_mut_unchecked() }
     }
-}
-
-pub struct FetchMut<'a, T: 'a> {
-    pub inner: RefMut<'a, dyn Resource>,
-    pub phantom: PhantomData<&'a T>,
 }

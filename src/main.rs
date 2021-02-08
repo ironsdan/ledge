@@ -14,17 +14,24 @@ use world::system::System;
 use world::component::Component;
 use world::storage::VecStorage;
 use world::storage::ReadStorage;
+use std::any::type_name;
+
+fn print_type_of<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>())
+}
 
 fn main() {
     let mut test_world = World::new();
 
-    test_world.insert(8);
+    let test_resource = TestRes::new();
+
+    test_world.insert::<u8>(8);
 
     test_world.register::<TestComp>();
     
     {
         let mut test_comp = test_world.fetch_mut::<TestComp>();
-        (*test_comp).test.push((0, 10));
+        test_comp.test.push((0, 10));
         (*test_comp).test.push((0, 20));
         (*test_comp).test.push((0, 30));
         (*test_comp).test.push((0, 40));
@@ -37,6 +44,8 @@ fn main() {
         }
     }
 
+    test_world.remove::<u8>();
+
     // let (interface, event_loop) = InterfaceBuilder::new("test", "Dan").build().unwrap();
 
     // let game = Game {
@@ -48,6 +57,12 @@ fn main() {
 
 pub struct TestComp {
     test: Vec<(u8, u8)>,
+}
+
+impl TestComp {
+    pub fn test(&self) -> (u8, u8) {
+        return self.test[0];
+    }
 }
 
 impl Component for TestComp {
@@ -67,16 +82,16 @@ impl TestRes {
     }
 }
 
-struct TestSystem {
+// struct TestSystem {
 
-}
+// }
 
-impl<'a> System<'a> for TestSystem {
-    type SystemData = ReadStorage<'a, TestComp>;
+// impl<'a> System<'a> for TestSystem {
+//     type SystemData = ReadStorage<'a, TestComp>;
 
-    fn run(&mut self, data0: Self::SystemData) {
-        for test in (*data0.data).inner.inner.iter() {
-            println!("{:?}", test.test);
-        }
-    }
-}
+//     fn run(&mut self, data0: Self::SystemData) {
+//         for test in (*data0.data).inner.inner.iter() {
+//             println!("{:?}", test.test);
+//         }
+//     }
+// }
