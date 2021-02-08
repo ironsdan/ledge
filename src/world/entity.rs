@@ -2,7 +2,7 @@ use crate::world::World;
 use crate::world::component::Component;
 use crate::world::storage::{
     WriteStorage,
-    SystemData,
+    // SystemData,
 };
 
 pub struct EntityBuilder<'a> {

@@ -2,11 +2,10 @@ use crate::{
     world::component::Component,
     world::{Fetch, FetchMut},
     world::entity::Entities,
-    // system::DynSystemData,
 };
-
 use std::{marker::PhantomData};
 
+// Stores the bitset (used for joining) and the physical storage for the component.
 pub struct TrackedStorage<C: Component> {
     pub bitset: Bitset,
     pub inner: C::Storage,
@@ -21,6 +20,7 @@ impl<C: Component> TrackedStorage<C> {
     }
 }
 
+// Simple vec wrapper, added because in the future there will be other storage types as well.
 pub struct VecStorage<T> {
     pub inner: Vec<T>,
 }
@@ -33,6 +33,7 @@ impl<T> Default for VecStorage<T> {
     }
 }
 
+// Found this online helps with defaults for some of the types.
 pub trait TryDefault: Sized {
     fn try_default() -> Result<Self, String>;
 
@@ -69,6 +70,7 @@ where
     }
 }
 
+// Inspired by hibitset and amethyst this is a hierarchial bitset that is used for speedy joining.
 #[derive(Default)]
 pub struct Bitset {}
 
@@ -78,21 +80,22 @@ impl Bitset {
     }
 }
 
+// Currently only used for component storage reads. TODO impl
 pub struct Storage<'a, T, D> {
     pub data: D,
     pub entities: Fetch<'a, Entities>,
     pub phantom: PhantomData<T>,
 }
 
-pub struct SystemData {
+// pub struct SystemData {
 
-}
+// }
 
-impl SystemData {
-    // pub fn fetch<T: Component>() -> WriteStorage<T> {
+// impl SystemData {
+//     // pub fn fetch<T: Component>() -> WriteStorage<T> {
 
-    // }
-}
+//     // }
+// }
 
 pub type ReadStorage<'a, T> = Storage<'a, T, Fetch<'a, TrackedStorage<T>>>;
 
