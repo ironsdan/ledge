@@ -30,11 +30,14 @@ fn main() {
 
     let test_resource = TestRes::new();
 
-    test_world.insert::<Entities>(Entities {});
+    // test_world.insert::<Entities>(Entities {});
     test_world.insert::<u8>(8);
     test_world.insert::<TestRes>(test_resource);
 
     test_world.register::<TestComp>();
+
+    test_world.create_entity().with(TestComp{test:(0,0)}).build();
+    test_world.create_entity().with(TestComp{test:(10,20)}).build();
 
     {
         let write_storage: WriteStorage<TestComp> = test_world.write_comp_storage::<TestComp>();
@@ -90,9 +93,10 @@ impl<'a> System<'a> for TestSystem1 {
     type SystemData = WriteStorage<'a, TestComp>;
 
     fn run(&mut self, mut data0: Self::SystemData) {
-        (*data0.data).inner.inner.push(TestComp { test: (0, 10) });
-        (*data0.data).inner.inner.push(TestComp { test: (0, 20) });
-        (*data0.data).inner.inner.push(TestComp { test: (0, 30) });
+        for data in (*data0.data).inner.inner.iter_mut() {
+            (*data).test.0 += 10;
+            (*data).test.1 += 20;
+        }
     }
 }
 

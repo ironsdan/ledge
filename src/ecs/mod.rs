@@ -139,10 +139,7 @@ impl World {
                 inner: self.resources.get(&ResourceId::new::<R>()).unwrap().borrow(), 
                 phantom: PhantomData,
             },
-            entities: Fetch {
-                inner: self.entities().inner,
-                phantom: PhantomData,
-            },
+            entities: self.entities(),
             phantom: PhantomData
         }
     }
@@ -156,10 +153,7 @@ impl World {
                 inner: self.resources.get(&ResourceId::new::<R>()).unwrap().borrow_mut(), 
                 phantom: PhantomData,
             },
-            entities: Fetch {
-                inner: self.entities().inner,
-                phantom: PhantomData,
-            },
+            entities: self.entities(),
             phantom: PhantomData
         }
     }
@@ -190,8 +184,8 @@ impl World {
     }
 
     // Convenience function for getting all the entities.
-    pub fn entities(&self) -> Fetch<Entities> {
-        self.fetch::<Entities>()
+    pub fn entities(&self) -> Entities {
+        self.fetch::<EntityController>()
     }
 
     pub fn create_entity(&mut self) -> EntityBuilder {

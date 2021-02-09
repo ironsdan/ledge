@@ -2,8 +2,12 @@ use crate::{
     ecs::component::Component,
     ecs::{Fetch, FetchMut},
     ecs::entity::Entities,
+    ecs::entity::Entity,
 };
-use std::{marker::PhantomData};
+use std::{
+    marker::PhantomData,
+    ops::{Deref, DerefMut}
+};
 
 // Stores the bitset (used for joining) and the physical storage for the component.
 pub struct TrackedStorage<C: Component> {
@@ -17,6 +21,10 @@ impl<C: Component> TrackedStorage<C> {
             bitset: Bitset::new(),
             inner: storage,
         }
+    }
+
+    pub fn insert(&mut self, index: usize, value: C) {
+        self.inner.insert(index, value);
     }
 }
 
@@ -54,9 +62,27 @@ where
     }
 }
 
-pub trait DynamicStorage<T>: TryDefault {}
+pub trait DynamicStorage<T>: TryDefault {
+    fn insert(&mut self, index: usize, value: T);
+    fn get(&self, id: usize) -> &T;
+}
 
-impl<T> DynamicStorage<T> for VecStorage<T> {} 
+impl<T> DynamicStorage<T> for VecStorage<T> {
+    fn insert(&mut self, index: usize, value: T) {
+        self.inner.push(value);
+        // if index < self.inner.len() {
+        //     println!("Inserting in dyn storage entity with id: {}", index);
+        //     self.inner.insert(index, value); // TODO this seems like a bad way to do it.
+        // } else if index == 0 && self.inner.len() == 0 {
+        //     println!("Inserting in dyn storage when 0 entity with id: {}", index);
+        //     self.inner.insert(index, value); // TODO this seems like a bad way to do it.
+        // }
+    }
+
+    fn get(&self, id: usize) -> &T {
+        self.inner.get(id).unwrap()
+    }
+} 
 
 impl<C: Component> Default for TrackedStorage<C>
 where
@@ -83,19 +109,38 @@ impl Bitset {
 // Currently only used for component storage reads. TODO impl
 pub struct Storage<'a, T, D> {
     pub data: D,
-    pub entities: Fetch<'a, Entities>,
+    pub entities: Entities<'a>,
     pub phantom: PhantomData<T>,
 }
 
-// pub struct SystemData {
+impl<'a, T, D> Storage<'a, T, D>
+where 
+    D: DerefMut<Target = TrackedStorage<T>>,
+    T: Component,
+    {
+    pub fn insert(&mut self, entity: Entity, value: T) {
+        // println!("Inserting in storage entity with id: {}", entity.id());
+        self.data.insert(entity.id(), value);
+    }
 
-// }
+    pub fn get(&self, e: Entity) -> Option<&T> {
+        Some(self.data.inner.get(e.id()))
+        // if self.data.bitset.contains(e.id()) && self.entities.is_alive(e) {
+        //     Some(self.data.inner.get(e.id()))
+        // } else {
+        //     None
+        // }
+    }
+}
 
-// impl SystemData {
-//     // pub fn fetch<T: Component>() -> WriteStorage<T> {
+pub trait SystemStorage {
+    // pub fn fetch<T: Component>() -> WriteStorage<T> {
 
-//     // }
-// }
+    // }
+    // fn setup<C: Component>(&self) {
+
+    // }
+}
 
 pub type ReadStorage<'a, T> = Storage<'a, T, Fetch<'a, TrackedStorage<T>>>;
 

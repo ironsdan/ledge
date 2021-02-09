@@ -1,7 +1,7 @@
-use crate::ecs::World;
+use crate::ecs::{World, Fetch};
 use crate::ecs::component::Component;
 use crate::ecs::storage::{
-    // WriteStorage,
+    WriteStorage,
     Bitset,
     // SystemData,
 };
@@ -23,8 +23,8 @@ impl<'a> EntityBuilder<'a> {
 
     pub fn with<C: Component>(self, component: C) -> Self {
         {
-            // let mut storage: WriteStorage<C> = SystemData::fetch(&self.world);
-            // storage.insert(self.entity, c).unwrap();
+            let mut storage: WriteStorage<C> = self.world.write_comp_storage();
+            storage.insert(self.entity, component);
         }
         self
     }
@@ -66,11 +66,16 @@ impl EntityController {
 
     pub fn create_entity(&mut self) -> Entity {
         let id = self.next_id();
-        let generation = self.generations[id];
+        // let generation = self.generations[id];
+        let generation = Generation {};
         Entity {
             id,
             generation
         }
+    }
+
+    pub fn is_alive(&self, id: usize) -> bool {
+        true
     }
 }
 
@@ -86,14 +91,19 @@ impl Default for EntityController {
 }
 
 // The user seen entity object.
+#[derive(Clone, Copy, Hash, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Entity {
     id: usize,
     generation: Generation,
 }
 
-pub struct Entities {
-    
+impl Entity {
+    pub fn id(&self) -> usize {
+        self.id
+    }
 }
+
+pub type Entities<'a> = Fetch<'a, EntityController>;
 
 // impl Resource for Entities
 
