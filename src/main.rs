@@ -16,7 +16,7 @@ use ecs::storage::VecStorage;
 use ecs::storage::ReadStorage;
 use ecs::storage::WriteStorage;
 // use std::any::type_name;
-use ecs::entity::Entities;
+// use ecs::entity::Entities;
 
 // fn print_type_of<T>(_: &T) {
 //     println!("{}", std::any::type_name::<T>())
@@ -25,8 +25,8 @@ use ecs::entity::Entities;
 fn main() {
     let mut test_world = World::new();
 
-    let mut test_system0 = TestSystem1{};
-    let mut test_system1 = TestSystem{};
+    let mut test_system0 = VelWrite{};
+    let mut test_system1 = VelRead{};
 
     let test_resource = TestRes::new();
 
@@ -34,17 +34,17 @@ fn main() {
     test_world.insert::<u8>(8);
     test_world.insert::<TestRes>(test_resource);
 
-    test_world.register::<TestComp>();
+    test_world.register::<Vel>();
 
-    test_world.create_entity().with(TestComp{test:(0,0)}).build();
-    test_world.create_entity().with(TestComp{test:(10,20)}).build();
+    test_world.create_entity().with(Vel{test:(0,0)}).build();
+    test_world.create_entity().with(Vel{test:(10,20)}).build();
 
     {
-        let write_storage: WriteStorage<TestComp> = test_world.write_comp_storage::<TestComp>();
+        let write_storage: WriteStorage<Vel> = test_world.write_comp_storage::<Vel>();
         test_system0.run(write_storage);
     }
     {
-        let read_storage: ReadStorage<TestComp> = test_world.read_comp_storage::<TestComp>();
+        let read_storage: ReadStorage<Vel> = test_world.read_comp_storage::<Vel>();
         test_system1.run(read_storage);
     }
 
@@ -60,18 +60,32 @@ fn main() {
     // event::run(interface, event_loop, game);
 }
 
-pub struct TestComp {
+pub struct Vel {
     test: (u8, u8),
 }
 
-impl TestComp {
+impl Vel {
     pub fn test(&self) -> (u8, u8) {
         return self.test;
     }
 }
 
-impl Component for TestComp {
-    type Storage = VecStorage<TestComp>;
+impl Component for Vel {
+    type Storage = VecStorage<Self>;
+}
+
+pub struct Pos {
+    test: (u8, u8),
+}
+
+impl Pos {
+    pub fn test(&self) -> (u8, u8) {
+        return self.test;
+    }
+}
+
+impl Component for Pos {
+    type Storage = VecStorage<Self>;
 }
 
 #[derive(Debug)]
@@ -87,10 +101,10 @@ impl TestRes {
     }
 }
 
-struct TestSystem1 {}
+struct VelWrite {}
 
-impl<'a> System<'a> for TestSystem1 {
-    type SystemData = WriteStorage<'a, TestComp>;
+impl<'a> System<'a> for VelWrite {
+    type SystemData = WriteStorage<'a, Vel>;
 
     fn run(&mut self, mut data0: Self::SystemData) {
         for data in (*data0.data).inner.inner.iter_mut() {
@@ -100,10 +114,10 @@ impl<'a> System<'a> for TestSystem1 {
     }
 }
 
-struct TestSystem {}
+struct VelRead {}
 
-impl<'a> System<'a> for TestSystem {
-    type SystemData = ReadStorage<'a, TestComp>;
+impl<'a> System<'a> for VelRead {
+    type SystemData = ReadStorage<'a, Vel>;
 
     fn run(&mut self, data0: Self::SystemData) {
         for test in (*data0.data).inner.inner.iter() {
