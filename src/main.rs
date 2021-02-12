@@ -15,7 +15,7 @@ use ecs::component::Component;
 use ecs::storage::VecStorage;
 use ecs::storage::ReadStorage;
 use ecs::storage::WriteStorage;
-use ecs::storage::LayeredBitMap;
+use ecs::layeredbitmap::LayeredBitMap;
 // use ecs::join::*;
 // use std::any::type_name;
 // use ecs::entity::Entities;
@@ -27,19 +27,19 @@ use ecs::storage::LayeredBitMap;
 fn main() {
     let mut test_bitset = LayeredBitMap::new();
 
-    test_bitset.insert(30);
-    // test_bitset.insert(30);
+    test_bitset.insert(60);
+    test_bitset.insert(61);
     // test_bitset.insert(29);
 
-    println!("{:b}\n{:b}", test_bitset.layer0[0], test_bitset.layer1[0]);
+    // println!("{:b}", test_bitset.layer0[0]);
 
     // test_bitset.insert(63);
     // test_bitset.insert(62);
     // test_bitset.insert(236);
 
-    test_bitset.remove(31);
+    test_bitset.remove(60);
 
-    println!("{}", test_bitset.check(236));
+    println!("{}", test_bitset.check(61));
 
     // let mut test_world = World::new();
 

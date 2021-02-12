@@ -3,6 +3,7 @@ pub mod component;
 pub mod storage;
 pub mod system;
 pub mod join;
+pub mod layeredbitmap;
 
 use crate::ecs::{
     component::Component,

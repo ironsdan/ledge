@@ -2,9 +2,9 @@ use crate::ecs::{World, Fetch};
 use crate::ecs::component::Component;
 use crate::ecs::storage::{
     WriteStorage,
-    LayeredBitMap,
     // SystemData,
 };
+use crate::ecs::layeredbitmap::LayeredBitMap;
 
 pub struct EntityBuilder<'a> {
     pub entity: Entity,
