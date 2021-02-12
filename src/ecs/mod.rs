@@ -2,6 +2,7 @@ pub mod entity;
 pub mod component;
 pub mod storage;
 pub mod system;
+pub mod join;
 
 use crate::ecs::{
     component::Component,

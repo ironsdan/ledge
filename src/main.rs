@@ -15,6 +15,7 @@ use ecs::component::Component;
 use ecs::storage::VecStorage;
 use ecs::storage::ReadStorage;
 use ecs::storage::WriteStorage;
+// use ecs::join::*;
 // use std::any::type_name;
 // use ecs::entity::Entities;
 
