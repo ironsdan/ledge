@@ -2,7 +2,7 @@ use crate::ecs::{World, Fetch};
 use crate::ecs::component::Component;
 use crate::ecs::storage::{
     WriteStorage,
-    BitSet,
+    LayeredBitMap,
     // SystemData,
 };
 
@@ -44,8 +44,8 @@ impl<'a> EntityBuilder<'a> {
 pub struct EntityController {
     max_id: usize,
     generations: Vec<Generation>,
-    alive: BitSet,
-    killed: BitSet,
+    alive: LayeredBitMap,
+    killed: LayeredBitMap,
 }
 
 impl EntityController {
@@ -53,8 +53,8 @@ impl EntityController {
         Self {
             max_id: 0,
             generations: Vec::new(),
-            alive: BitSet::new(),
-            killed: BitSet::new(),
+            alive: LayeredBitMap::new(),
+            killed: LayeredBitMap::new(),
         }
     }
 
@@ -84,8 +84,8 @@ impl Default for EntityController {
         EntityController {
             max_id: 0,
             generations: Vec::new(),
-            alive: BitSet::new(),
-            killed: BitSet::new(),
+            alive: LayeredBitMap::new(),
+            killed: LayeredBitMap::new(),
         }
     }
 }

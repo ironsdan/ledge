@@ -15,6 +15,7 @@ use ecs::component::Component;
 use ecs::storage::VecStorage;
 use ecs::storage::ReadStorage;
 use ecs::storage::WriteStorage;
+use ecs::storage::LayeredBitMap;
 // use ecs::join::*;
 // use std::any::type_name;
 // use ecs::entity::Entities;
@@ -24,33 +25,49 @@ use ecs::storage::WriteStorage;
 // }
 
 fn main() {
-    let mut test_world = World::new();
+    let mut test_bitset = LayeredBitMap::new();
 
-    let mut test_system0 = VelWrite{};
-    let mut test_system1 = VelRead{};
+    test_bitset.insert(30);
+    // test_bitset.insert(30);
+    // test_bitset.insert(29);
 
-    let test_resource = TestRes::new();
+    println!("{:b}\n{:b}", test_bitset.layer0[0], test_bitset.layer1[0]);
 
-    // test_world.insert::<Entities>(Entities {});
-    test_world.insert::<u8>(8);
-    test_world.insert::<TestRes>(test_resource);
+    // test_bitset.insert(63);
+    // test_bitset.insert(62);
+    // test_bitset.insert(236);
 
-    test_world.register::<Vel>();
+    test_bitset.remove(31);
 
-    test_world.create_entity().with(Vel{test:(0,0)}).build();
-    test_world.create_entity().with(Vel{test:(10,20)}).build();
+    println!("{}", test_bitset.check(236));
 
-    {
-        let write_storage: WriteStorage<Vel> = test_world.write_comp_storage::<Vel>();
-        test_system0.run(write_storage);
-    }
-    {
-        let read_storage: ReadStorage<Vel> = test_world.read_comp_storage::<Vel>();
-        test_system1.run(read_storage);
-    }
+    // let mut test_world = World::new();
 
-    test_world.remove::<u8>();
-    test_world.remove::<TestRes>();
+    // let mut test_system0 = VelWrite{};
+    // let mut test_system1 = VelRead{};
+
+    // let test_resource = TestRes::new();
+
+    // // test_world.insert::<Entities>(Entities {});
+    // test_world.insert::<u8>(8);
+    // test_world.insert::<TestRes>(test_resource);
+
+    // test_world.register::<Vel>();
+
+    // test_world.create_entity().with(Vel{test:(0,0)}).build();
+    // test_world.create_entity().with(Vel{test:(10,20)}).build();
+
+    // {
+    //     let write_storage: WriteStorage<Vel> = test_world.write_comp_storage::<Vel>();
+    //     test_system0.run(write_storage);
+    // }
+    // {
+    //     let read_storage: ReadStorage<Vel> = test_world.read_comp_storage::<Vel>();
+    //     test_system1.run(read_storage);
+    // }
+
+    // test_world.remove::<u8>();
+    // test_world.remove::<TestRes>();
 
     // let (interface, event_loop) = InterfaceBuilder::new("test", "Dan").build().unwrap();
 
