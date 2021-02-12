@@ -4,14 +4,12 @@ pub trait Joinable {
 
     fn join<J: Joinable>(self) -> JoinIterator<Self>
     where
-        Self: Sized
+        Self: Sized,
     {
         JoinIterator::new(self)
     }
 
-    fn get_values(&self) -> Self::Value {
-        Self::Value
-    }
+    fn get_values(&self) -> Self::Value;
 }
 
 pub struct JoinIterator<J: Joinable> {
@@ -27,9 +25,9 @@ impl<J: Joinable> JoinIterator<J> {
     }
 }
 
-impl<J: Joinable> Iterator for JoinIterator<J> {
-    type Item = J::Type;
-    fn next(&mut self) -> Option<J::Type> {
-        Some(self.values)
-    }
-}
+// impl<J: Joinable> Iterator for JoinIterator<J> {
+//     type Item = J::Type;
+//     fn next(&mut self) -> Option<J::Type> {
+//         Some(self.values)
+//     }
+// }

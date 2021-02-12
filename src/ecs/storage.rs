@@ -3,6 +3,7 @@ use crate::{
     ecs::{Fetch, FetchMut},
     ecs::entity::Entities,
     ecs::entity::Entity,
+    ecs::join::Joinable,
 };
 use std::{
     marker::PhantomData,
@@ -11,14 +12,14 @@ use std::{
 
 // Stores the bitset (used for joining) and the physical storage for the component.
 pub struct TrackedStorage<C: Component> {
-    pub bitset: Bitset,
+    pub bitset: BitSet,
     pub inner: C::Storage,
 }
 
 impl<C: Component> TrackedStorage<C> {
     pub fn new(storage: C::Storage) -> Self {
         Self {
-            bitset: Bitset::new(),
+            bitset: BitSet::new(),
             inner: storage,
         }
     }
@@ -98,9 +99,9 @@ where
 
 // Inspired by hibitset and amethyst this is a hierarchial bitset that is used for speedy joining.
 #[derive(Default)]
-pub struct Bitset {}
+pub struct BitSet {}
 
-impl Bitset {
+impl BitSet {
     pub fn new() -> Self {
         Self {}
     }
@@ -133,14 +134,20 @@ where
     }
 }
 
-pub trait SystemStorage {
-    // pub fn fetch<T: Component>() -> WriteStorage<T> {
+impl<'a, 'b, T, D> Joinable for &'a Storage<'b, T, D>
+where
+    T: Component,
+    D: Deref<Target = TrackedStorage<T>> 
+{
+    type Value = &'a T::Storage;
+    type Type = &'a T;
 
-    // }
-    // fn setup<C: Component>(&self) {
-
-    // }
+    fn get_values(&self) -> Self::Value {
+        &self.data.inner
+    }
 }
+
+// pub trait SystemStorage {}
 
 pub type ReadStorage<'a, T> = Storage<'a, T, Fetch<'a, TrackedStorage<T>>>;
 
