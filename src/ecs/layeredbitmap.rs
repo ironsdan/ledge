@@ -1,13 +1,12 @@
 // Inspired by hibitset and amethyst this is a hierarchial bitset that is used for speedy joining.
 const USIZE_BITS: usize = std::mem::size_of::<usize>() * 8;
 const LAYER_FACTOR: usize = 4;
-const LAYER1: usize = USIZE_BITS / LAYER_FACTOR;
+const LAYER1: usize = USIZE_BITS * LAYER_FACTOR;
 
 #[derive(Default)]
 pub struct LayeredBitMap {
     pub layer1: Vec<usize>,
     pub layer0: Vec<usize>,
-    max_index: usize,
 }
 
 impl LayeredBitMap {
@@ -15,34 +14,55 @@ impl LayeredBitMap {
         Self {
             layer1: Vec::new(),
             layer0: Vec::new(),
-            max_index: 0,
         }
     }
 
     pub fn insert(&mut self, index: usize) {
-        if index > self.max_index {
+        if (index / USIZE_BITS) + 1 > self.layer0.len() {
             for _ in 0..((index / USIZE_BITS) + 1 - self.layer0.len()) {
                 self.layer0.push(0);
             }
             for _ in 0..((index / LAYER1) + 1 - self.layer1.len()) {
                 self.layer1.push(0);
             }
-            self.max_index = index;
         }
         self.layer0[index / USIZE_BITS] |= 1 << (index % USIZE_BITS);
-        self.layer1[index / LAYER1] |= 1 << (index % USIZE_BITS) + (LAYER_FACTOR - 1) - (index % LAYER_FACTOR);
+        self.layer1[index / (USIZE_BITS*LAYER_FACTOR)] |= 1 << (index / LAYER_FACTOR);
     }
 
     pub fn remove(&mut self, index: usize) {
-        self.layer0[index / USIZE_BITS] = self.layer0[index / USIZE_BITS] ^ 1 << (index % USIZE_BITS);
+        self.layer0[index / USIZE_BITS] &= !(1 << (index % USIZE_BITS));
+               
+        let mut value = 0;
+        let mut test;
+        let mut curr_index = index;
+        loop {
+            test = curr_index % LAYER_FACTOR;
+            value |= self.layer0[curr_index / USIZE_BITS] & 1 << (curr_index % USIZE_BITS);
+            curr_index -= 1;
+            if test == 0 || value != 0 {break}
+        }
+        curr_index = index;
+        loop {
+            curr_index += 1;
+            test = curr_index % LAYER_FACTOR;
+            if test == 0 || value != 0 {break} 
+            value |= self.layer0[curr_index / USIZE_BITS] & 1 << (curr_index % USIZE_BITS);
+        }
+        if value != 0 {
+            value = 1;
+        }
+        self.layer1[index / LAYER1] = self.layer1[index / LAYER1] & !(!value << (index / LAYER_FACTOR));
     }
 
     pub fn check(&self, index: usize) -> bool {
-        if index > self.max_index {
+        if (index / USIZE_BITS) > self.layer0.len() {
+            println!("failed due to bounds check");
             return false;
         }
-        if self.layer1[index / LAYER1] & (1 << (index % USIZE_BITS) + ((LAYER_FACTOR - 1) - (index % LAYER_FACTOR))) != 0  {
-            println!("layer1 check: true");
+        if !self.layer1[index / LAYER1] & (1 << (index / LAYER_FACTOR)) != 0  {
+            println!("failed due to layer 1 check");
+            return false;
         }
         (self.layer0[index / USIZE_BITS] & (1 << (index % USIZE_BITS))) != 0
     }

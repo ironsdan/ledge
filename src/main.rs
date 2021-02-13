@@ -27,19 +27,13 @@ use ecs::layeredbitmap::LayeredBitMap;
 fn main() {
     let mut test_bitset = LayeredBitMap::new();
 
-    test_bitset.insert(60);
-    test_bitset.insert(61);
-    // test_bitset.insert(29);
+    test_bitset.insert(255);
+    test_bitset.insert(254);
+    test_bitset.remove(254);
+    test_bitset.remove(255);
+    println!("{:b}", test_bitset.layer0[0]);
 
-    // println!("{:b}", test_bitset.layer0[0]);
-
-    // test_bitset.insert(63);
-    // test_bitset.insert(62);
-    // test_bitset.insert(236);
-
-    test_bitset.remove(60);
-
-    println!("{}", test_bitset.check(61));
+    println!("{}", test_bitset.check(254));
 
     // let mut test_world = World::new();
 
