@@ -27,7 +27,7 @@ impl LayeredBitMap {
             }
         }
         self.layer0[index / USIZE_BITS] |= 1 << (index % USIZE_BITS);
-        self.layer1[index / (USIZE_BITS*LAYER_FACTOR)] |= 1 << (index / LAYER_FACTOR);
+        self.layer1[index / (USIZE_BITS*LAYER_FACTOR)] |= 1 << (index % LAYER_FACTOR);
     }
 
     pub fn remove(&mut self, index: usize) {

@@ -87,6 +87,7 @@ fn main() {
     // event::run(interface, event_loop, game);
 }
 
+#[derive(Default)]
 pub struct Vel {
     test: (u8, u8),
 }
@@ -101,6 +102,7 @@ impl Component for Vel {
     type Storage = VecStorage<Self>;
 }
 
+#[derive(Default)]
 pub struct Pos {
     test: (u8, u8),
 }
@@ -134,10 +136,10 @@ impl<'a> System<'a> for VelWrite {
     type SystemData = WriteStorage<'a, Vel>;
 
     fn run(&mut self, mut data0: Self::SystemData) {
-        for data in (*data0.data).inner.inner.iter_mut() {
-            (*data).test.0 += 10;
-            (*data).test.1 += 20;
-        }
+        // for data in (*data0.data).inner.inner.iter_mut() {
+        //     (*data).test.0 += 10;
+        //     (*data).test.1 += 20;
+        // }
     }
 }
 
@@ -147,8 +149,8 @@ impl<'a> System<'a> for VelRead {
     type SystemData = ReadStorage<'a, Vel>;
 
     fn run(&mut self, data0: Self::SystemData) {
-        for test in (*data0.data).inner.inner.iter() {
-            println!("{:?}", test.test);
-        }
+        // for test in (*data0.data).inner.inner.iter() {
+        //     println!("{:?}", test.test);
+        // }
     }
 }

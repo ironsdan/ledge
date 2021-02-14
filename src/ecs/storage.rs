@@ -11,6 +11,8 @@ use std::{
     ops::{Deref, DerefMut}
 };
 
+use vector_map::VecMap;
+
 // Stores the bitset (used for joining) and the physical storage for the component.
 pub struct TrackedStorage<C: Component> {
     pub bitset: LayeredBitMap,
@@ -32,10 +34,10 @@ impl<C: Component> TrackedStorage<C> {
 
 // Simple vec wrapper, added because in the future there will be other storage types as well.
 pub struct VecStorage<T> {
-    pub inner: Vec<T>,
+    pub inner: VecMap<usize, T>,
 }
 
-impl<T> Default for VecStorage<T> {
+impl<T: Default> Default for VecStorage<T> {
     fn default() -> Self {
         Self{
             inner: Default::default()
@@ -69,9 +71,9 @@ pub trait DynamicStorage<T>: TryDefault {
     fn get(&self, id: usize) -> &T;
 }
 
-impl<T> DynamicStorage<T> for VecStorage<T> {
+impl<T: Default> DynamicStorage<T> for VecStorage<T> {
     fn insert(&mut self, index: usize, value: T) {
-        self.inner.push(value);
+        self.inner.insert(index, value);
         // if index < self.inner.len() {
         //     println!("Inserting in dyn storage entity with id: {}", index);
         //     self.inner.insert(index, value); // TODO this seems like a bad way to do it.
@@ -82,7 +84,7 @@ impl<T> DynamicStorage<T> for VecStorage<T> {
     }
 
     fn get(&self, id: usize) -> &T {
-        self.inner.get(id).unwrap()
+        self.inner.get(&id).unwrap()
     }
 } 
 
