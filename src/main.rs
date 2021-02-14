@@ -25,15 +25,30 @@ use ecs::layeredbitmap::LayeredBitMap;
 // }
 
 fn main() {
-    let mut test_bitset = LayeredBitMap::new();
+    let mut test_bitset0 = LayeredBitMap::new();
+    let mut test_bitset1 = LayeredBitMap::new();
 
-    test_bitset.insert(255);
-    test_bitset.insert(254);
-    test_bitset.remove(254);
-    test_bitset.remove(255);
-    println!("{:b}", test_bitset.layer0[0]);
+    test_bitset0.insert(0);
+    test_bitset0.insert(1);
+    test_bitset0.insert(2);
+    test_bitset0.insert(5);
+    test_bitset0.insert(6);
+    test_bitset0.insert(255);
+    // test_bitset0.insert(1023);
 
-    println!("{}", test_bitset.check(254));
+    test_bitset1.insert(0);
+    test_bitset1.insert(2);
+    test_bitset1.insert(5);
+    test_bitset1.insert(255);
+    // test_bitset1.insert(1023);
+    
+    let joined = LayeredBitMap::join(test_bitset0, test_bitset1);
+
+    println!("{:?}", joined);
+
+    // println!("{:b}", test_bitset.layer0[0]);
+
+    // println!("{}", test_bitset.check(254));
 
     // let mut test_world = World::new();
 

@@ -66,4 +66,35 @@ impl LayeredBitMap {
         }
         (self.layer0[index / USIZE_BITS] & (1 << (index % USIZE_BITS))) != 0
     }
+
+    pub fn len(&self) -> usize {
+        self.layer0.len()
+    }
+
+    pub fn join(lhs: Self, rhs: Self) -> Vec<usize> {
+        let mut result = Vec::new();
+        let mut looper = &lhs;
+        let mut other = &rhs;
+        let mut both;
+
+        if rhs.len() < lhs.len() {
+            looper = &rhs;
+            other = &lhs;
+        }
+
+        let mut curr_index = 0;
+
+        for i in 0..looper.len() {
+            both = looper.layer0[i] & other.layer0[i];
+
+            for j in curr_index..curr_index + USIZE_BITS {
+                if both & 1 << (j % USIZE_BITS) != 0 {
+                    result.push(j);
+                }
+            }
+            curr_index = curr_index + USIZE_BITS;
+        }
+
+        result
+    }
 }
