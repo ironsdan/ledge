@@ -11,6 +11,7 @@ use crate::ecs::{
         TrackedStorage,
         ReadStorage,
         WriteStorage,
+        Storage,
     },
     entity::{
         Entities,
@@ -136,7 +137,7 @@ impl World {
     where
     R: Resource + Component
     {
-        ReadStorage {
+        Storage {
             data: Fetch { 
                 inner: self.resources.get(&ResourceId::new::<R>()).unwrap().borrow(), 
                 phantom: PhantomData,
@@ -150,7 +151,7 @@ impl World {
     where
     R: Resource + Component
     {
-        WriteStorage {
+        Storage {
             data: FetchMut { 
                 inner: self.resources.get(&ResourceId::new::<R>()).unwrap().borrow_mut(), 
                 phantom: PhantomData,

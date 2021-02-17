@@ -29,6 +29,7 @@ impl<C: Component> TrackedStorage<C> {
 
     pub fn insert(&mut self, index: usize, value: C) {
         self.inner.insert(index, value);
+        self.bitset.insert(index);
     }
 }
 
@@ -136,12 +137,66 @@ where
     type Type = &'a T;
 
     fn get_values(&self) -> Self::Value {
+        // println!("{:?}", self.data.inner);
         &self.data.inner
     }
+
+    fn get_keys(&self) -> Vec<usize> {
+        println!("{:?}", LayeredBitMap::join(&self.data.bitset, &self.data.bitset));
+        LayeredBitMap::join(&self.data.bitset, &self.data.bitset)
+    }
+
+    fn get(value: &mut Self::Value, index: usize) -> Self::Type {
+        value.get(index)
+    }
 }
+
+// impl<'a, 'b, T, D> Joinable for &'a mut Storage<'b, T, D>
+// where
+//     T: Component,
+//     D: Deref<Target = TrackedStorage<T>> 
+// {
+//     type Value = &'a mut T::Storage;
+//     type Type = &'a T;
+
+//     fn get_values(&self) -> Self::Value {
+//         &self.data.inner
+//     }
+
+//     fn get_keys(&self) -> Vec<usize> {
+//         LayeredBitMap::join(&self.data.bitset, &self.data.bitset)
+//     }
+
+//     fn get(value: &mut Self::Value, index: usize) -> Self::Type {
+//         value.get(index)
+//     }
+// }
 
 // pub trait SystemStorage {}
 
 pub type ReadStorage<'a, T> = Storage<'a, T, Fetch<'a, TrackedStorage<T>>>;
 
 pub type WriteStorage<'a, T> = Storage<'a, T, FetchMut<'a, TrackedStorage<T>>>;
+
+impl<'a, 'b, T, D, A, B> Joinable for (&'a Storage<'b, T, D>, &'a Storage<'b, A, B>)
+where
+    A: Component,
+    B: Deref<Target = TrackedStorage<A>>,
+    T: Component,
+    D: Deref<Target = TrackedStorage<T>> 
+{
+    type Value = (&'a T::Storage, &'a A::Storage);
+    type Type = (&'a T, &'a A);
+
+    fn get_values(&self) -> Self::Value {
+        (&self.0.data.inner, &self.1.data.inner)
+    }
+
+    fn get_keys(&self) -> Vec<usize> {
+        LayeredBitMap::join(&self.0.data.bitset, &self.1.data.bitset)
+    }
+
+    fn get(value: &mut Self::Value, index: usize) -> Self::Type {
+        (value.0.get(index), value.1.get(index))
+    }
+}

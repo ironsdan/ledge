@@ -71,7 +71,7 @@ impl LayeredBitMap {
         self.layer0.len()
     }
 
-    pub fn join(lhs: Self, rhs: Self) -> Vec<usize> {
+    pub fn join(lhs: &Self, rhs: &Self) -> Vec<usize> {
         let mut result = Vec::new();
         let mut looper = &lhs;
         let mut other = &rhs;
