@@ -70,6 +70,7 @@ where
 pub trait DynamicStorage<T>: TryDefault {
     fn insert(&mut self, index: usize, value: T);
     fn get(&self, id: usize) -> &T;
+    fn get_mut(&mut self, id: usize) -> &mut T;
 }
 
 impl<T: Default> DynamicStorage<T> for VecStorage<T> {
@@ -86,6 +87,10 @@ impl<T: Default> DynamicStorage<T> for VecStorage<T> {
 
     fn get(&self, id: usize) -> &T {
         self.inner.get(&id).unwrap()
+    }
+
+    fn get_mut(&mut self, id: usize) -> &mut T {
+        self.inner.get_mut(&id).unwrap()
     }
 } 
 
@@ -114,17 +119,15 @@ where
     T: Component,
     {
     pub fn insert(&mut self, entity: Entity, value: T) {
-        // println!("Inserting in storage entity with id: {}", entity.id());
         self.data.insert(entity.id(), value);
     }
 
     pub fn get(&self, e: Entity) -> Option<&T> {
         Some(self.data.inner.get(e.id()))
-        // if self.data.bitset.contains(e.id()) && self.entities.is_alive(e) {
-        //     Some(self.data.inner.get(e.id()))
-        // } else {
-        //     None
-        // }
+    }
+
+    pub fn get_mut(&mut self, e: Entity) -> Option<&mut T> {
+        Some(self.data.inner.get_mut(e.id()))
     }
 }
 
@@ -136,41 +139,35 @@ where
     type Value = &'a T::Storage;
     type Type = &'a T;
 
-    fn get_values(&self) -> Self::Value {
-        // println!("{:?}", self.data.inner);
-        &self.data.inner
+    fn view(self) -> (Vec<usize>, Self::Value) {
+        (LayeredBitMap::join(&self.data.bitset, &self.data.bitset), &self.data.inner)
     }
 
-    fn get_keys(&self) -> Vec<usize> {
-        println!("{:?}", LayeredBitMap::join(&self.data.bitset, &self.data.bitset));
-        LayeredBitMap::join(&self.data.bitset, &self.data.bitset)
-    }
-
-    fn get(value: &mut Self::Value, index: usize) -> Self::Type {
+    unsafe fn get(value: &mut Self::Value, index: usize) -> Self::Type {
         value.get(index)
     }
 }
 
-// impl<'a, 'b, T, D> Joinable for &'a mut Storage<'b, T, D>
-// where
-//     T: Component,
-//     D: Deref<Target = TrackedStorage<T>> 
-// {
-//     type Value = &'a mut T::Storage;
-//     type Type = &'a T;
+impl<'a, 'b, T, D> Joinable for &'a mut Storage<'b, T, D>
+where
+    T: Component,
+    D: DerefMut<Target = TrackedStorage<T>> 
+{
+    type Value = &'a mut T::Storage;
+    type Type = &'a mut T;
 
-//     fn get_values(&self) -> Self::Value {
-//         &self.data.inner
-//     }
+    fn view(self) -> (Vec<usize>, Self::Value) {
+        (LayeredBitMap::join(&self.data.bitset, &self.data.bitset), &mut self.data.inner)
+    }
 
-//     fn get_keys(&self) -> Vec<usize> {
-//         LayeredBitMap::join(&self.data.bitset, &self.data.bitset)
-//     }
-
-//     fn get(value: &mut Self::Value, index: usize) -> Self::Type {
-//         value.get(index)
-//     }
-// }
+    unsafe fn get(v: &mut Self::Value, index: usize) -> Self::Type {
+        // This is horribly unsafe. Unfortunately, Rust doesn't provide a way
+        // to abstract mutable/immutable state at the moment, so we have to hack
+        // our way through it.
+        let value: *mut Self::Value = v as *mut Self::Value;
+        (*value).get_mut(index)
+    }
+}
 
 // pub trait SystemStorage {}
 
@@ -188,15 +185,32 @@ where
     type Value = (&'a T::Storage, &'a A::Storage);
     type Type = (&'a T, &'a A);
 
-    fn get_values(&self) -> Self::Value {
-        (&self.0.data.inner, &self.1.data.inner)
+    fn view(self) -> (Vec<usize>, Self::Value) {
+        (LayeredBitMap::join_set(&[&self.0.data.bitset, &self.1.data.bitset]), (&self.0.data.inner, &self.1.data.inner))
     }
 
-    fn get_keys(&self) -> Vec<usize> {
-        LayeredBitMap::join(&self.0.data.bitset, &self.1.data.bitset)
-    }
-
-    fn get(value: &mut Self::Value, index: usize) -> Self::Type {
+    unsafe fn get(value: &mut Self::Value, index: usize) -> Self::Type {
         (value.0.get(index), value.1.get(index))
+    }
+}
+
+impl<'a, 'b, T, D, A, B, C, E> Joinable for (&'a Storage<'b, T, D>, &'a Storage<'b, A, B>, &'a Storage<'b, C, E>)
+where
+    A: Component,
+    B: Deref<Target = TrackedStorage<A>>,
+    C: Component,
+    E: Deref<Target = TrackedStorage<C>>,
+    T: Component,
+    D: Deref<Target = TrackedStorage<T>>,
+{
+    type Value = (&'a T::Storage, &'a A::Storage, &'a C::Storage);
+    type Type = (&'a T, &'a A, &'a C);
+
+    fn view(self) -> (Vec<usize>, Self::Value) {
+        (LayeredBitMap::join_set(&[&self.0.data.bitset, &self.1.data.bitset, &self.2.data.bitset]), (&self.0.data.inner, &self.1.data.inner, &self.2.data.inner))
+    }
+
+    unsafe fn get(value: &mut Self::Value, index: usize) -> Self::Type {
+        (value.0.get(index), value.1.get(index), value.2.get(index))
     }
 }

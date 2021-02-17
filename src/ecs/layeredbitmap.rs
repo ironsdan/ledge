@@ -31,6 +31,9 @@ impl LayeredBitMap {
     }
 
     pub fn remove(&mut self, index: usize) {
+        if index/USIZE_BITS > self.layer0.len() {
+            return
+        }
         self.layer0[index / USIZE_BITS] &= !(1 << (index % USIZE_BITS));
                
         let mut value = 0;
@@ -69,6 +72,40 @@ impl LayeredBitMap {
 
     pub fn len(&self) -> usize {
         self.layer0.len()
+    }
+
+    pub fn join_set(set: &[&Self]) -> Vec<usize> {
+        let mut result = Vec::new();
+        let mut looper = &set[0];
+        let mut current_result = 0;
+
+        for bitmap in set.iter() {
+            if bitmap.len() < looper.len() {
+                looper = &bitmap;
+            }
+        }
+
+        let mut curr_index = 0;
+
+        for i in 0..looper.len() {
+            for bitmap in set.iter() {
+                if current_result == 0 {
+                    current_result |= bitmap.layer0[i];
+                } else {
+                    current_result &= bitmap.layer0[i];
+                }
+            }
+            
+            for j in curr_index..curr_index + USIZE_BITS {
+                if current_result & 1 << (j % USIZE_BITS) != 0 {
+                    result.push(j);
+                }
+            }
+            
+            curr_index = curr_index + USIZE_BITS;
+        }        
+
+        result
     }
 
     pub fn join(lhs: &Self, rhs: &Self) -> Vec<usize> {
