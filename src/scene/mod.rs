@@ -14,7 +14,7 @@ pub type Stack = SceneStack<ecs::World>;
 pub trait Scene<C> {
     fn current_scene(&self) -> bool;
     fn update(&mut self, gameworld: &mut C, ctx: &mut Interface) -> SceneSwitch<C>;
-    fn draw(&mut self, gameworld: &mut C, ctx: &mut Interface, builder: &mut AutoCommandBufferBuilder<StandardCommandPoolBuilder>) -> GameResult<()>;
+    fn draw(&mut self, ctx: &mut Interface, builder: &mut AutoCommandBufferBuilder<StandardCommandPoolBuilder>) -> GameResult<()>;
     fn input(&mut self, gameworld: &mut C, started: bool);
 }
 

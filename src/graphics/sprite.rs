@@ -106,4 +106,8 @@ impl Drawable for Sprite {
         self.create_set(interface.resources.fetch::<AssetStorage<Texture>>().get(self.texture_handle.clone()).unwrap().vulkano_texture.clone(), sampler, layout);
         interface.graphics_ctx.draw(builder, self);
     }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
 }

@@ -23,6 +23,7 @@ pub mod fs {
 
 pub trait Drawable {
     fn draw(&mut self, interface: &mut Interface, draw_settings: DrawSettings, builder: &mut AutoCommandBufferBuilder<StandardCommandPoolBuilder>);
+    fn name(&self) -> &str;
 }
 
 pub struct DrawSettings {}

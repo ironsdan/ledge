@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 use crate::asset::Asset;
+use rand::prelude::*;
 
 #[derive(Clone, PartialEq)]
 pub struct Handle<A> 
@@ -17,7 +18,9 @@ pub enum HandleId {
 
 impl HandleId {
     pub fn random() -> Self {
-        HandleId::Id(29481)
+        let mut rng = rand::thread_rng();
+        let y: u64 = rng.gen();
+        HandleId::Id(y)
     }
 
     pub fn default() -> Self {

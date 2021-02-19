@@ -2,7 +2,7 @@ use crate::scene::*;
 use crate::ecs;
 
 pub struct SceneStack<C> {
-    scenes: Vec<Box<dyn Scene<C>>>,
+    pub scenes: Vec<Box<dyn Scene<C>>>,
 }
 
 impl<C> SceneStack<C> {
