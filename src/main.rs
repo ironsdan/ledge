@@ -21,13 +21,8 @@ use graphics::sprite::Sprite;
 use vulkano::format::Format;
 use vulkano::image::{Dimensions, ImmutableImage};
 use image::ImageFormat;
-use vulkano::command_buffer::AutoCommandBufferBuilder;
-use vulkano::command_buffer::pool::standard::StandardCommandPoolBuilder;
-
-use std::rc::Rc;
 
 fn main() {
-    // let mut world = World::new();
     let (mut interface, event_loop) = InterfaceBuilder::new("test", "Dan").build().unwrap();
 
     let asset_storage = storage::AssetStorage::<types::Texture>::new();
@@ -140,10 +135,10 @@ impl Scene<World> for TestScene {
     fn update(&mut self, gameworld: &mut World, ctx: &mut Interface) -> SceneSwitch<World> {
         SceneSwitch::None
     }
-    fn draw(&mut self, ctx: &mut Interface, builder: &mut AutoCommandBufferBuilder<StandardCommandPoolBuilder>) -> GameResult<()> {
+    fn draw(&mut self, ctx: &mut Interface) -> GameResult<()> {
         for element in self.elements.iter_mut() {
             println!("element: {:?}", element.name());
-            element.draw(ctx, DrawSettings {}, builder);
+            element.draw(ctx, DrawSettings {});
         }
         Ok(())
     }

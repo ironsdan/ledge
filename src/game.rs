@@ -27,11 +27,11 @@ impl EventHandler for GameState {
     }
 
     fn draw(&mut self, interface: &mut Interface) -> GameResult {
-        let mut builder = interface.graphics_ctx.begin_frame().unwrap();
+        interface.graphics_ctx.begin_frame();
 
-        self.scene_stack.scenes[0].draw(interface, &mut builder);
+        self.scene_stack.scenes[0].draw(interface).unwrap();
 
-        interface.graphics_ctx.present(builder);
+        interface.graphics_ctx.present();
         return Ok(());
     }
 }

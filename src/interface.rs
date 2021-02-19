@@ -1,6 +1,5 @@
 use crate::error::*;
 use crate::conf::*;
-use crate::graphics::*;
 
 pub struct InterfaceBuilder {
     pub(crate) game_name: String,

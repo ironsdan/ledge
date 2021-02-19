@@ -14,8 +14,6 @@ use crate::asset::types::Texture;
 use crate::asset::storage::AssetStorage;
 use vulkano::sampler::Sampler;
 use vulkano::descriptor::descriptor_set::UnsafeDescriptorSetLayout;
-use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
-use vulkano::command_buffer::pool::standard::StandardCommandPoolBuilder;
 
 #[derive(Clone, PartialEq)]
 pub struct Sprite {
@@ -100,11 +98,11 @@ impl Sprite {
 }
 
 impl Drawable for Sprite {
-    fn draw(&mut self, interface: &mut Interface, draw_settings: DrawSettings, builder: &mut AutoCommandBufferBuilder<StandardCommandPoolBuilder>) {
+    fn draw(&mut self, interface: &mut Interface, draw_settings: DrawSettings) {
         let sampler = &interface.graphics_ctx.sampler;
         let layout = interface.graphics_ctx.pipeline.descriptor_set_layout(0).unwrap();
         self.create_set(interface.resources.fetch::<AssetStorage<Texture>>().get(self.texture_handle.clone()).unwrap().vulkano_texture.clone(), sampler, layout);
-        interface.graphics_ctx.draw(builder, self);
+        interface.graphics_ctx.draw(self);
     }
 
     fn name(&self) -> &str {

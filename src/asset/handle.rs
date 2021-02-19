@@ -19,8 +19,7 @@ pub enum HandleId {
 impl HandleId {
     pub fn random() -> Self {
         let mut rng = rand::thread_rng();
-        let y: u64 = rng.gen();
-        HandleId::Id(y)
+        HandleId::Id(rng.gen())
     }
 
     pub fn default() -> Self {

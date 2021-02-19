@@ -20,10 +20,9 @@ use winit::window::Window;
 use winit::window::WindowBuilder;
 use winit::dpi::PhysicalSize;
 
-use image::ImageFormat;
 use std::sync::Arc;
 use crate::lib::*;
-use crate::graphics::{sprite::*, animation::*};
+use crate::graphics::sprite::*;
 use crate::conf::*;
 use crate::graphics::{vs, fs};
 
@@ -38,11 +37,11 @@ pub struct GraphicsContext {
     pub dynamic_state: vulkano::command_buffer::DynamicState,
     pub buffer_pool: vulkano::buffer::CpuBufferPool<Vertex>,
     pub pipeline: std::sync::Arc<dyn vulkano::pipeline::GraphicsPipelineAbstract + std::marker::Send + std::marker::Sync>,
-    pub sprites: Vec<Sprite>,
     pub image_num: usize,
     pub acquire_future: Option<SwapchainAcquireFuture<Window>>,
     pub recreate_swapchain: bool,
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
+    pub current_image_builder: Option<AutoCommandBufferBuilder<StandardCommandPoolBuilder>>,
 }
 
 impl GraphicsContext {
@@ -195,38 +194,15 @@ impl GraphicsContext {
             dynamic_state: dynamic_state,
             buffer_pool: buffer_pool,
             pipeline: pipeline,
-            sprites: Vec::new(),
             image_num: 0,
             acquire_future: None,
             previous_frame_end: Some(empty_future.boxed()),
             recreate_swapchain: false,
+            current_image_builder: None,
         }
     }
 
-    // pub fn create_sprite(&mut self, name: String, position: [f32; 2], file_bytes: &[u8], size: [u32; 2], matrix_dims: [u32; 2], animation_machine: Option<AnimationStateMachine>) -> Sprite {
-    //     let (texture, _) = {
-    //         let image = image::load_from_memory_with_format(file_bytes,
-    //             ImageFormat::Png).unwrap().to_rgba8();
-    //         let dimensions = image.dimensions();
-    //         let image_data = image.into_raw().clone();
-    
-    //         ImmutableImage::from_iter(
-    //             image_data.iter().cloned(),
-    //             Dimensions::Dim2d { width: dimensions.0, height: dimensions.1 },
-    //             Format::R8G8B8A8Srgb,
-    //             self.queue.clone(),
-    //         )
-    //         .unwrap()
-    //     };
-
-    //     let mut sprite = Sprite::new(name, texture.clone(), position, size, matrix_dims, animation_machine);
-    //     let layout = self.pipeline.descriptor_set_layout(0).unwrap();
-    //     sprite.create_set(&self.sampler, layout);
-
-    //     return sprite;
-    // }
-
-    pub fn begin_frame(&mut self) -> Option<AutoCommandBufferBuilder<StandardCommandPoolBuilder>> {
+    pub fn begin_frame(&mut self) {
         self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 
         if self.recreate_swapchain {
@@ -234,7 +210,7 @@ impl GraphicsContext {
             let (new_swapchain, new_images) =
                 match self.swapchain.recreate_with_dimensions(dimensions) {
                     Ok(r) => r,
-                    Err(SwapchainCreationError::UnsupportedDimensions) => return None,
+                    Err(SwapchainCreationError::UnsupportedDimensions) => return,
                     Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
                 };
 
@@ -252,7 +228,7 @@ impl GraphicsContext {
                 Ok(r) => r,
                 Err(AcquireError::OutOfDate) => {
                     self.recreate_swapchain = true;
-                    return None;
+                    return;
                 }
                 Err(e) => panic!("Failed to acquire next image: {:?}", e),
             };
@@ -264,20 +240,20 @@ impl GraphicsContext {
         self.image_num = image_num;
         self.acquire_future = Some(acquire_future);
 
-        let mut builder =
+        let builder =
             AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queue.family())
                 .unwrap();
 
         let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
-        builder.begin_render_pass(self.framebuffers[image_num].clone(), false, clear_values).unwrap();
-        return Some(builder);
+        self.current_image_builder = Some(builder);
+        self.current_image_builder.as_mut().unwrap().begin_render_pass(self.framebuffers[image_num].clone(), false, clear_values).unwrap();
     }
 
-    pub fn draw(&mut self, builder: &mut AutoCommandBufferBuilder<StandardCommandPoolBuilder>, sprite: &Sprite) {
+    pub fn draw(&mut self, sprite: &Sprite) {
         let data = &sprite.rect;
         let vertex_buffer = self.buffer_pool.chunk(data.vertices.to_vec()).unwrap();
         
-        builder.draw(
+        self.current_image_builder.as_mut().unwrap().draw(
             self.pipeline.clone(),
             &self.dynamic_state,
             vec!(Arc::new(vertex_buffer.clone())),
@@ -286,11 +262,9 @@ impl GraphicsContext {
         ).unwrap();
     }
 
-    pub fn present(&mut self, mut builder: AutoCommandBufferBuilder<StandardCommandPoolBuilder>) {
-        builder.end_render_pass().unwrap();
-        let command_buffer = builder.build().unwrap();
-
-        self.sprites.clear();
+    pub fn present(&mut self) {
+        self.current_image_builder.as_mut().unwrap().end_render_pass().unwrap();
+        let command_buffer = self.current_image_builder.take().unwrap().build().unwrap();
 
         let future = self.previous_frame_end
             .take()
