@@ -203,28 +203,28 @@ impl GraphicsContext {
         }
     }
 
-    pub fn create_sprite(&mut self, name: String, position: [f32; 2], file_bytes: &[u8], size: [u32; 2], matrix_dims: [u32; 2], animation_machine: Option<AnimationStateMachine>) -> Sprite {
-        let (texture, _) = {
-            let image = image::load_from_memory_with_format(file_bytes,
-                ImageFormat::Png).unwrap().to_rgba8();
-            let dimensions = image.dimensions();
-            let image_data = image.into_raw().clone();
+    // pub fn create_sprite(&mut self, name: String, position: [f32; 2], file_bytes: &[u8], size: [u32; 2], matrix_dims: [u32; 2], animation_machine: Option<AnimationStateMachine>) -> Sprite {
+    //     let (texture, _) = {
+    //         let image = image::load_from_memory_with_format(file_bytes,
+    //             ImageFormat::Png).unwrap().to_rgba8();
+    //         let dimensions = image.dimensions();
+    //         let image_data = image.into_raw().clone();
     
-            ImmutableImage::from_iter(
-                image_data.iter().cloned(),
-                Dimensions::Dim2d { width: dimensions.0, height: dimensions.1 },
-                Format::R8G8B8A8Srgb,
-                self.queue.clone(),
-            )
-            .unwrap()
-        };
+    //         ImmutableImage::from_iter(
+    //             image_data.iter().cloned(),
+    //             Dimensions::Dim2d { width: dimensions.0, height: dimensions.1 },
+    //             Format::R8G8B8A8Srgb,
+    //             self.queue.clone(),
+    //         )
+    //         .unwrap()
+    //     };
 
-        let mut sprite = Sprite::new(name, texture.clone(), position, size, matrix_dims, animation_machine);
-        let layout = self.pipeline.descriptor_set_layout(0).unwrap();
-        sprite.create_set(&self.sampler, layout);
+    //     let mut sprite = Sprite::new(name, texture.clone(), position, size, matrix_dims, animation_machine);
+    //     let layout = self.pipeline.descriptor_set_layout(0).unwrap();
+    //     sprite.create_set(&self.sampler, layout);
 
-        return sprite;
-    }
+    //     return sprite;
+    // }
 
     pub fn begin_frame(&mut self) -> Option<AutoCommandBufferBuilder<StandardCommandPoolBuilder>> {
         self.previous_frame_end.as_mut().unwrap().cleanup_finished();

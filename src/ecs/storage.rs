@@ -19,6 +19,10 @@ pub struct TrackedStorage<C: Component> {
     pub inner: C::Storage,
 }
 
+pub type ReadStorage<'a, T> = Storage<'a, T, Fetch<'a, TrackedStorage<T>>>;
+
+pub type WriteStorage<'a, T> = Storage<'a, T, FetchMut<'a, TrackedStorage<T>>>;
+
 impl<C: Component> TrackedStorage<C> {
     pub fn new(storage: C::Storage) -> Self {
         Self {
@@ -169,12 +173,6 @@ where
     }
 }
 
-// pub trait SystemStorage {}
-
-pub type ReadStorage<'a, T> = Storage<'a, T, Fetch<'a, TrackedStorage<T>>>;
-
-pub type WriteStorage<'a, T> = Storage<'a, T, FetchMut<'a, TrackedStorage<T>>>;
-
 impl<'a, 'b, T, D, A, B> Joinable for (&'a Storage<'b, T, D>, &'a Storage<'b, A, B>)
 where
     A: Component,
@@ -194,17 +192,17 @@ where
     }
 }
 
-impl<'a, 'b, T, D, A, B, C, E> Joinable for (&'a Storage<'b, T, D>, &'a Storage<'b, A, B>, &'a Storage<'b, C, E>)
+impl<'a, 'b, A, B, C, D, E, F> Joinable for (&'a Storage<'b, A, B>, &'a Storage<'b, C, D>, &'a Storage<'b, E, F>)
 where
     A: Component,
     B: Deref<Target = TrackedStorage<A>>,
     C: Component,
-    E: Deref<Target = TrackedStorage<C>>,
-    T: Component,
-    D: Deref<Target = TrackedStorage<T>>,
+    D: Deref<Target = TrackedStorage<C>>,
+    E: Component,
+    F: Deref<Target = TrackedStorage<E>>,
 {
-    type Value = (&'a T::Storage, &'a A::Storage, &'a C::Storage);
-    type Type = (&'a T, &'a A, &'a C);
+    type Value = (&'a A::Storage, &'a C::Storage, &'a E::Storage);
+    type Type = (&'a A, &'a C, &'a E);
 
     fn view(self) -> (Vec<usize>, Self::Value) {
         (LayeredBitMap::join_set(&[&self.0.data.bitset, &self.1.data.bitset, &self.2.data.bitset]), (&self.0.data.inner, &self.1.data.inner, &self.2.data.inner))
@@ -212,5 +210,28 @@ where
 
     unsafe fn get(value: &mut Self::Value, index: usize) -> Self::Type {
         (value.0.get(index), value.1.get(index), value.2.get(index))
+    }
+}
+
+impl<'a, 'b, A, B, C, D, E, F, G, H> Joinable for (&'a Storage<'b, A, B>, &'a Storage<'b, C, D>, &'a Storage<'b, E, F>, &'a Storage<'b, G, H>)
+where
+    A: Component,
+    B: Deref<Target = TrackedStorage<A>>,
+    C: Component,
+    D: Deref<Target = TrackedStorage<C>>,
+    E: Component,
+    F: Deref<Target = TrackedStorage<E>>,
+    G: Component,
+    H: Deref<Target = TrackedStorage<G>>,
+{
+    type Value = (&'a A::Storage, &'a C::Storage, &'a E::Storage, &'a G::Storage);
+    type Type = (&'a A, &'a C, &'a E, &'a G);
+
+    fn view(self) -> (Vec<usize>, Self::Value) {
+        (LayeredBitMap::join_set(&[&self.0.data.bitset, &self.1.data.bitset, &self.2.data.bitset]), (&self.0.data.inner, &self.1.data.inner, &self.2.data.inner, &self.3.data.inner))
+    }
+
+    unsafe fn get(value: &mut Self::Value, index: usize) -> Self::Type {
+        (value.0.get(index), value.1.get(index), value.2.get(index), value.3.get(index))
     }
 }

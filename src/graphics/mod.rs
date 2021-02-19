@@ -3,6 +3,9 @@ pub mod animation;
 pub mod sprite;
 
 use crate::interface::Interface;
+use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
+use vulkano::command_buffer::pool::standard::StandardCommandPoolBuilder;
+
 
 pub mod vs {
     vulkano_shaders::shader! {
@@ -19,7 +22,7 @@ pub mod fs {
 }
 
 pub trait Drawable {
-    fn draw(&self, interface: &mut Interface, draw_settings: DrawSettings);
+    fn draw(&mut self, interface: &mut Interface, draw_settings: DrawSettings, builder: &mut AutoCommandBufferBuilder<StandardCommandPoolBuilder>);
 }
 
 pub struct DrawSettings {}

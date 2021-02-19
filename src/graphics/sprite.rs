@@ -1,22 +1,36 @@
 use crate::lib::*;
 use std::sync::Arc;
 use crate::graphics::animation::*;
+use crate::interface::Interface;
+use crate::graphics::Drawable;
+use crate::graphics::DrawSettings;
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
+use vulkano::image::ImmutableImage;
+use vulkano::format::Format;
+use vulkano::descriptor::descriptor_set::PersistentDescriptorSetImg;
+use vulkano::descriptor::descriptor_set::PersistentDescriptorSetSampler;
+use crate::asset::handle::Handle;
+use crate::asset::types::Texture;
+use crate::asset::storage::AssetStorage;
+use vulkano::sampler::Sampler;
+use vulkano::descriptor::descriptor_set::UnsafeDescriptorSetLayout;
+use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
+use vulkano::command_buffer::pool::standard::StandardCommandPoolBuilder;
 
 #[derive(Clone, PartialEq)]
 pub struct Sprite {
     pub name: String,
-    pub texture: Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>,
+    pub texture_handle: Handle<Texture>,
     pub rect: Rect,
     pub size: [u32; 2],
     pub screen_size: [f32; 2],
     pub matrix_dims: [u32; 2],
     pub animation_machine: Option<AnimationStateMachine>,
-    pub set: Option<std::sync::Arc<vulkano::descriptor::descriptor_set::PersistentDescriptorSet<(((), vulkano::descriptor::descriptor_set::PersistentDescriptorSetImg<std::sync::Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>>), vulkano::descriptor::descriptor_set::PersistentDescriptorSetSampler)>>>,
+    pub set: Option<std::sync::Arc<PersistentDescriptorSet<(((), PersistentDescriptorSetImg<std::sync::Arc<ImmutableImage<Format>>>), PersistentDescriptorSetSampler)>>>,
 }
 
 impl Sprite {
-    pub fn new(name: String, texture: Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>, pos: [f32; 2], size: [u32; 2], matrix_dims: [u32; 2], animation_machine: Option<AnimationStateMachine>) -> Self {
+    pub fn new(name: String, handle: Handle<Texture>, pos: [f32; 2], size: [u32; 2], matrix_dims: [u32; 2], animation_machine: Option<AnimationStateMachine>) -> Self {
         let screen_size = convert_to_screen_space(size, [800, 600]); // Converts the given array from pixels to screen space size (0.0-2.0).
 
         let texture_coord = [ // Adjust the size of the "viewport" of the sprite to only be one animation frame.
@@ -29,7 +43,7 @@ impl Sprite {
         let rect = Rect::new(screen_size[0], screen_size[1], pos, texture_coord); // Create the Rect that is associated with the texture for drawing.
         Self {
             name: name,
-            texture: texture,
+            texture_handle: handle,
             rect: rect,
             size: size,
             screen_size: screen_size,
@@ -39,10 +53,10 @@ impl Sprite {
         }
     }
 
-    pub fn create_set(&mut self, sampler: &std::sync::Arc<vulkano::sampler::Sampler>, layout: &std::sync::Arc<vulkano::descriptor::descriptor_set::UnsafeDescriptorSetLayout>) {
+    pub fn create_set(&mut self, texture: Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>, sampler: &std::sync::Arc<Sampler>, layout: &std::sync::Arc<UnsafeDescriptorSetLayout>) {
         let set = Arc::new(
             PersistentDescriptorSet::start(layout.clone())
-                .add_sampled_image(self.texture.clone(), sampler.clone())
+                .add_sampled_image(texture.clone(), sampler.clone())
                 .unwrap()
                 .build()
                 .unwrap(),
@@ -82,5 +96,14 @@ impl Sprite {
         for i in 0..self.rect.vertices.len() {
             self.rect.vertices[i].tex_coords = texture_coord[i];
         }
+    }
+}
+
+impl Drawable for Sprite {
+    fn draw(&mut self, interface: &mut Interface, draw_settings: DrawSettings, builder: &mut AutoCommandBufferBuilder<StandardCommandPoolBuilder>) {
+        let sampler = &interface.graphics_ctx.sampler;
+        let layout = interface.graphics_ctx.pipeline.descriptor_set_layout(0).unwrap();
+        self.create_set(interface.resources.fetch::<AssetStorage<Texture>>().get(self.texture_handle.clone()).unwrap().vulkano_texture.clone(), sampler, layout);
+        interface.graphics_ctx.draw(builder, self);
     }
 }

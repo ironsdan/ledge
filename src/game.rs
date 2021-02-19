@@ -1,26 +1,36 @@
 use crate::event::*;
 use crate::error::*;
 use crate::interface::Interface;
-use crate::graphics::sprite::*;
+use crate::scene;
+use crate::ecs;
 
-pub struct Game {
-    pub world: Vec<Sprite>,
+pub struct GameState {
+    scene_stack: scene::Stack,
 }
 
-impl EventHandler for Game {
-    fn update_world(&mut self, sprite: Sprite) {
-        self.world.push(sprite);
+impl GameState {
+    pub fn new() -> Self {
+        let scene_stack = scene::Stack::new();
+        Self {
+            scene_stack,
+        }
     }
 
+    pub fn add_scene(&mut self, scene: Box<dyn scene::Scene<ecs::World>>) {
+        self.scene_stack.push(scene);
+    }
+}
+
+impl EventHandler for GameState {
     fn update(&mut self, interface: &mut Interface) -> GameResult {
         return Ok(());
     }
 
     fn draw(&self, interface: &mut Interface) -> GameResult {
         let mut builder = interface.graphics_ctx.begin_frame().unwrap();
-        for sprite in self.world.iter() {
-            interface.graphics_ctx.draw(&mut builder, &sprite);
-        }
+
+        // self.scene_stack
+
         interface.graphics_ctx.present(builder);
         return Ok(());
     }
