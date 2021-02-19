@@ -137,7 +137,7 @@ impl Scene<World> for TestScene {
     }
     fn draw(&mut self, ctx: &mut Interface) -> GameResult<()> {
         for element in self.elements.iter_mut() {
-            println!("element: {:?}", element.name());
+            // println!("element: {:?}", element.name());
             element.draw(ctx, DrawSettings {});
         }
         Ok(())

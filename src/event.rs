@@ -32,6 +32,7 @@ where
                 // if let Err(e) = game_state.update(interface) {
                 //     println!("Error on EventHandler::update(): {:?}", e);
                 // }
+                sleep(Duration::from_millis(16 - now.elapsed().unwrap().as_secs_f64() as u64));
             }
             Event::RedrawRequested(_) => {
                 if let Err(e) = game_state.draw(interface) {
@@ -40,14 +41,20 @@ where
                 sleep(Duration::from_millis(16 - now.elapsed().unwrap().as_secs_f64() as u64));
             }
             Event::RedrawEventsCleared => {
+                sleep(Duration::from_millis(16 - now.elapsed().unwrap().as_secs_f64() as u64));
                 // print!("Cleared: ");
             }
+            Event::UserEvent(_) => {
+                sleep(Duration::from_millis(16 - now.elapsed().unwrap().as_secs_f64() as u64));
+            }
+            Event::WindowEvent{ .. } => {} // These two cause issues if I don't set them to do nothing.
+            Event::DeviceEvent { .. } => {}
             _ => {
-                // print!("Other: ");
-            },
+                sleep(Duration::from_millis(16 - now.elapsed().unwrap().as_secs_f64() as u64));
+            }
         }
         
-        // println!("{:?}", now.elapsed().unwrap());
+        println!("{:?}", now.elapsed().unwrap());
     });
 }
 
