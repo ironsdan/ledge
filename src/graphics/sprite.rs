@@ -61,8 +61,8 @@ impl Sprite {
             [1.0 / matrix_dims[0] as f32, 1.0 / matrix_dims[1] as f32],
         ];
 
-        let sampler = &interface.graphics_ctx.sampler;
-        let layout = interface.graphics_ctx.pipeline.descriptor_set_layout(0).unwrap();
+        let sampler = &interface.graphics_context.sampler;
+        let layout = interface.graphics_context.pipeline.descriptor_set_layout(0).unwrap();
         let texture = world.fetch::<AssetStorage<Texture>>().get(handle.clone()).unwrap().vulkano_texture.clone();
         let set = Arc::new(
             PersistentDescriptorSet::start(layout.clone())

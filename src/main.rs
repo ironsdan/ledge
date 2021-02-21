@@ -8,14 +8,15 @@ mod error;
 mod ecs;
 mod scene;
 mod asset;
+mod input;
 
 use interface::*;
-use game::*;
-use ecs::World;
 use asset::*;
-use graphics::sprite::Sprite;
 use event::*;
 use scene::level::*;
+use graphics::sprite::Sprite;
+use game::GameState;
+use ecs::World;
 
 fn main() {
     let mut world = World::new();
@@ -32,21 +33,40 @@ fn main() {
 
     // Texture Creation //
     let pokeball_texture_handle;
+    let rock_texture_handle;
     {
-        let texture_test = types::Texture::from_file_vulkano(include_bytes!("images/pokeball.png"), &interface.graphics_ctx);
+        let texture_poke = types::Texture::from_file_vulkano(include_bytes!("images/pokeball.png"), &interface.graphics_context);
+        let texture_rock = types::Texture::from_file_vulkano(include_bytes!("images/rock.png"), &interface.graphics_context);
+
         let mut texture_assets = world.fetch_mut::<storage::AssetStorage<types::Texture>>();
-        pokeball_texture_handle = texture_assets.insert(texture_test);
+        pokeball_texture_handle = texture_assets.insert(texture_poke);
+        rock_texture_handle = texture_assets.insert(texture_rock);
     }
-    let test_sprite = Sprite::new(&interface, &world, "pokeball".to_string(), pokeball_texture_handle.clone(), [0.0, 0.0], [400, 300], [1, 1], None);
+    let poke_sprite = Sprite::new(&interface, &world, 
+        "pokeball".to_string(), 
+        pokeball_texture_handle.clone(), 
+        [0.0, 0.0], 
+        [40, 30], 
+        [1, 1], 
+        None
+    );
+    let rock_sprite = Sprite::new(&interface, &world, 
+        "rock".to_string(), 
+        rock_texture_handle.clone(), 
+        [0.0, 0.0], 
+        [800, 600], 
+        [1, 1], 
+        None
+    );
 
     // Entity Creation //
-    let pokeball = world.create_entity().with::<Sprite>(test_sprite.clone())
-                                      .is::<Visible>()
-                                      .is::<DynamicObject>()
-                                      .with::<Pos>(Pos {test: (-1.0,-1.0)}).build();
-    let pokeball1 = world.create_entity().with::<Sprite>(test_sprite.clone())
+    let pokeball1 = world.create_entity().with::<Sprite>(rock_sprite)
                                        .is::<Visible>()
                                        .with::<Pos>(Pos {test: (-1.0,-1.0)}).build();
+    let pokeball = world.create_entity().with::<Sprite>(poke_sprite)
+                                        .is::<Visible>()
+                                        .is::<DynamicObject>()
+                                        .with::<Pos>(Pos {test: (-1.0,-1.0)}).build();
 
     // Level Builder //
     let level_space = LevelSpaceBuilder::new().with_entity(pokeball).with_entity(pokeball1).build();

@@ -33,4 +33,8 @@ impl KeyboardInterface {
 
         // self.set_key_modifier(key, pressed);
     }
+
+    pub(crate) fn pressed_keys(&self) -> &HashSet<KeyCode> {
+        &self.pressed_keys
+    }
 }

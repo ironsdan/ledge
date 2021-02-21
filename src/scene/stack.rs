@@ -22,6 +22,10 @@ impl<C> SpaceStack<C> {
             scene.draw(world, context).unwrap();
         }
     }
+
+    pub fn update(&mut self) {
+
+    }
 }
 
 pub enum SpaceSwitch<C> {

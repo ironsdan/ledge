@@ -1,18 +1,22 @@
-use crate::interface::*;
-use winit::event_loop::{ControlFlow, EventLoop};
-use winit::event::{Event, WindowEvent};
-use crate::error::*;
 use std::time::{Duration, SystemTime};
 use std::thread::sleep;
-use crate::ecs::system::System;
-use crate::ecs::component::Component;
-use crate::ecs::storage::VecStorage;
-use crate::ecs::storage::NullStorage;
-use crate::ecs::storage::WriteStorage;
-use crate::ecs::storage::ReadStorage;
-use crate::ecs::join::Joinable;
-use crate::graphics::sprite::Sprite;
-use crate::ecs::World;
+use winit::{
+    event_loop::{ControlFlow, EventLoop},
+    event::{Event, WindowEvent}
+};
+use crate::{
+    ecs::{
+        World,
+        system::System,
+        component::Component,
+        storage::{VecStorage, NullStorage, WriteStorage, ReadStorage},
+        join::Joinable,
+    },
+    graphics::sprite::Sprite,
+    error::*,
+    interface::*,
+    input::keyboard::*,
+};
 
 pub fn run<S: 'static>(mut interface: Interface, mut world: World, event_loop: EventLoop<()>, mut game_state: S) -> !
 where
@@ -34,7 +38,7 @@ where
                     *control_flow = ControlFlow::Exit;
                 },
                 WindowEvent::Resized(_) => {
-                    interface.graphics_ctx.recreate_swapchain = true;
+                    interface.graphics_context.recreate_swapchain = true;
                 },
                 _ => {},
             },
@@ -53,7 +57,8 @@ where
                 sleep(Duration::from_millis(16 - now.elapsed().unwrap().as_secs_f64() as u64));
                 // println!("{:?}", 1.0/now.elapsed().unwrap().as_secs_f64());
 
-                pos_system.run((world.write_comp_storage::<Pos>(), world.read_comp_storage::<DynamicObject>()));
+                try_move_sprite(&interface.keyboard_context, world.write_comp_storage::<Pos>(), world.read_comp_storage::<DynamicObject>());
+                // pos_system.run((world.write_comp_storage::<Pos>(), world.read_comp_storage::<DynamicObject>()));
                 sprite_system.run((world.write_comp_storage::<Sprite>(), world.read_comp_storage::<Pos>()));
             },
             Event::RedrawRequested(_) => {
@@ -109,7 +114,7 @@ impl<'a> System<'a> for PosWrite {
             }
             if pos.test.1 < 0.0 {
                 pos.test.1 += 0.01;
-            }        
+            }
         }
     }
 }
@@ -121,8 +126,33 @@ impl<'a> System<'a> for SpriteMove {
 
     fn run(&mut self, (mut sprite, pos): Self::SystemData) {
         for (sprite, pos) in (&mut sprite, &pos).join() {
-            println!("{}: ({}, {})", sprite.name, sprite.rect.x, sprite.rect.y);
             sprite.update_rect([pos.test.0 as f32, pos.test.1 as f32]);
         }
+    }
+}
+
+pub fn try_move_sprite<'a>(keyboard_context: &KeyboardInterface, mut pos: WriteStorage<'a, Pos>, dynamic: ReadStorage<'a, DynamicObject>) {
+    let mut x = 0.0;
+    let mut y = 0.0;
+    
+    let keys = keyboard_context.pressed_keys();
+
+    if keys.contains(&KeyCode::W) {
+        y -= 0.01;
+    }
+    if keys.contains(&KeyCode::A) {
+        x -= 0.01;
+    }
+    if keys.contains(&KeyCode::S) {
+        y += 0.01;
+    }
+    if keys.contains(&KeyCode::D) {
+        x += 0.01;
+    }
+    
+    for (pos, dynamic) in (&mut pos, &dynamic).join() {
+        pos.test.0 += x;
+        pos.test.1 += y;
+        // sprite.update_rect([pos.test.0 as f32, pos.test.1 as f32]);
     }
 }

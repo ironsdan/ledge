@@ -1,7 +1,9 @@
-use vulkano::command_buffer::DynamicState;
-use vulkano::framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract};
-use vulkano::image::SwapchainImage;
-use vulkano::pipeline::viewport::Viewport;
+use vulkano::{
+    command_buffer::DynamicState,
+    framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract},
+    image::SwapchainImage,
+    pipeline::viewport::Viewport,
+};
 use winit::window::Window;
 use std::sync::Arc;
 
