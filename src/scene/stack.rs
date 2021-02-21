@@ -2,47 +2,47 @@ use crate::scene::*;
 use crate::graphics::context::GraphicsContext;
 use crate::ecs;
 
-pub struct SceneStack<C> {
-    pub scenes: Vec<Box<dyn Scene<C>>>,
+pub struct SpaceStack<C> {
+    pub scenes: Vec<Box<dyn Space<C>>>,
 }
 
-impl<C> SceneStack<C> {
+impl<C> SpaceStack<C> {
     pub fn new() -> Self {
         Self {
             scenes: Vec::new(),
         }  
     }
 
-    pub fn push(&mut self, scene: Box<Scene<C>>) {
+    pub fn push(&mut self, scene: Box<Space<C>>) {
         self.scenes.push(scene)
     }
 
-    // pub fn draw(&mut self, context: &mut GraphicsContext) {
-    //     for scene in self.scenes.iter_mut() {
-    //         scene.draw(context).unwrap();
-    //     }
-    // }
+    pub fn draw(&mut self, world: &mut World, context: &mut GraphicsContext) {
+        for scene in self.scenes.iter_mut() {
+            scene.draw(world, context).unwrap();
+        }
+    }
 }
 
-pub enum SceneSwitch<C> {
+pub enum SpaceSwitch<C> {
     None,
-    Push(Box<Scene<C>>),
-    Replace(Box<Scene<C>>),
+    Push(Box<Space<C>>),
+    Replace(Box<Space<C>>),
     Pop,
 }
 
-impl<C> SceneSwitch<C> {
+impl<C> SpaceSwitch<C> {
     pub fn replace<S>(scene: S) -> Self
     where
-        S: Scene<C> + 'static,
+        S: Space<C> + 'static,
     {
-        SceneSwitch::Replace(Box::new(scene))
+        SpaceSwitch::Replace(Box::new(scene))
     }
 
     pub fn push<S>(scene: S) -> Self
     where
-        S: Scene<C> + 'static,
+        S: Space<C> + 'static,
     {
-        SceneSwitch::Push(Box::new(scene))
+        SpaceSwitch::Push(Box::new(scene))
     }
 }

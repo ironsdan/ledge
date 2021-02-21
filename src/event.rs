@@ -7,6 +7,7 @@ use std::thread::sleep;
 use crate::ecs::system::System;
 use crate::ecs::component::Component;
 use crate::ecs::storage::VecStorage;
+use crate::ecs::storage::NullStorage;
 use crate::ecs::storage::WriteStorage;
 use crate::ecs::storage::ReadStorage;
 use crate::ecs::join::Joinable;
@@ -52,7 +53,7 @@ where
                 sleep(Duration::from_millis(16 - now.elapsed().unwrap().as_secs_f64() as u64));
                 // println!("{:?}", 1.0/now.elapsed().unwrap().as_secs_f64());
 
-                pos_system.run((world.write_comp_storage::<Pos>(), world.read_comp_storage::<Moveable>()));
+                pos_system.run((world.write_comp_storage::<Pos>(), world.read_comp_storage::<DynamicObject>()));
                 sprite_system.run((world.write_comp_storage::<Sprite>(), world.read_comp_storage::<Pos>()));
             },
             Event::RedrawRequested(_) => {
@@ -90,16 +91,16 @@ impl Component for Pos {
 }
 
 #[derive(Default)]
-pub struct Moveable {}
+pub struct DynamicObject {}
 
-impl Component for Moveable {
-    type Storage = VecStorage<Self>;
+impl Component for DynamicObject {
+    type Storage = NullStorage<Self>;
 }
 
 struct PosWrite {}
 
 impl<'a> System<'a> for PosWrite {
-    type SystemData = (WriteStorage<'a, Pos>, ReadStorage<'a, Moveable>);
+    type SystemData = (WriteStorage<'a, Pos>, ReadStorage<'a, DynamicObject>);
 
     fn run(&mut self, (mut pos, moveable): Self::SystemData) {
         for (pos, _) in (&mut pos, &moveable).join() {

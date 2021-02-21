@@ -2,7 +2,7 @@ use crate::ecs::{World, Fetch};
 use crate::ecs::component::Component;
 use crate::ecs::storage::{
     WriteStorage,
-    // SystemData,
+    NullStorage,
 };
 use crate::ecs::layeredbitmap::LayeredBitMap;
 
@@ -22,10 +22,14 @@ impl<'a> EntityBuilder<'a> {
     }
 
     pub fn with<C: Component>(self, component: C) -> Self {
-        {
-            let mut storage: WriteStorage<C> = self.world.write_comp_storage();
-            storage.insert(self.entity, component);
-        }
+        let mut storage: WriteStorage<C> = self.world.write_comp_storage();
+        storage.insert(self.entity, component);
+        self
+    }
+
+    pub fn is<C: Component<Storage = NullStorage<C>> + Default>(self) -> Self {
+        let mut storage: WriteStorage<C> = self.world.write_comp_storage();
+        storage.insert(self.entity, C::default());
         self
     }
 

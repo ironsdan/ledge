@@ -9,12 +9,11 @@ use crate::ecs::World;
 use crate::ecs;
 use crate::error::*;
 
-pub type Stack = SceneStack<ecs::World>;
+pub type Stack = SpaceStack<ecs::World>;
 
-pub trait Scene<C> {
+pub trait Space<C> {
     fn current_scene(&self) -> bool;
-    fn setup(&mut self, interface: &mut Interface, world: &mut World);
-    fn update(&mut self, context: &mut GraphicsContext) -> SceneSwitch<C>;
+    fn update(&mut self, context: &mut GraphicsContext) -> SpaceSwitch<C>;
     fn draw(&mut self, world: &mut World, context: &mut GraphicsContext) -> GameResult<()>;
     fn input(&mut self, gameworld: &mut C, started: bool);
 }

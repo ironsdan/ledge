@@ -5,20 +5,20 @@ use crate::scene;
 use crate::ecs::World;
 
 pub struct GameState {
-    current_scene: Box<dyn scene::Scene<World>>,
-    // scene_stack: scene::Stack,
+    // current_scene: Box<dyn scene::Scene<World>>,
+    space_stack: scene::Stack,
 }
 
 impl GameState {
-    pub fn new(default_scene: Box<dyn scene::Scene<World>>) -> Self {
+    pub fn new() -> Self {
         Self {
-            current_scene: default_scene,
+            space_stack: scene::Stack::new(),
         }
     }
 
-    // pub fn add_scene(&mut self, scene: Box<dyn scene::Scene<ecs::World>>) {
-    //     self.scene_stack.push(scene);
-    // }
+    pub fn add_space(&mut self, scene: Box<dyn scene::Space<World>>) {
+        self.space_stack.push(scene);
+    }
 }
 
 impl EventHandler for GameState {
@@ -29,7 +29,7 @@ impl EventHandler for GameState {
     fn draw(&mut self, interface: &mut Interface, world: &mut World) -> GameResult {
         interface.graphics_ctx.begin_frame();
 
-        self.current_scene.draw(world, &mut interface.graphics_ctx).unwrap();
+        self.space_stack.draw(world, &mut interface.graphics_ctx);
 
         interface.graphics_ctx.present();
         return Ok(());
