@@ -10,10 +10,15 @@ use vulkano::format::Format;
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSetImg;
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSetSampler;
 use crate::asset::handle::Handle;
+use crate::asset::handle::HandleId;
 use crate::asset::types::Texture;
 use crate::asset::storage::AssetStorage;
 use vulkano::sampler::Sampler;
 use vulkano::descriptor::descriptor_set::UnsafeDescriptorSetLayout;
+use crate::ecs::component::Component;
+use crate::ecs::storage::VecStorage;
+use std::marker::PhantomData;
+use crate::ecs::World;
 
 #[derive(Clone, PartialEq)]
 pub struct Sprite {
@@ -27,8 +32,27 @@ pub struct Sprite {
     pub set: Option<std::sync::Arc<PersistentDescriptorSet<(((), PersistentDescriptorSetImg<std::sync::Arc<ImmutableImage<Format>>>), PersistentDescriptorSetSampler)>>>,
 }
 
+impl Component for Sprite {
+    type Storage = VecStorage<Self>;
+}
+
+impl Default for Sprite {
+    fn default() -> Self {
+        Self {
+            name: "Empty Name".to_string(),
+            texture_handle: Handle { id: HandleId::default(), marker: PhantomData },
+            rect: Rect::default(),
+            size: [0, 0],
+            screen_size: [0.0, 0.0],
+            matrix_dims: [0, 0],
+            animation_machine: None,
+            set: None,
+        }
+    }
+}
+
 impl Sprite {
-    pub fn new(name: String, handle: Handle<Texture>, pos: [f32; 2], size: [u32; 2], matrix_dims: [u32; 2], animation_machine: Option<AnimationStateMachine>) -> Self {
+    pub fn new(interface: &Interface, world: &World, name: String, handle: Handle<Texture>, pos: [f32; 2], size: [u32; 2], matrix_dims: [u32; 2], animation_machine: Option<AnimationStateMachine>) -> Self {
         let screen_size = convert_to_screen_space(size, [800, 600]); // Converts the given array from pixels to screen space size (0.0-2.0).
 
         let texture_coord = [ // Adjust the size of the "viewport" of the sprite to only be one animation frame.
@@ -37,6 +61,17 @@ impl Sprite {
             [1.0 / matrix_dims[0] as f32,             0.0            ],
             [1.0 / matrix_dims[0] as f32, 1.0 / matrix_dims[1] as f32],
         ];
+
+        let sampler = &interface.graphics_ctx.sampler;
+        let layout = interface.graphics_ctx.pipeline.descriptor_set_layout(0).unwrap();
+        let texture = world.fetch::<AssetStorage<Texture>>().get(handle.clone()).unwrap().vulkano_texture.clone();
+        let set = Arc::new(
+            PersistentDescriptorSet::start(layout.clone())
+                .add_sampled_image(texture, sampler.clone())
+                .unwrap()
+                .build()
+                .unwrap(),
+        );
 
         let rect = Rect::new(screen_size[0], screen_size[1], pos, texture_coord); // Create the Rect that is associated with the texture for drawing.
         Self {
@@ -47,20 +82,8 @@ impl Sprite {
             screen_size: screen_size,
             matrix_dims: matrix_dims,
             animation_machine: animation_machine,
-            set: None,
+            set: Some(set),
         }
-    }
-
-    pub fn create_set(&mut self, texture: Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>, sampler: &std::sync::Arc<Sampler>, layout: &std::sync::Arc<UnsafeDescriptorSetLayout>) {
-        let set = Arc::new(
-            PersistentDescriptorSet::start(layout.clone())
-                .add_sampled_image(texture.clone(), sampler.clone())
-                .unwrap()
-                .build()
-                .unwrap(),
-        );
-
-        self.set = Some(set);
     }
 
     pub fn update_animation_frame(&mut self) {
@@ -98,10 +121,7 @@ impl Sprite {
 }
 
 impl Drawable for Sprite {
-    fn draw(&mut self, interface: &mut Interface, draw_settings: DrawSettings) {
-        let sampler = &interface.graphics_ctx.sampler;
-        let layout = interface.graphics_ctx.pipeline.descriptor_set_layout(0).unwrap();
-        self.create_set(interface.resources.fetch::<AssetStorage<Texture>>().get(self.texture_handle.clone()).unwrap().vulkano_texture.clone(), sampler, layout);
+    fn draw(&mut self, interface: &mut Interface) {
         interface.graphics_ctx.draw(self);
     }
 

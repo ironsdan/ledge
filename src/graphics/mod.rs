@@ -20,7 +20,7 @@ pub mod fs {
 }
 
 pub trait Drawable {
-    fn draw(&mut self, interface: &mut Interface, draw_settings: DrawSettings);
+    fn draw(&mut self, interface: &mut Interface);
     fn name(&self) -> &str;
 }
 

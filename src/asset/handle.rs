@@ -8,7 +8,7 @@ where
     A: Asset
 {
     pub id: HandleId,
-    marker: PhantomData<A>
+    pub marker: PhantomData<A>
 }
 
 #[derive(Hash, PartialEq, PartialOrd, Eq, Clone)]
