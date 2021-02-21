@@ -1,4 +1,5 @@
 use crate::scene::*;
+use crate::graphics::context::GraphicsContext;
 use crate::ecs;
 
 pub struct SceneStack<C> {
@@ -15,6 +16,12 @@ impl<C> SceneStack<C> {
     pub fn push(&mut self, scene: Box<Scene<C>>) {
         self.scenes.push(scene)
     }
+
+    // pub fn draw(&mut self, context: &mut GraphicsContext) {
+    //     for scene in self.scenes.iter_mut() {
+    //         scene.draw(context).unwrap();
+    //     }
+    // }
 }
 
 pub enum SceneSwitch<C> {

@@ -37,6 +37,23 @@ impl<C: Component> TrackedStorage<C> {
     }
 }
 
+#[derive(Default)]
+pub struct NullStorage<T> {
+    inner: T,
+}
+
+impl<T: Default> DynamicStorage<T> for NullStorage<T> {
+    fn insert(&mut self, index: usize, value: T) {}
+
+    fn get(&self, id: usize) -> &T {
+        &self.inner
+    }
+
+    fn get_mut(&mut self, id: usize) -> &mut T {
+        &mut self.inner
+    }
+} 
+
 // Simple vec wrapper, added because in the future there will be other storage types as well.
 pub struct VecStorage<T> {
     pub inner: VecMap<usize, T>,

@@ -2,7 +2,7 @@ pub mod context;
 pub mod animation;
 pub mod sprite;
 
-use crate::interface::Interface;
+use crate::graphics::context::GraphicsContext;
 
 
 pub mod vs {
@@ -20,7 +20,7 @@ pub mod fs {
 }
 
 pub trait Drawable {
-    fn draw(&mut self, interface: &mut Interface);
+    fn draw(&mut self, context: &mut GraphicsContext);
     fn name(&self) -> &str;
 }
 

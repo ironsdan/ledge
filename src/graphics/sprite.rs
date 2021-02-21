@@ -13,8 +13,7 @@ use crate::asset::handle::Handle;
 use crate::asset::handle::HandleId;
 use crate::asset::types::Texture;
 use crate::asset::storage::AssetStorage;
-use vulkano::sampler::Sampler;
-use vulkano::descriptor::descriptor_set::UnsafeDescriptorSetLayout;
+use crate::graphics::context::GraphicsContext;
 use crate::ecs::component::Component;
 use crate::ecs::storage::VecStorage;
 use std::marker::PhantomData;
@@ -121,8 +120,8 @@ impl Sprite {
 }
 
 impl Drawable for Sprite {
-    fn draw(&mut self, interface: &mut Interface) {
-        interface.graphics_ctx.draw(self);
+    fn draw(&mut self, context: &mut GraphicsContext) {
+        context.draw(self);
     }
 
     fn name(&self) -> &str {

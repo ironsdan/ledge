@@ -13,13 +13,14 @@ use crate::ecs::join::Joinable;
 use crate::graphics::sprite::Sprite;
 use crate::ecs::World;
 
-pub fn run<S: 'static>(mut interface: Interface, world: World, event_loop: EventLoop<()>, mut game_state: S) -> !
+pub fn run<S: 'static>(mut interface: Interface, mut world: World, event_loop: EventLoop<()>, mut game_state: S) -> !
 where
     S: EventHandler,
 {    
     event_loop.run(move |event, _, control_flow| {
         let now = SystemTime::now();
         let interface = &mut interface;
+        let world = &mut world;
 
         let mut pos_system = PosWrite {};
         let mut sprite_system = SpriteMove {};
@@ -51,11 +52,11 @@ where
                 sleep(Duration::from_millis(16 - now.elapsed().unwrap().as_secs_f64() as u64));
                 // println!("{:?}", 1.0/now.elapsed().unwrap().as_secs_f64());
 
-                pos_system.run(world.write_comp_storage::<Pos>());
+                pos_system.run((world.write_comp_storage::<Pos>(), world.read_comp_storage::<Moveable>()));
                 sprite_system.run((world.write_comp_storage::<Sprite>(), world.read_comp_storage::<Pos>()));
             },
             Event::RedrawRequested(_) => {
-                if let Err(e) = game_state.draw(interface, &world) {
+                if let Err(e) = game_state.draw(interface, world) {
                     println!("Error on EventHandler::update(): {:?}", e);
                 }
                 sleep(Duration::from_millis(16 - now.elapsed().unwrap().as_secs_f64() as u64));
@@ -71,7 +72,7 @@ where
 
 pub trait EventHandler {
     fn update(&mut self, interface: &mut Interface) -> GameResult;
-    fn draw(&mut self, interface: &mut Interface, world: &World) -> GameResult;
+    fn draw(&mut self, interface: &mut Interface, world: &mut World) -> GameResult;
 
     // fn mouse_button_down_event(&mut self, interface: &mut Interface, button: MouseButton, x: f32, y: f32);
     // fn mouse_button_up_event();
@@ -84,19 +85,24 @@ pub struct Pos {
     pub test: (f32, f32),
 }
 
-impl Pos {}
-
 impl Component for Pos {
+    type Storage = VecStorage<Self>;
+}
+
+#[derive(Default)]
+pub struct Moveable {}
+
+impl Component for Moveable {
     type Storage = VecStorage<Self>;
 }
 
 struct PosWrite {}
 
 impl<'a> System<'a> for PosWrite {
-    type SystemData = WriteStorage<'a, Pos>;
+    type SystemData = (WriteStorage<'a, Pos>, ReadStorage<'a, Moveable>);
 
-    fn run(&mut self, mut pos: Self::SystemData) {
-        for pos in (&mut pos).join() {
+    fn run(&mut self, (mut pos, moveable): Self::SystemData) {
+        for (pos, _) in (&mut pos, &moveable).join() {
             if pos.test.0 < 0.0 {
                 pos.test.0 += 0.01;
             }

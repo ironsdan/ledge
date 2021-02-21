@@ -135,7 +135,7 @@ impl World {
     // Convienience functions for reading/writing the TrackedStorage of a component.
     pub fn read_comp_storage<R>(&self) -> ReadStorage<R>
     where
-    R: Resource + Component
+        R: Resource + Component
     {
         Storage {
             data: Fetch { 
@@ -149,7 +149,7 @@ impl World {
 
     pub fn write_comp_storage<R>(&self) -> WriteStorage<R>
     where
-    R: Resource + Component
+        R: Resource + Component
     {
         Storage {
             data: FetchMut { 
@@ -216,6 +216,11 @@ impl ResourceId {
     pub fn new<T: Resource>() -> Self {
         Self {
             type_id: TypeId::of::<T>()
+        }
+    }
+    pub fn from_type_id<T: Resource>(type_id: TypeId) -> Self {
+        Self {
+            type_id
         }
     }
 

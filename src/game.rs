@@ -2,34 +2,23 @@ use crate::event::*;
 use crate::error::*;
 use crate::interface::Interface;
 use crate::scene;
-use crate::ecs;
-
-use crate::ecs::system::System;
-use crate::ecs::component::Component;
-use crate::ecs::storage::VecStorage;
-use crate::ecs::storage::WriteStorage;
-use crate::ecs::storage::ReadStorage;
-use crate::ecs::join::Joinable;
-use crate::graphics::sprite::Sprite;
-use crate::graphics::Drawable;
-use crate::graphics::DrawSettings;
 use crate::ecs::World;
 
 pub struct GameState {
-    scene_stack: scene::Stack,
+    current_scene: Box<dyn scene::Scene<World>>,
+    // scene_stack: scene::Stack,
 }
 
 impl GameState {
-    pub fn new() -> Self {
-        let scene_stack = scene::Stack::new();
+    pub fn new(default_scene: Box<dyn scene::Scene<World>>) -> Self {
         Self {
-            scene_stack,
+            current_scene: default_scene,
         }
     }
 
-    pub fn add_scene(&mut self, scene: Box<dyn scene::Scene<ecs::World>>) {
-        self.scene_stack.push(scene);
-    }
+    // pub fn add_scene(&mut self, scene: Box<dyn scene::Scene<ecs::World>>) {
+    //     self.scene_stack.push(scene);
+    // }
 }
 
 impl EventHandler for GameState {
@@ -37,31 +26,13 @@ impl EventHandler for GameState {
         return Ok(());
     }
 
-    fn draw(&mut self, interface: &mut Interface, world: &World) -> GameResult {
+    fn draw(&mut self, interface: &mut Interface, world: &mut World) -> GameResult {
         interface.graphics_ctx.begin_frame();
 
-        // self.scene_stack.scenes[0].draw(interface).unwrap();
-        let mut sprite_system = SpriteDraw{
-            interface
-        };
-
-        sprite_system.run(world.write_comp_storage::<Sprite>());
+        self.current_scene.draw(world, &mut interface.graphics_ctx).unwrap();
 
         interface.graphics_ctx.present();
         return Ok(());
     }
 }
 
-struct SpriteDraw<'a> {
-    interface: &'a mut Interface,
-}
-
-impl<'a> System<'a> for SpriteDraw<'a> {
-    type SystemData = WriteStorage<'a, Sprite>;
-
-    fn run(&mut self, mut sprite: Self::SystemData) {
-        for sprite in (&mut sprite).join() {
-            sprite.draw(self.interface);
-        }
-    }
-}
