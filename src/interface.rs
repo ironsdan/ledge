@@ -34,7 +34,8 @@ impl InterfaceBuilder {
 
 pub struct Interface {
     pub(crate) graphics_context: crate::graphics::context::GraphicsContext,
-    pub(crate) keyboard_context: crate::input::keyboard::KeyboardInterface, 
+    pub(crate) keyboard_context: crate::input::keyboard::KeyboardContext, 
+    pub(crate) mouse_context: crate::input::mouse::MouseContext, 
 }
 
 impl Interface {
@@ -42,7 +43,8 @@ impl Interface {
         let event_loop = winit::event_loop::EventLoop::new();
         let interface_ctx = Interface {
             graphics_context: crate::graphics::context::GraphicsContext::new(&event_loop, instance_conf),
-            keyboard_context: crate::input::keyboard::KeyboardInterface::new(),
+            keyboard_context: crate::input::keyboard::KeyboardContext::new(),
+            mouse_context: crate::input::mouse::MouseContext::new(),
         };
 
         Ok((interface_ctx, event_loop))
@@ -56,10 +58,11 @@ impl Interface {
 
                 },
                 winit::event::WindowEvent::CursorMoved {
-                    position: position,
+                    position,
                     ..
                 } => {
-
+                    self.mouse_context.set_last_position((position.x / 400.0 - 1.0, position.y / 300.0 - 1.0));
+                    // println!("mouse: ({}, {})", position.x / 400.0 - 1.0, position.y / 300.0 - 1.0);
                 },
                 winit::event::WindowEvent::MouseInput { button, state, ..} => {
 
@@ -80,7 +83,7 @@ impl Interface {
                         winit::event::ElementState::Released => false,
                     };
                     self.keyboard_context.set_key(*keycode, pressed);
-                    println!("{:?} {}", keycode, pressed);
+                    // println!("{:?} {}", keycode, pressed);
                 },
                 _ => {}
             },

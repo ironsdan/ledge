@@ -15,7 +15,8 @@ use crate::{
     graphics::sprite::Sprite,
     error::*,
     interface::*,
-    input::keyboard::*,
+    input:: {keyboard::*, mouse::*},
+    physics::*,
 };
 
 pub fn run<S: 'static>(mut interface: Interface, mut world: World, event_loop: EventLoop<()>, mut game_state: S) -> !
@@ -27,8 +28,10 @@ where
         let interface = &mut interface;
         let world = &mut world;
 
-        let mut pos_system = PosWrite {};
         let mut sprite_system = SpriteMove {};
+        let mut gravity_system = GravitySystem {};
+        let mut movement_system = MovementSystem {};
+        let mut position_system = PositionSystem {};
 
         interface.process_event(&event);
         
@@ -57,9 +60,13 @@ where
                 sleep(Duration::from_millis(16 - now.elapsed().unwrap().as_secs_f64() as u64));
                 // println!("{:?}", 1.0/now.elapsed().unwrap().as_secs_f64());
 
-                try_move_sprite(&interface.keyboard_context, world.write_comp_storage::<Pos>(), world.read_comp_storage::<DynamicObject>());
-                // pos_system.run((world.write_comp_storage::<Pos>(), world.read_comp_storage::<DynamicObject>()));
-                sprite_system.run((world.write_comp_storage::<Sprite>(), world.read_comp_storage::<Pos>()));
+                
+                movement_system.run((world.write_comp_storage::<RigidBody>(), now.elapsed().unwrap()));
+                position_system.run((world.write_comp_storage::<Position>(), world.read_comp_storage::<RigidBody>(), now.elapsed().unwrap()));
+
+                try_move_sprite(&interface.keyboard_context, world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<DynamicObject>());
+                // gravity_system.run((world.write_comp_storage::<Position>(), world.read_comp_storage::<RigidBody>()));
+                sprite_system.run((world.write_comp_storage::<Sprite>(), world.read_comp_storage::<Position>()));
             },
             Event::RedrawRequested(_) => {
                 if let Err(e) = game_state.draw(interface, world) {
@@ -86,73 +93,38 @@ pub trait EventHandler {
     // fn mouse_wheel_event();
 }
 
-#[derive(Default)]
-pub struct Pos {
-    pub test: (f32, f32),
-}
 
-impl Component for Pos {
-    type Storage = VecStorage<Self>;
-}
 
-#[derive(Default)]
-pub struct DynamicObject {}
-
-impl Component for DynamicObject {
-    type Storage = NullStorage<Self>;
-}
-
-struct PosWrite {}
-
-impl<'a> System<'a> for PosWrite {
-    type SystemData = (WriteStorage<'a, Pos>, ReadStorage<'a, DynamicObject>);
-
-    fn run(&mut self, (mut pos, moveable): Self::SystemData) {
-        for (pos, _) in (&mut pos, &moveable).join() {
-            if pos.test.0 < 0.0 {
-                pos.test.0 += 0.01;
-            }
-            if pos.test.1 < 0.0 {
-                pos.test.1 += 0.01;
-            }
-        }
-    }
-}
-
-struct SpriteMove {}
-
-impl<'a> System<'a> for SpriteMove {
-    type SystemData = (WriteStorage<'a, Sprite>, ReadStorage<'a, Pos>);
-
-    fn run(&mut self, (mut sprite, pos): Self::SystemData) {
-        for (sprite, pos) in (&mut sprite, &pos).join() {
-            sprite.update_rect([pos.test.0 as f32, pos.test.1 as f32]);
-        }
-    }
-}
-
-pub fn try_move_sprite<'a>(keyboard_context: &KeyboardInterface, mut pos: WriteStorage<'a, Pos>, dynamic: ReadStorage<'a, DynamicObject>) {
+pub fn try_move_sprite<'a>(keyboard_context: &KeyboardContext, mut rigid_body: WriteStorage<'a, RigidBody>, dynamic: ReadStorage<'a, DynamicObject>) {
     let mut x = 0.0;
     let mut y = 0.0;
     
     let keys = keyboard_context.pressed_keys();
 
     if keys.contains(&KeyCode::W) {
-        y -= 0.01;
+        y -= 2.0;
     }
     if keys.contains(&KeyCode::A) {
-        x -= 0.01;
+        x -= 2.0;
     }
     if keys.contains(&KeyCode::S) {
-        y += 0.01;
+        y += 2.0;
     }
     if keys.contains(&KeyCode::D) {
-        x += 0.01;
+        x += 2.0;
     }
     
-    for (pos, dynamic) in (&mut pos, &dynamic).join() {
-        pos.test.0 += x;
-        pos.test.1 += y;
-        // sprite.update_rect([pos.test.0 as f32, pos.test.1 as f32]);
+    for (rigid_body, _) in (&mut rigid_body, &dynamic).join() {
+        rigid_body.desired_velocity.0 = x;
+        rigid_body.desired_velocity.1 = y;
+    }
+}
+
+pub fn try_move_sprite_mouse<'a>(mouse_context: &MouseContext, mut pos: WriteStorage<'a, Position>, dynamic: ReadStorage<'a, DynamicObject>) {    
+    let mouse_pos = mouse_context.last_position;
+    
+    for (pos, _) in (&mut pos, &dynamic).join() {
+        pos.0 = mouse_pos.0 as f32;
+        pos.1 = mouse_pos.1 as f32;
     }
 }

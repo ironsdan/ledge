@@ -2,20 +2,17 @@ use std::collections::HashSet;
 use winit::event::ModifiersState;
 pub use winit::event::VirtualKeyCode as KeyCode;
 
-pub struct KeyModifierList {}
 
-pub struct KeyboardInterface {
+pub struct KeyboardContext {
     pressed_keys: HashSet<KeyCode>,
-    key_modifiers: KeyModifierList,
     last_pressed: Option<KeyCode>,
     current_pressed: Option<KeyCode>,
 }
 
-impl KeyboardInterface {
+impl KeyboardContext {
     pub(crate) fn new() -> Self {
         Self {
             pressed_keys: HashSet::with_capacity(128),
-            key_modifiers: KeyModifierList {},
             last_pressed: None,
             current_pressed: None,
         }
@@ -37,4 +34,6 @@ impl KeyboardInterface {
     pub(crate) fn pressed_keys(&self) -> &HashSet<KeyCode> {
         &self.pressed_keys
     }
+
+    
 }
