@@ -36,6 +36,7 @@ pub struct Interface {
     pub(crate) graphics_context: crate::graphics::context::GraphicsContext,
     pub(crate) keyboard_context: crate::input::keyboard::KeyboardContext, 
     pub(crate) mouse_context: crate::input::mouse::MouseContext, 
+    pub(crate) timer_state: crate::timer::TimerState,
 }
 
 impl Interface {
@@ -45,6 +46,7 @@ impl Interface {
             graphics_context: crate::graphics::context::GraphicsContext::new(&event_loop, instance_conf),
             keyboard_context: crate::input::keyboard::KeyboardContext::new(),
             mouse_context: crate::input::mouse::MouseContext::new(),
+            timer_state: crate::timer::TimerState::new(),
         };
 
         Ok((interface_ctx, event_loop))

@@ -20,6 +20,7 @@ use std::time::Duration;
 #[derive(Default)]
 pub struct RigidBody {
     pub(crate) velocity: (f32, f32),
+    pub(crate) previous_velocity: (f32, f32),
     pub(crate) transition_speed: (f32, f32),
     pub(crate) desired_velocity: (f32, f32),
 }
@@ -63,6 +64,7 @@ impl<'a> System<'a> for MovementSystem {
 
     fn run(&mut self, (mut rigid_body, delta_time): Self::SystemData) {
         for rigid_body in (&mut rigid_body).join() {
+            rigid_body.previous_velocity = rigid_body.velocity;
             let mut velocity: (f32, f32) = (0.0, 0.0);
             velocity.0 = rigid_body.velocity.0 * 
                     (1.0 - delta_time.as_secs_f32() * rigid_body.transition_speed.0) + 
@@ -75,7 +77,7 @@ impl<'a> System<'a> for MovementSystem {
             if (velocity.0 < 0.005 && velocity.0 > -0.005) && rigid_body.desired_velocity.0 == 0.0 { velocity.0 = 0.0}
             if (velocity.1 < 0.005 && velocity.1 > -0.005) && rigid_body.desired_velocity.1 == 0.0 { velocity.1 = 0.0}
 
-            // println!("({} * {}) + ({} * {})", rigid_body.velocity.0, (1.0 - delta_time.as_secs_f32() * rigid_body.transition_speed.0), rigid_body.desired_velocity.0, (delta_time.as_secs_f32() * rigid_body.transition_speed.0));
+            println!("({} * {}) + ({} * {})", rigid_body.velocity.0, (1.0 - delta_time.as_secs_f32() * rigid_body.transition_speed.0), rigid_body.desired_velocity.0, (delta_time.as_secs_f32() * rigid_body.transition_speed.0));
 
             rigid_body.velocity = velocity;
         }
@@ -89,8 +91,8 @@ impl<'a> System<'a> for PositionSystem {
 
     fn run(&mut self, (mut pos, rigid_body, delta_time): Self::SystemData) {
         for (pos, rigid_body) in (&mut pos, &rigid_body).join() {
-            pos.0 += rigid_body.velocity.0 * delta_time.as_secs_f32(); 
-            pos.1 += rigid_body.velocity.1 * delta_time.as_secs_f32(); 
+            pos.0 += (rigid_body.velocity.0 + rigid_body.previous_velocity.0)/2.0 * delta_time.as_secs_f32(); 
+            pos.1 += (rigid_body.velocity.1 + rigid_body.previous_velocity.1)/2.0 * delta_time.as_secs_f32(); 
         }
     }
 }

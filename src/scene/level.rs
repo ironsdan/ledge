@@ -10,6 +10,8 @@ use crate::ecs::join::Joinable;
 use crate::scene::*;
 use crate::scene::stack::*;
 use crate::graphics::sprite::Sprite;
+use crate::physics::*;
+use crate::event::KeyboardInputSystem;
 
 pub struct LevelSpaceBuilder {
     pub(crate) level_scene: LevelSpace,
@@ -46,7 +48,18 @@ pub struct LevelSpace {
 }
 
 impl Space<World> for LevelSpace {
-    fn update(&mut self, _context: &mut GraphicsContext) -> SpaceSwitch<World> {
+    
+    fn update(&mut self, interface: &mut Interface, world: &mut World) -> SpaceSwitch<World> {
+        let mut sprite_system = SpriteMove {};
+        let mut movement_system = MovementSystem {};
+        let mut position_system = PositionSystem {};
+        let mut input_system = KeyboardInputSystem {};
+
+        movement_system.run((world.write_comp_storage::<RigidBody>(), interface.timer_state.elapsed().unwrap()));
+        position_system.run((world.write_comp_storage::<Position>(), world.read_comp_storage::<RigidBody>(), interface.timer_state.elapsed().unwrap()));
+        input_system.run((world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<DynamicObject>(), &interface.keyboard_context));
+        sprite_system.run((world.write_comp_storage::<Sprite>(), world.read_comp_storage::<Position>()));
+        
         SpaceSwitch::None
     }
 

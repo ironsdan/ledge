@@ -13,7 +13,7 @@ pub type Stack = SpaceStack<ecs::World>;
 
 pub trait Space<C> {
     fn current_scene(&self) -> bool;
-    fn update(&mut self, context: &mut GraphicsContext) -> SpaceSwitch<C>;
+    fn update(&mut self, interface: &mut Interface, world: &mut World) -> SpaceSwitch<C>;
     fn draw(&mut self, world: &mut World, context: &mut GraphicsContext) -> GameResult<()>;
     fn input(&mut self, gameworld: &mut C, started: bool);
 }

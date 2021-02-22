@@ -10,6 +10,7 @@ mod scene;
 mod asset;
 mod input;
 mod physics;
+mod timer;
 
 use interface::*;
 use asset::*;
@@ -68,7 +69,7 @@ fn main() {
     let pokeball = world.create_entity().with::<Sprite>(poke_sprite)
                                         .is::<Visible>()
                                         .is::<DynamicObject>()
-                                        .with::<RigidBody>(RigidBody { velocity: (0.0, 0.0), desired_velocity: (0.0, 0.0), transition_speed: (30.0, 30.0)})
+                                        .with::<RigidBody>(RigidBody { velocity: (0.0, 0.0), previous_velocity: (0.0, 0.0), desired_velocity: (0.0, 0.0), transition_speed: (30.0, 30.0)})
                                         .with::<Position>(Position(-1.0,-1.0)).build();
 
     // Level Builder //

@@ -23,8 +23,8 @@ impl GameState {
 }
 
 impl EventHandler for GameState {
-    fn update(&mut self, interface: &mut Interface) -> GameResult {
-        self.space_stack.update();
+    fn update(&mut self, interface: &mut Interface, world: &mut World) -> GameResult {
+        self.space_stack.update(interface, world);
         Ok(())
     }
 
