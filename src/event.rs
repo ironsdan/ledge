@@ -87,10 +87,10 @@ impl<'a> System<'a> for KeyboardInputSystem {
         
         let keys = keyboard_context.pressed_keys();
 
-        if keys.contains(&KeyCode::W) { y -= 0.1; }
-        if keys.contains(&KeyCode::A) { x -= 0.1; }
-        if keys.contains(&KeyCode::S) { y += 0.1; }
-        if keys.contains(&KeyCode::D) { x += 0.1; }
+        if keys.contains(&KeyCode::W) { y -= 1.0; }
+        if keys.contains(&KeyCode::A) { x -= 1.0; }
+        if keys.contains(&KeyCode::S) { y += 1.0; }
+        if keys.contains(&KeyCode::D) { x += 1.0; }
         
         for (rigid_body, _) in (&mut rigid_body, &dynamic).join() {
             rigid_body.desired_velocity.0 = x;

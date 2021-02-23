@@ -20,6 +20,7 @@ impl TimerState {
     pub fn tick(&mut self) {
         let now = time::Instant::now();
         let mut frame_time = now - self.last_instant;
+        // println!("Frame time: {:?}", frame_time);
         if frame_time > time::Duration::from_millis(25) {
             frame_time = time::Duration::from_millis(25);
         }

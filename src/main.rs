@@ -66,12 +66,32 @@ fn main() {
     let pokeball1 = world.create_entity().with::<Sprite>(rock_sprite)
                                        .is::<Visible>()
                                        .with::<Position>(Position { previous_position: (-1.0,-1.0), current_position: (-1.0, -1.0) }).build();
-    let pokeball = world.create_entity().with::<Sprite>(poke_sprite)
+    let pokeball = world.create_entity().with::<Sprite>(poke_sprite.clone())
+                                        .is::<Visible>()
+                                        .is::<DynamicObject>()
+                                        .with::<RigidBody>(RigidBody { velocity: (0.0, 0.0), previous_velocity: (0.0, 0.0), desired_velocity: (0.0, 0.0), transition_speed: (50.0, 50.0)})
+                                        .with::<Position>(Position { previous_position: (0.0, 0.0), current_position: (0.0, 0.0) }).build();
+    let pokeball = world.create_entity().with::<Sprite>(poke_sprite.clone())
                                         .is::<Visible>()
                                         .is::<DynamicObject>()
                                         .with::<RigidBody>(RigidBody { velocity: (0.0, 0.0), previous_velocity: (0.0, 0.0), desired_velocity: (0.0, 0.0), transition_speed: (50.0, 50.0)})
                                         .with::<Position>(Position { previous_position: (-1.0,-1.0), current_position: (-1.0, -1.0) }).build();
 
+    let pokeball = world.create_entity().with::<Sprite>(poke_sprite.clone())
+                                        .is::<Visible>()
+                                        .is::<DynamicObject>()
+                                        .with::<RigidBody>(RigidBody { velocity: (0.0, 0.0), previous_velocity: (0.0, 0.0), desired_velocity: (0.0, 0.0), transition_speed: (50.0, 50.0)})
+                                        .with::<Position>(Position { previous_position: (-0.5, -0.5), current_position: (-0.5, -0.5) }).build();
+    let pokeball = world.create_entity().with::<Sprite>(poke_sprite.clone())
+                                        .is::<Visible>()
+                                        .is::<DynamicObject>()
+                                        .with::<RigidBody>(RigidBody { velocity: (0.0, 0.0), previous_velocity: (0.0, 0.0), desired_velocity: (0.0, 0.0), transition_speed: (50.0, 50.0)})
+                                        .with::<Position>(Position { previous_position: (0.0, -1.0), current_position: (0.0, -1.0) }).build();
+    let pokeball = world.create_entity().with::<Sprite>(poke_sprite)
+                                        .is::<Visible>()
+                                        .is::<DynamicObject>()
+                                        .with::<RigidBody>(RigidBody { velocity: (0.0, 0.0), previous_velocity: (0.0, 0.0), desired_velocity: (0.0, 0.0), transition_speed: (50.0, 50.0)})
+                                        .with::<Position>(Position { previous_position: (-1.0, 0.0), current_position: (-1.0, 0.0) }).build();
     // Level Builder //
     let level_space = LevelSpaceBuilder::new().with_entity(pokeball).with_entity(pokeball1).build();
 

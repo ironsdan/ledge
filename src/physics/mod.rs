@@ -53,7 +53,7 @@ impl<'a> System<'a> for GravitySystem {
     fn run(&mut self, (mut rigid_body, position): Self::SystemData) {
         for (rigid_body, pos) in (&mut rigid_body, &position).join() {
             if pos.current_position.1 < 0.9 {
-                rigid_body.velocity.1 += 0.05;
+                // rigid_body.velocity.1 += 0.05;
             }
         }
     }
@@ -62,30 +62,33 @@ impl<'a> System<'a> for GravitySystem {
 pub struct MovementSystem {}
 
 impl<'a> System<'a> for MovementSystem {
-    type SystemData = (WriteStorage<'a, RigidBody>, Duration);
+    type SystemData = (WriteStorage<'a, RigidBody>, Duration, f32);
 
-    fn run(&mut self, (mut rigid_body, delta_time): Self::SystemData) {
+    fn run(&mut self, (mut rigid_body, delta_time, alpha): Self::SystemData) {
         for rigid_body in (&mut rigid_body).join() {
             rigid_body.previous_velocity = rigid_body.velocity;
             let mut velocity: (f32, f32) = (0.0, 0.0);
             velocity.0 = rigid_body.velocity.0 * 
                     (1.0 - delta_time.as_secs_f32() * rigid_body.transition_speed.0) + 
                     rigid_body.desired_velocity.0 * (delta_time.as_secs_f32() * rigid_body.transition_speed.0);
-            
+            velocity.0 = velocity.0 * alpha + rigid_body.previous_velocity.0 * (1.0 - alpha);
+
             velocity.1 = rigid_body.velocity.1 * 
                     (1.0 - delta_time.as_secs_f32() * rigid_body.transition_speed.1) + 
                     rigid_body.desired_velocity.1 * (delta_time.as_secs_f32() * rigid_body.transition_speed.1);
+            velocity.1 = velocity.1 * alpha + rigid_body.previous_velocity.1 * (1.0 - alpha);
 
-            if (velocity.0 < 0.005 && velocity.0 > -0.005) && rigid_body.desired_velocity.0 == 0.0 { velocity.0 = 0.0}
-            if (velocity.1 < 0.005 && velocity.1 > -0.005) && rigid_body.desired_velocity.1 == 0.0 { velocity.1 = 0.0}
+            // if (velocity.0 < 0.005 && velocity.0 > -0.005) && rigid_body.desired_velocity.0 == 0.0 { velocity.0 = 0.0}
+            // if (velocity.1 < 0.005 && velocity.1 > -0.005) && rigid_body.desired_velocity.1 == 0.0 { velocity.1 = 0.0}
 
-            // println!("{:?}", delta_time);
             if delta_time.as_secs_f64() < 0.010 {
-                println!("[ERROR]: delta_time significantly LOWER than expexted.");
+                println!("[ERROR]: delta_time LOWER than expexted.");
             }
             if delta_time.as_secs_f64() > 0.020 {
-                println!("[ERROR]: delta_time significantly HIGHER than expexted.");
+                println!("[ERROR]: delta_time HIGHER than expexted.");
             }
+
+            // println!("{} {}", velocity.0, velocity.1);
 
             rigid_body.velocity = velocity;
         }
@@ -95,17 +98,17 @@ impl<'a> System<'a> for MovementSystem {
 pub struct PositionSystem {}
 
 impl<'a> System<'a> for PositionSystem {
-    type SystemData = (WriteStorage<'a, Position>, ReadStorage<'a, RigidBody>, f32);
+    type SystemData = (WriteStorage<'a, Position>, ReadStorage<'a, RigidBody>, Duration, f32);
 
-    fn run(&mut self, (mut pos, rigid_body, alpha): Self::SystemData) {
+    fn run(&mut self, (mut pos, rigid_body, delta_time, _alpha): Self::SystemData) {
         for (pos, rigid_body) in (&mut pos, &rigid_body).join() {
             pos.previous_position = pos.current_position;
 
-            pos.current_position.0 += (rigid_body.velocity.0 + rigid_body.previous_velocity.0)/2.0;
-            pos.current_position.1 += (rigid_body.velocity.1 + rigid_body.previous_velocity.1)/2.0;
+            pos.current_position.0 += (rigid_body.velocity.0 + rigid_body.previous_velocity.0)/2.0 * delta_time.as_secs_f32();
+            pos.current_position.1 += (rigid_body.velocity.1 + rigid_body.previous_velocity.1)/2.0 * delta_time.as_secs_f32();
 
-            pos.current_position.0 = pos.current_position.0 * alpha + pos.previous_position.0 * (1.0 - alpha); 
-            pos.current_position.1 = pos.current_position.1 * alpha + pos.previous_position.1 * (1.0 - alpha); 
+            // pos.current_position.0 = pos.current_position.0 * (0.25 + alpha) + pos.previous_position.0 * (0.75 - alpha); 
+            // pos.current_position.1 = pos.current_position.1 * (0.25 + alpha) + pos.previous_position.1 * (0.75 - alpha); 
         }
     }
 }
