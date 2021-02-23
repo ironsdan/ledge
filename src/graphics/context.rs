@@ -1,30 +1,34 @@
-use vulkano::buffer::CpuBufferPool;
-use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
-use vulkano::device::{Device, DeviceExtensions};
-use vulkano::format::Format;
-use vulkano::framebuffer::{Subpass, RenderPassAbstract};
-use vulkano::image::{Dimensions, ImageUsage, ImmutableImage};
-use vulkano::instance::{Instance, PhysicalDevice};
-use vulkano::pipeline::{GraphicsPipeline, GraphicsPipelineAbstract};
-use vulkano::sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode};
-use vulkano::swapchain::{
-    self, AcquireError, ColorSpace, FullscreenExclusive, PresentMode, SurfaceTransform, Swapchain,
-    SwapchainCreationError,
+use vulkano::{
+    buffer::CpuBufferPool,
+    command_buffer::{AutoCommandBufferBuilder, DynamicState},
+    device::{Device, DeviceExtensions},
+    framebuffer::{Subpass, RenderPassAbstract},
+    image::ImageUsage,
+    instance::{Instance, PhysicalDevice},
+    pipeline::{GraphicsPipeline, GraphicsPipelineAbstract},
+    sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode},
+    swapchain::{
+        self, AcquireError, ColorSpace, FullscreenExclusive, PresentMode, SurfaceTransform, Swapchain,
+        SwapchainCreationError,
+    },
+    sync::{self, FlushError, GpuFuture},
+    command_buffer::pool::standard::StandardCommandPoolBuilder,
+    swapchain::SwapchainAcquireFuture,
+    command_buffer::SubpassContents,
+
 };
-use vulkano::sync::{self, FlushError, GpuFuture};
 use vulkano_win::VkSurfaceBuild;
-use vulkano::command_buffer::pool::standard::StandardCommandPoolBuilder;
-use vulkano::swapchain::SwapchainAcquireFuture;
-use winit::window::Window;
-
-use winit::window::WindowBuilder;
-use winit::dpi::PhysicalSize;
-
+use winit::{
+    window::{Window, WindowBuilder},
+    dpi::PhysicalSize,
+};
 use std::sync::Arc;
-use crate::lib::*;
-use crate::graphics::sprite::*;
-use crate::conf::*;
-use crate::graphics::{vs, fs};
+use crate::{
+    lib::*,
+    graphics::sprite::*,
+    conf::*,
+    graphics::{vs, fs},
+};
 
 pub struct GraphicsContext {
     pub queue: std::sync::Arc<vulkano::device::Queue>,
@@ -42,6 +46,7 @@ pub struct GraphicsContext {
     pub recreate_swapchain: bool,
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
     pub current_image_builder: Option<AutoCommandBufferBuilder<StandardCommandPoolBuilder>>,
+    pub now: Option<std::time::Instant>,
 }
 
 impl GraphicsContext {
@@ -50,9 +55,10 @@ impl GraphicsContext {
         let instance = Instance::new(None, &required_extensions, None).unwrap();
         let physical = PhysicalDevice::enumerate(&instance).next().unwrap();
         println!(
-            "Using device: {} (type: {:?})",
+            "Using device: {} (type: {:?})\nExtensions: {:?}",
             physical.name(),
-            physical.ty()
+            physical.ty(),
+            required_extensions,
         );
 
         let surface = WindowBuilder::new()
@@ -100,7 +106,7 @@ impl GraphicsContext {
                 &queue,
                 SurfaceTransform::Identity,
                 alpha,
-                PresentMode::Fifo,
+                PresentMode::Immediate, // This is definitely not great. But keeps from frame spikes
                 FullscreenExclusive::Default,
                 true,
                 ColorSpace::SrgbNonLinear,
@@ -171,17 +177,10 @@ impl GraphicsContext {
             reference: None,
         };
 
+        let default_future = sync::now(device.clone()).boxed();
+
         let framebuffers =
             window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
-
-        let (_, empty_future) = {
-            ImmutableImage::from_iter(
-                [0, 0, 0, 0].iter().cloned(),
-                Dimensions::Dim2d { width: 1, height: 1 },
-                Format::R8G8B8A8Srgb,
-                queue.clone()
-            ).unwrap()
-        };
 
         Self {
             queue: queue,
@@ -196,13 +195,15 @@ impl GraphicsContext {
             pipeline: pipeline,
             image_num: 0,
             acquire_future: None,
-            previous_frame_end: Some(empty_future.boxed()),
+            previous_frame_end: Some(default_future),
             recreate_swapchain: false,
             current_image_builder: None,
+            now: None,
         }
     }
 
     pub fn begin_frame(&mut self) {
+        self.now = Some(std::time::Instant::now());
         self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 
         if self.recreate_swapchain {
@@ -246,7 +247,7 @@ impl GraphicsContext {
 
         let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
         self.current_image_builder = Some(builder);
-        self.current_image_builder.as_mut().unwrap().begin_render_pass(self.framebuffers[image_num].clone(), false, clear_values).unwrap();
+        self.current_image_builder.as_mut().unwrap().begin_render_pass(self.framebuffers[image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
     }
 
     pub fn draw(&mut self, sprite: &Sprite) {
@@ -266,7 +267,6 @@ impl GraphicsContext {
         self.current_image_builder.as_mut().unwrap().end_render_pass().unwrap();
         let command_buffer = self.current_image_builder.take().unwrap().build().unwrap();
 
-        
         let future = self.previous_frame_end
             .take()
             .unwrap()
@@ -274,12 +274,8 @@ impl GraphicsContext {
             .then_execute(self.queue.clone(), command_buffer)
             .unwrap()
             .then_swapchain_present(self.queue.clone(), self.swapchain.clone(), self.image_num);
-            
-            // let now = std::time::Instant::now();
 
-            let future = future.then_signal_fence_and_flush();
-
-            // println!("Time to present: {:?}", now.elapsed());
+        let future = future.then_signal_fence_and_flush();
 
         match future {
             Ok(future) => {
@@ -294,9 +290,12 @@ impl GraphicsContext {
                 self.previous_frame_end = Some(sync::now(self.device.clone()).boxed());
             }
         };
-        
-        // timestep = start.elapsed().unwrap().as_millis() as f32;
-        
-        // self.surface.window().request_redraw();
+
+        // Limits the frame rate since PresentMode::Immediate has to be used.
+        let mut sleep_time = 0.0005 - self.now.unwrap().elapsed().as_secs_f32();
+        if sleep_time < 0.0 {
+            sleep_time = 0.0
+        }
+        std::thread::sleep(std::time::Duration::from_secs_f32(sleep_time));
     }
 }

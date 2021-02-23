@@ -12,6 +12,7 @@ use crate::scene::stack::*;
 use crate::graphics::sprite::Sprite;
 use crate::physics::*;
 use crate::event::KeyboardInputSystem;
+use crate::timer::*;
 
 pub struct LevelSpaceBuilder {
     pub(crate) level_scene: LevelSpace,
@@ -56,9 +57,9 @@ impl Space<World> for LevelSpace {
         let mut input_system = KeyboardInputSystem {};
         let mut gravity_system = GravitySystem {};
 
-        movement_system.run((world.write_comp_storage::<RigidBody>(), interface.timer_state.delta(), interface.timer_state.alpha()));
+        movement_system.run((world.write_comp_storage::<RigidBody>(), fps_as_duration(60), interface.timer_state.alpha()));
         gravity_system.run((world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<Position>()));
-        position_system.run((world.write_comp_storage::<Position>(), world.read_comp_storage::<RigidBody>(), interface.timer_state.delta(), interface.timer_state.alpha()));
+        position_system.run((world.write_comp_storage::<Position>(), world.read_comp_storage::<RigidBody>(), fps_as_duration(60), interface.timer_state.alpha()));
         input_system.run((world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<DynamicObject>(), &interface.keyboard_context));
         sprite_system.run((world.write_comp_storage::<Sprite>(), world.read_comp_storage::<Position>()));
         

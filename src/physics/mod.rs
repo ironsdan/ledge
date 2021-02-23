@@ -71,22 +71,22 @@ impl<'a> System<'a> for MovementSystem {
             velocity.0 = rigid_body.velocity.0 * 
                     (1.0 - delta_time.as_secs_f32() * rigid_body.transition_speed.0) + 
                     rigid_body.desired_velocity.0 * (delta_time.as_secs_f32() * rigid_body.transition_speed.0);
-            velocity.0 = velocity.0 * alpha + rigid_body.previous_velocity.0 * (1.0 - alpha);
+            // velocity.0 = velocity.0 * alpha + rigid_body.previous_velocity.0 * (1.0 - alpha);
 
             velocity.1 = rigid_body.velocity.1 * 
                     (1.0 - delta_time.as_secs_f32() * rigid_body.transition_speed.1) + 
                     rigid_body.desired_velocity.1 * (delta_time.as_secs_f32() * rigid_body.transition_speed.1);
-            velocity.1 = velocity.1 * alpha + rigid_body.previous_velocity.1 * (1.0 - alpha);
+            // velocity.1 = velocity.1 * alpha + rigid_body.previous_velocity.1 * (1.0 - alpha);
 
-            // if (velocity.0 < 0.005 && velocity.0 > -0.005) && rigid_body.desired_velocity.0 == 0.0 { velocity.0 = 0.0}
-            // if (velocity.1 < 0.005 && velocity.1 > -0.005) && rigid_body.desired_velocity.1 == 0.0 { velocity.1 = 0.0}
+            if (velocity.0 < 0.005 && velocity.0 > -0.005) && rigid_body.desired_velocity.0 == 0.0 { velocity.0 = 0.0}
+            if (velocity.1 < 0.005 && velocity.1 > -0.005) && rigid_body.desired_velocity.1 == 0.0 { velocity.1 = 0.0}
 
-            if delta_time.as_secs_f64() < 0.010 {
-                println!("[ERROR]: delta_time LOWER than expexted.");
-            }
-            if delta_time.as_secs_f64() > 0.020 {
-                println!("[ERROR]: delta_time HIGHER than expexted.");
-            }
+            // if delta_time.as_secs_f64() < 0.010 {
+            //     println!("[ERROR]: delta_time LOWER than expexted.");
+            // }
+            // if delta_time.as_secs_f64() > 0.020 {
+            //     println!("[ERROR]: delta_time HIGHER than expexted.");
+            // }
 
             // println!("{} {}", velocity.0, velocity.1);
 

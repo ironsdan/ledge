@@ -56,12 +56,10 @@ where
                 if let Err(e) = game_state.draw(interface, world) {
                     println!("Error on EventHandler::update(): {:?}", e);
                 }
-                // println!();
+                // println!("New frame");
             },
             Event::RedrawRequested(_) => {},
-            Event::RedrawEventsCleared => {
-                sleep(Duration::from_millis(10));
-            },
+            Event::RedrawEventsCleared => {},
         }
         
     });

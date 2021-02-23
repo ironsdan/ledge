@@ -2,6 +2,7 @@ use vulkano::image::ImmutableImage;
 use std::sync::Arc;
 use vulkano::format::Format;
 use vulkano::image::Dimensions;
+use vulkano::image::MipmapsCount;
 use crate::graphics::context::*;
 use image::ImageFormat;
 
@@ -26,6 +27,7 @@ impl Texture {
             ImmutableImage::from_iter(
                 image_data.iter().cloned(),
                 Dimensions::Dim2d { width: dimensions.0, height: dimensions.1 },
+                MipmapsCount::One,
                 Format::R8G8B8A8Srgb,
                 context.queue.clone(),
             )
