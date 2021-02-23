@@ -46,6 +46,19 @@ impl Component for DynamicObject {
     type Storage = NullStorage<Self>;
 }
 
+pub struct GravitySystem {}
+
+impl<'a> System<'a> for GravitySystem {
+    type SystemData = (WriteStorage<'a, RigidBody>, ReadStorage<'a, Position>);
+    fn run(&mut self, (mut rigid_body, position): Self::SystemData) {
+        for (rigid_body, pos) in (&mut rigid_body, &position).join() {
+            if pos.current_position.1 < 0.9 {
+                rigid_body.velocity.1 += 0.05;
+            }
+        }
+    }
+}
+
 pub struct MovementSystem {}
 
 impl<'a> System<'a> for MovementSystem {
@@ -73,7 +86,7 @@ impl<'a> System<'a> for MovementSystem {
             if delta_time.as_secs_f64() > 0.020 {
                 println!("[ERROR]: delta_time significantly HIGHER than expexted.");
             }
-            
+
             rigid_body.velocity = velocity;
         }
     }

@@ -20,14 +20,12 @@ impl TimerState {
     pub fn tick(&mut self) {
         let now = time::Instant::now();
         let mut frame_time = now - self.last_instant;
-        // println!("time since last: {:?}", frame_time);
         if frame_time > time::Duration::from_millis(25) {
             frame_time = time::Duration::from_millis(25);
         }
         self.frame_times.push(frame_time);
         self.last_instant = now;
         self.dt_left += frame_time;
-        // println!("dt_left: {:?}", self.dt_left);
     }
 
     pub fn delta(&self) -> time::Duration {
@@ -36,13 +34,11 @@ impl TimerState {
 
     pub fn alpha(&self) -> f32 {
         let target_dt = self.fps_as_duration(60);
-        // println!("ALPHA: {:?}", self.dt_left.as_secs_f32() / target_dt.as_secs_f32());
         self.dt_left.as_secs_f32() / target_dt.as_secs_f32()
     }
 
     pub fn check_update_time(&mut self, target_fps: u32) -> bool {
         let target_dt = self.fps_as_duration(target_fps);
-        // println!("targetdt: {:?}", target_dt);
         if self.dt_left > target_dt {
             self.dt_left -= target_dt;
             true
