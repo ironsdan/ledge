@@ -65,12 +65,12 @@ fn main() {
     // Entity Creation //
     let pokeball1 = world.create_entity().with::<Sprite>(rock_sprite)
                                        .is::<Visible>()
-                                       .with::<Position>(Position(-1.0,-1.0)).build();
+                                       .with::<Position>(Position { previous_position: (-1.0,-1.0), current_position: (-1.0, -1.0) }).build();
     let pokeball = world.create_entity().with::<Sprite>(poke_sprite)
                                         .is::<Visible>()
                                         .is::<DynamicObject>()
-                                        .with::<RigidBody>(RigidBody { velocity: (0.0, 0.0), previous_velocity: (0.0, 0.0), desired_velocity: (0.0, 0.0), transition_speed: (30.0, 30.0)})
-                                        .with::<Position>(Position(-1.0,-1.0)).build();
+                                        .with::<RigidBody>(RigidBody { velocity: (0.0, 0.0), previous_velocity: (0.0, 0.0), desired_velocity: (0.0, 0.0), transition_speed: (50.0, 50.0)})
+                                        .with::<Position>(Position { previous_position: (-1.0,-1.0), current_position: (-1.0, -1.0) }).build();
 
     // Level Builder //
     let level_space = LevelSpaceBuilder::new().with_entity(pokeball).with_entity(pokeball1).build();

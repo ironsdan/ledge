@@ -30,7 +30,10 @@ impl Component for RigidBody {
 }
 
 #[derive(Default)]
-pub struct Position(pub f32, pub f32);
+pub struct Position {
+    pub previous_position: (f32, f32),
+    pub current_position: (f32, f32),
+}
 
 impl Component for Position {
     type Storage = VecStorage<Self>;
@@ -41,20 +44,6 @@ pub struct DynamicObject {}
 
 impl Component for DynamicObject {
     type Storage = NullStorage<Self>;
-}
-
-pub struct GravitySystem {}
-
-impl<'a> System<'a> for GravitySystem {
-    type SystemData = (WriteStorage<'a, Position>, ReadStorage<'a, RigidBody>);
-
-    fn run(&mut self, (mut pos, rigid_body): Self::SystemData) {
-        for (pos, _) in (&mut pos, &rigid_body).join() {
-            if pos.1 < 0.9 {
-                pos.1 += 0.05;
-            }
-        }
-    }
 }
 
 pub struct MovementSystem {}
@@ -77,8 +66,14 @@ impl<'a> System<'a> for MovementSystem {
             if (velocity.0 < 0.005 && velocity.0 > -0.005) && rigid_body.desired_velocity.0 == 0.0 { velocity.0 = 0.0}
             if (velocity.1 < 0.005 && velocity.1 > -0.005) && rigid_body.desired_velocity.1 == 0.0 { velocity.1 = 0.0}
 
-            println!("({} * {}) + ({} * {})", rigid_body.velocity.0, (1.0 - delta_time.as_secs_f32() * rigid_body.transition_speed.0), rigid_body.desired_velocity.0, (delta_time.as_secs_f32() * rigid_body.transition_speed.0));
-
+            // println!("{:?}", delta_time);
+            if delta_time.as_secs_f64() < 0.010 {
+                println!("[ERROR]: delta_time significantly LOWER than expexted.");
+            }
+            if delta_time.as_secs_f64() > 0.020 {
+                println!("[ERROR]: delta_time significantly HIGHER than expexted.");
+            }
+            
             rigid_body.velocity = velocity;
         }
     }
@@ -87,12 +82,17 @@ impl<'a> System<'a> for MovementSystem {
 pub struct PositionSystem {}
 
 impl<'a> System<'a> for PositionSystem {
-    type SystemData = (WriteStorage<'a, Position>, ReadStorage<'a, RigidBody>, Duration);
+    type SystemData = (WriteStorage<'a, Position>, ReadStorage<'a, RigidBody>, f32);
 
-    fn run(&mut self, (mut pos, rigid_body, delta_time): Self::SystemData) {
+    fn run(&mut self, (mut pos, rigid_body, alpha): Self::SystemData) {
         for (pos, rigid_body) in (&mut pos, &rigid_body).join() {
-            pos.0 += (rigid_body.velocity.0 + rigid_body.previous_velocity.0)/2.0 * delta_time.as_secs_f32(); 
-            pos.1 += (rigid_body.velocity.1 + rigid_body.previous_velocity.1)/2.0 * delta_time.as_secs_f32(); 
+            pos.previous_position = pos.current_position;
+
+            pos.current_position.0 += (rigid_body.velocity.0 + rigid_body.previous_velocity.0)/2.0;
+            pos.current_position.1 += (rigid_body.velocity.1 + rigid_body.previous_velocity.1)/2.0;
+
+            pos.current_position.0 = pos.current_position.0 * alpha + pos.previous_position.0 * (1.0 - alpha); 
+            pos.current_position.1 = pos.current_position.1 * alpha + pos.previous_position.1 * (1.0 - alpha); 
         }
     }
 }
@@ -104,7 +104,7 @@ impl<'a> System<'a> for SpriteMove {
 
     fn run(&mut self, (mut sprite, pos): Self::SystemData) {
         for (sprite, pos) in (&mut sprite, &pos).join() {
-            sprite.update_rect([pos.0 as f32, pos.1 as f32]);
+            sprite.update_rect([pos.current_position.0 as f32, pos.current_position.1 as f32]);
         }
     }
 }

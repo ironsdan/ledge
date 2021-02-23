@@ -55,8 +55,8 @@ impl Space<World> for LevelSpace {
         let mut position_system = PositionSystem {};
         let mut input_system = KeyboardInputSystem {};
 
-        movement_system.run((world.write_comp_storage::<RigidBody>(), interface.timer_state.elapsed().unwrap()));
-        position_system.run((world.write_comp_storage::<Position>(), world.read_comp_storage::<RigidBody>(), interface.timer_state.elapsed().unwrap()));
+        movement_system.run((world.write_comp_storage::<RigidBody>(), interface.timer_state.delta()));
+        position_system.run((world.write_comp_storage::<Position>(), world.read_comp_storage::<RigidBody>(), interface.timer_state.alpha()));
         input_system.run((world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<DynamicObject>(), &interface.keyboard_context));
         sprite_system.run((world.write_comp_storage::<Sprite>(), world.read_comp_storage::<Position>()));
         

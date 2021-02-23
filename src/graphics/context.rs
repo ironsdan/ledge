@@ -266,14 +266,20 @@ impl GraphicsContext {
         self.current_image_builder.as_mut().unwrap().end_render_pass().unwrap();
         let command_buffer = self.current_image_builder.take().unwrap().build().unwrap();
 
+        
         let future = self.previous_frame_end
             .take()
             .unwrap()
             .join(self.acquire_future.take().unwrap())
             .then_execute(self.queue.clone(), command_buffer)
             .unwrap()
-            .then_swapchain_present(self.queue.clone(), self.swapchain.clone(), self.image_num)
-            .then_signal_fence_and_flush();
+            .then_swapchain_present(self.queue.clone(), self.swapchain.clone(), self.image_num);
+            
+            // let now = std::time::Instant::now();
+
+            let future = future.then_signal_fence_and_flush();
+
+            // println!("Time to present: {:?}", now.elapsed());
 
         match future {
             Ok(future) => {
@@ -290,7 +296,7 @@ impl GraphicsContext {
         };
         
         // timestep = start.elapsed().unwrap().as_millis() as f32;
-        // print!("Redraw: ");
-        self.surface.window().request_redraw();
+        
+        // self.surface.window().request_redraw();
     }
 }

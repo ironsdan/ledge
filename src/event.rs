@@ -23,7 +23,6 @@ where
     S: EventHandler,
 {    
     event_loop.run(move |event, _, control_flow| {
-        let now = SystemTime::now();
         let interface = &mut interface;
         let world = &mut world;
 
@@ -47,23 +46,24 @@ where
             Event::NewEvents(_) => {},
             Event::UserEvent(_) => {},
             Event::LoopDestroyed => {},
-            Event::MainEventsCleared => {
+            Event::MainEventsCleared => { 
+                interface.timer_state.tick();
+
                 if let Err(e) = game_state.update(interface, world) {
                     println!("Error on EventHandler::update(): {:?}", e);
                 }
-                sleep(Duration::from_millis(16 - now.elapsed().unwrap().as_secs_f64() as u64));
-            },
-            Event::RedrawRequested(_) => {
+
                 if let Err(e) = game_state.draw(interface, world) {
                     println!("Error on EventHandler::update(): {:?}", e);
                 }
-                sleep(Duration::from_millis(16 - now.elapsed().unwrap().as_secs_f64() as u64));
+                // println!();
             },
+            Event::RedrawRequested(_) => {},
             Event::RedrawEventsCleared => {
-                sleep(Duration::from_millis(16 - now.elapsed().unwrap().as_secs_f64() as u64));
+                sleep(Duration::from_millis(10));
             },
         }
-        // println!("{:?}", 1.0/now.elapsed().unwrap().as_secs_f64());
+        
     });
 }
 
@@ -87,10 +87,10 @@ impl<'a> System<'a> for KeyboardInputSystem {
         
         let keys = keyboard_context.pressed_keys();
 
-        if keys.contains(&KeyCode::W) { y -= 2.0; }
-        if keys.contains(&KeyCode::A) { x -= 2.0; }
-        if keys.contains(&KeyCode::S) { y += 2.0; }
-        if keys.contains(&KeyCode::D) { x += 2.0; }
+        if keys.contains(&KeyCode::W) { y -= 0.1; }
+        if keys.contains(&KeyCode::A) { x -= 0.1; }
+        if keys.contains(&KeyCode::S) { y += 0.1; }
+        if keys.contains(&KeyCode::D) { x += 0.1; }
         
         for (rigid_body, _) in (&mut rigid_body, &dynamic).join() {
             rigid_body.desired_velocity.0 = x;

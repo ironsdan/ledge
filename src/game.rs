@@ -24,7 +24,13 @@ impl GameState {
 
 impl EventHandler for GameState {
     fn update(&mut self, interface: &mut Interface, world: &mut World) -> GameResult {
-        self.space_stack.update(interface, world);
+        
+        const DESIRED_FPS: u32 = 60;
+
+        while interface.timer_state.check_update_time(DESIRED_FPS) {
+            self.space_stack.update(interface, world);
+        }
+
         Ok(())
     }
 
