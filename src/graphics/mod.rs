@@ -24,4 +24,4 @@ pub trait Drawable {
     fn name(&self) -> &str;
 }
 
-pub struct DrawSettings {}
+// pub struct DrawSettings {}

@@ -40,7 +40,7 @@ pub struct GraphicsContext {
     pub render_pass: std::sync::Arc<dyn RenderPassAbstract + std::marker::Send + std::marker::Sync>,
     pub dynamic_state: vulkano::command_buffer::DynamicState,
     pub buffer_pool: vulkano::buffer::CpuBufferPool<Vertex>,
-    pub pipeline: std::sync::Arc<dyn vulkano::pipeline::GraphicsPipelineAbstract + std::marker::Send + std::marker::Sync>,
+    pub pipeline: std::sync::Arc<dyn vulkano::pipeline::GraphicsPipelineAbstract + std::marker::Send + std::marker::Sync>, 
     pub image_num: usize,
     pub acquire_future: Option<SwapchainAcquireFuture<Window>>,
     pub recreate_swapchain: bool,
@@ -67,7 +67,6 @@ impl GraphicsContext {
             .with_resizable(conf.window_mode.resizable)
             .with_title(conf.window_setup.title)
             .with_maximized(conf.window_mode.maximized)
-            // .with_window_icon(Some(conf.))
             .build_vk_surface(event_loop, instance.clone())
             .unwrap();
 
@@ -80,6 +79,7 @@ impl GraphicsContext {
             khr_swapchain: true,
             ..DeviceExtensions::none()
         };
+        
         let (device, mut queues) = Device::new(
             physical,
             physical.supported_features(),
@@ -87,6 +87,7 @@ impl GraphicsContext {
             [(queue_family, 0.5)].iter().cloned(),
         )
         .unwrap();
+
         let queue = queues.next().unwrap(); 
 
         let (swapchain, images) = {
@@ -114,13 +115,8 @@ impl GraphicsContext {
             .unwrap()
         };
 
-        vulkano::impl_vertex!(Vertex, position, tex_coords);
-
         // Vertex Buffer Pool
         let buffer_pool: CpuBufferPool<Vertex> = CpuBufferPool::vertex_buffer(device.clone());
-
-        let vs = vs::Shader::load(device.clone()).unwrap();
-        let fs = fs::Shader::load(device.clone()).unwrap();
 
         let render_pass = Arc::new(
             vulkano::single_pass_renderpass!(device.clone(),
@@ -140,20 +136,9 @@ impl GraphicsContext {
             .unwrap(),
         );
 
-        let sampler = Sampler::new( 
-            device.clone(),
-            Filter::Linear,
-            Filter::Linear,
-            MipmapMode::Nearest,
-            SamplerAddressMode::Repeat,
-            SamplerAddressMode::Repeat,
-            SamplerAddressMode::Repeat,
-            0.0,
-            1.0,
-            0.0,
-            0.0,
-        )
-        .unwrap();
+        vulkano::impl_vertex!(Vertex, position, tex_coords);
+        let vs = vs::Shader::load(device.clone()).unwrap();
+        let fs = fs::Shader::load(device.clone()).unwrap();
 
         let pipeline = Arc::new(
             GraphicsPipeline::start()
@@ -165,7 +150,7 @@ impl GraphicsContext {
                 .blend_alpha_blending()
                 .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
                 .build(device.clone())
-                .unwrap(),
+                .unwrap()
         ) as Arc<dyn GraphicsPipelineAbstract + Send + Sync>;
         
         let mut dynamic_state = DynamicState {
@@ -176,6 +161,17 @@ impl GraphicsContext {
             write_mask: None,
             reference: None,
         };
+
+        let sampler = Sampler::new( 
+            device.clone(),
+            Filter::Linear,
+            Filter::Linear,
+            MipmapMode::Nearest,
+            SamplerAddressMode::Repeat,
+            SamplerAddressMode::Repeat,
+            SamplerAddressMode::Repeat,
+            0.0, 1.0, 0.0, 0.0,
+        ).unwrap();
 
         let default_future = sync::now(device.clone()).boxed();
 

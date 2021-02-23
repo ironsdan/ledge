@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::graphics::animation::*;
 use crate::interface::Interface;
 use crate::graphics::Drawable;
-use crate::graphics::DrawSettings;
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::image::ImmutableImage;
 use vulkano::format::Format;

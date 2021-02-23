@@ -1,7 +1,7 @@
 use std::time;
 
 pub struct TimerState {
-    initial_instant: time::Instant,
+    _initial_instant: time::Instant,
     last_instant: time::Instant,
     frame_times: Vec<time::Duration>,
     pub accumulator: time::Duration,
@@ -10,7 +10,7 @@ pub struct TimerState {
 impl TimerState {
     pub fn new() -> Self {
         Self{
-            initial_instant: time::Instant::now(),
+            _initial_instant: time::Instant::now(),
             last_instant: time::Instant::now(),
             frame_times: Vec::new(),
             accumulator: time::Duration::from_secs(0),
@@ -24,10 +24,6 @@ impl TimerState {
         self.frame_times.push(frame_time);
         self.last_instant = now;
         self.accumulator += frame_time;
-    }
-
-    pub fn delta(&self) -> time::Duration {
-        *self.frame_times.last().unwrap()
     }
 
     pub fn alpha(&self) -> f32 {
