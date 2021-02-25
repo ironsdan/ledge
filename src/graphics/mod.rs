@@ -1,27 +1,48 @@
 pub mod context;
 pub mod animation;
 pub mod sprite;
+pub mod shader;
 
 use crate::graphics::context::GraphicsContext;
+use std::sync::Arc;
+use vulkano::device::Device;
+use vulkano::OomError;
 
+// pub trait ShaderAbstract {
+//     fn load() -> Result<Self, OomError>;
+// }
 
 pub mod vs {
     vulkano_shaders::shader! {
         ty: "vertex",
-        path: "src/graphics/shader.vert"
+        path: "src/graphics/texture.vert"
     }
 }
 
 pub mod fs {
     vulkano_shaders::shader! {
         ty: "fragment",
-        path: "src/graphics/shader.frag"
+        path: "src/graphics/texture.frag"
+    }
+}
+
+pub mod vs_color {
+    vulkano_shaders::shader! {
+        ty: "vertex",
+        path: "src/graphics/color.vert"
+    }
+}
+
+pub mod fs_color {
+    vulkano_shaders::shader! {
+        ty: "fragment",
+        path: "src/graphics/color.frag"
     }
 }
 
 pub trait Drawable {
     fn draw(&mut self, context: &mut GraphicsContext);
-    fn name(&self) -> &str;
 }
 
-// pub struct DrawSettings {}
+#[derive(Clone, PartialEq)]
+pub struct DrawSettings {}

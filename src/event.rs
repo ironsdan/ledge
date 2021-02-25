@@ -11,7 +11,7 @@ use crate::{
         storage::{WriteStorage, ReadStorage},
         join::Joinable,
     },
-    graphics::sprite::Sprite,
+    graphics::sprite::SpriteBatch,
     error::*,
     interface::*,
     input:: {keyboard::*, mouse::*},

@@ -15,7 +15,8 @@ use vulkano::{
     command_buffer::pool::standard::StandardCommandPoolBuilder,
     swapchain::SwapchainAcquireFuture,
     command_buffer::SubpassContents,
-
+    instance::debug::{DebugCallback, MessageSeverity, MessageType},
+    instance::{self, InstanceExtensions},
 };
 use vulkano_win::VkSurfaceBuild;
 use winit::{
@@ -47,12 +48,69 @@ pub struct GraphicsContext {
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
     pub current_image_builder: Option<AutoCommandBufferBuilder<StandardCommandPoolBuilder>>,
     pub now: Option<std::time::Instant>,
+    pub debugger: std::option::Option<vulkano::instance::debug::DebugCallback>,
 }
 
 impl GraphicsContext {
     pub fn new(event_loop: &winit::event_loop::EventLoop<()>, conf: Conf) -> Self{
         let required_extensions = vulkano_win::required_extensions();
-        let instance = Instance::new(None, &required_extensions, None).unwrap();
+
+        let extensions = InstanceExtensions {
+            ext_debug_utils: true,
+            ..required_extensions
+        };
+    
+        println!("List of Vulkan debugging layers available to use:");
+        let mut layers = instance::layers_list().unwrap();
+        while let Some(l) = layers.next() {
+            println!("\t{}", l.name());
+        }
+    
+        let layer = "VK_LAYER_KHRONOS_validation";
+        let layers = vec![layer];
+    
+        let instance =
+            Instance::new(None, &extensions, layers).expect("failed to create Vulkan instance");
+
+        let severity = MessageSeverity {
+            error: true,
+            warning: true,
+            information: true,
+            verbose: true,
+        };
+    
+        let ty = MessageType::all();
+    
+        let debug_callback = DebugCallback::new(&instance, severity, ty, |msg| {
+            let severity = if msg.severity.error {
+                "error"
+            } else if msg.severity.warning {
+                "warning"
+            } else if msg.severity.information {
+                "information"
+            } else if msg.severity.verbose {
+                "verbose"
+            } else {
+                panic!("no-impl");
+            };
+    
+            let ty = if msg.ty.general {
+                "general"
+            } else if msg.ty.validation {
+                "validation"
+            } else if msg.ty.performance {
+                "performance"
+            } else {
+                panic!("no-impl");
+            };
+    
+            // println!(
+            //     "[{}]: {} {}: {}",
+            //     ty, msg.layer_prefix, severity, msg.description
+            // );
+        })
+        .ok();
+
         let physical = PhysicalDevice::enumerate(&instance).next().unwrap();
         println!(
             "Using device: {} (type: {:?})\nExtensions: {:?}",
@@ -167,9 +225,9 @@ impl GraphicsContext {
             Filter::Linear,
             Filter::Linear,
             MipmapMode::Nearest,
-            SamplerAddressMode::Repeat,
-            SamplerAddressMode::Repeat,
-            SamplerAddressMode::Repeat,
+            SamplerAddressMode::ClampToBorder(vulkano::sampler::BorderColor::IntTransparentBlack),
+            SamplerAddressMode::ClampToBorder(vulkano::sampler::BorderColor::IntTransparentBlack),
+            SamplerAddressMode::ClampToBorder(vulkano::sampler::BorderColor::IntTransparentBlack),
             0.0, 1.0, 0.0, 0.0,
         ).unwrap();
 
@@ -195,6 +253,7 @@ impl GraphicsContext {
             recreate_swapchain: false,
             current_image_builder: None,
             now: None,
+            debugger: debug_callback
         }
     }
 
@@ -246,18 +305,31 @@ impl GraphicsContext {
         self.current_image_builder.as_mut().unwrap().begin_render_pass(self.framebuffers[image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
     }
 
-    pub fn draw(&mut self, sprite: &Sprite) {
-        let data = &sprite.rect;
-        let vertex_buffer = self.buffer_pool.chunk(data.vertices.to_vec()).unwrap();
+    // pub fn draw(&mut self, sprite: &SpriteBatch) {
+    //     let data = &sprite.rect;
+    //     let vertex_buffer = self.buffer_pool.chunk(data.vertices.to_vec()).unwrap();
         
-        self.current_image_builder.as_mut().unwrap().draw(
-            self.pipeline.clone(),
-            &self.dynamic_state,
-            vec!(Arc::new(vertex_buffer.clone())),
-            sprite.set.as_ref().unwrap().clone(),
-            (),
-        ).unwrap();
-    }
+    //     self.current_image_builder.as_mut().unwrap().draw(
+    //         self.pipeline.clone(),
+    //         &self.dynamic_state,
+    //         vec!(Arc::new(vertex_buffer.clone())),
+    //         sprite.set.as_ref().unwrap().clone(),
+    //         (),
+    //     ).unwrap();
+    // }
+
+    // pub fn draw_color(&mut self, rect: &Rect) {
+    //     let data = &rect;
+    //     let vertex_buffer = self.buffer_pool.chunk(data.vertices.to_vec()).unwrap();
+        
+    //     self.current_image_builder.as_mut().unwrap().draw(
+    //         self.pipeline.clone(),
+    //         &self.dynamic_state,
+    //         vec!(Arc::new(vertex_buffer.clone())),
+    //         rect.set.as_ref().unwrap().clone(),
+    //         (),
+    //     ).unwrap();
+    // }
 
     pub fn present(&mut self) {
         self.current_image_builder.as_mut().unwrap().end_render_pass().unwrap();

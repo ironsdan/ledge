@@ -11,7 +11,7 @@ use crate::{
         join::Joinable,
     },
     graphics::{
-        sprite::Sprite,
+        sprite::SpriteBatch,
     }
 };
 
@@ -116,11 +116,11 @@ impl<'a> System<'a> for PositionSystem {
 pub struct SpriteMove {}
 
 impl<'a> System<'a> for SpriteMove {
-    type SystemData = (WriteStorage<'a, Sprite>, ReadStorage<'a, Position>);
+    type SystemData = (WriteStorage<'a, SpriteBatch>, ReadStorage<'a, Position>);
 
     fn run(&mut self, (mut sprite, pos): Self::SystemData) {
         for (sprite, pos) in (&mut sprite, &pos).join() {
-            sprite.update_rect([pos.current_position.0 as f32, pos.current_position.1 as f32]);
+            // sprite.update_rect([pos.current_position.0 as f32, pos.current_position.1 as f32]);
         }
     }
 }

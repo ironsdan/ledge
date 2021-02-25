@@ -9,7 +9,7 @@ use crate::ecs::system::System;
 use crate::ecs::join::Joinable;
 use crate::scene::*;
 use crate::scene::stack::*;
-use crate::graphics::sprite::Sprite;
+use crate::graphics::sprite::SpriteBatch;
 use crate::physics::*;
 use crate::event::KeyboardInputSystem;
 use crate::timer::*;
@@ -61,7 +61,7 @@ impl Space<World> for LevelSpace {
         gravity_system.run((world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<Position>()));
         position_system.run((world.write_comp_storage::<Position>(), world.read_comp_storage::<RigidBody>(), fps_as_duration(60), interface.timer_state.alpha()));
         input_system.run((world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<DynamicObject>(), &interface.keyboard_context));
-        sprite_system.run((world.write_comp_storage::<Sprite>(), world.read_comp_storage::<Position>()));
+        sprite_system.run((world.write_comp_storage::<SpriteBatch>(), world.read_comp_storage::<Position>()));
         
         SpaceSwitch::None
     }
@@ -71,7 +71,7 @@ impl Space<World> for LevelSpace {
             context
         };
 
-        sprite_system.run((world.write_comp_storage::<Sprite>(), world.read_comp_storage::<Visible>()));
+        sprite_system.run((world.write_comp_storage::<SpriteBatch>(), world.read_comp_storage::<Visible>()));
 
         Ok(())
     }
@@ -97,7 +97,7 @@ struct SpriteDraw<'a> {
 }
 
 impl<'a> System<'a> for SpriteDraw<'a> {
-    type SystemData = (WriteStorage<'a, Sprite>, ReadStorage<'a, Visible>);
+    type SystemData = (WriteStorage<'a, SpriteBatch>, ReadStorage<'a, Visible>);
 
     fn run(&mut self, (mut sprite, scene): Self::SystemData) {
         for (sprite, _) in (&mut sprite, &scene).join() {
