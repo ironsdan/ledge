@@ -26,20 +26,24 @@ impl Rect {
             y: pos[1],
             vertices: [
                 Vertex {
-                    position: [pos[0], pos[1]],
-                    tex_coords: texture_coord[0],
+                    a_pos: [pos[0], pos[1]],
+                    // tex_coords: texture_coord[0],
+                    // color: [0.0, 0.0, 0.0, 0.0],
                 },
                 Vertex {
-                    position: [pos[0], pos[1] + height],
-                    tex_coords: texture_coord[1],
+                    a_pos: [pos[0], pos[1] + height],
+                    // tex_coords: texture_coord[1],
+                    // color: [0.0, 0.0, 0.0, 0.0],
                 },
                 Vertex {
-                    position: [pos[0] + width, pos[1]],
-                    tex_coords: texture_coord[2],
+                    a_pos: [pos[0] + width, pos[1]],
+                    // tex_coords: texture_coord[2],
+                    // color: [0.0, 0.0, 0.0, 0.0],
                 },
                 Vertex {
-                    position: [pos[0] + width, pos[1] + height],
-                    tex_coords: texture_coord[3],
+                    a_pos: [pos[0] + width, pos[1] + height],
+                    // tex_coords: texture_coord[3],
+                    // color: [0.0, 0.0, 0.0, 0.0],
                 },
             ],
         }
@@ -63,7 +67,7 @@ impl Rect {
         
         for i in 0..4 {
             for j in 0..2 {
-                self.vertices[i].position[j] = default[i][j] + position[j];
+                self.vertices[i].a_pos[j] = default[i][j] + position[j];
             }
         }
 
@@ -79,8 +83,9 @@ impl Rect {
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Vertex {
-    pub position: [f32; 2],
-    pub tex_coords: [f32; 2],
+    pub a_pos: [f32; 2],
+    // pub tex_coords: [f32; 2],
+    // pub color: [f32; 4],
 }
 
 // This method is called once during initialization, then again whenever the window is resized

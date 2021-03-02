@@ -4,13 +4,6 @@ pub mod sprite;
 pub mod shader;
 
 use crate::graphics::context::GraphicsContext;
-use std::sync::Arc;
-use vulkano::device::Device;
-use vulkano::OomError;
-
-// pub trait ShaderAbstract {
-//     fn load() -> Result<Self, OomError>;
-// }
 
 pub mod vs {
     vulkano_shaders::shader! {

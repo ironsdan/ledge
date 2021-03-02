@@ -194,7 +194,7 @@ impl GraphicsContext {
             .unwrap(),
         );
 
-        vulkano::impl_vertex!(Vertex, position, tex_coords);
+        vulkano::impl_vertex!(Vertex, a_pos);
         let vs = vs::Shader::load(device.clone()).unwrap();
         let fs = fs::Shader::load(device.clone()).unwrap();
 
