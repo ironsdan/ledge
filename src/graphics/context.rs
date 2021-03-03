@@ -18,6 +18,7 @@ use vulkano::{
     instance::debug::{DebugCallback, MessageSeverity, MessageType},
     instance::{self, InstanceExtensions},
 };
+use vulkano::pipeline::vertex::OneVertexOneInstanceDefinition;
 use vulkano_win::VkSurfaceBuild;
 use winit::{
     window::{Window, WindowBuilder},
@@ -40,13 +41,13 @@ pub struct GraphicsContext {
     pub framebuffers: std::vec::Vec<std::sync::Arc<dyn vulkano::framebuffer::FramebufferAbstract + std::marker::Send + std::marker::Sync>>,
     pub render_pass: std::sync::Arc<dyn RenderPassAbstract + std::marker::Send + std::marker::Sync>,
     pub dynamic_state: vulkano::command_buffer::DynamicState,
-    pub buffer_pool: vulkano::buffer::CpuBufferPool<Vertex>,
+    pub vertex_buffer_pool: vulkano::buffer::CpuBufferPool<Vertex>,
     pub pipeline: std::sync::Arc<dyn vulkano::pipeline::GraphicsPipelineAbstract + std::marker::Send + std::marker::Sync>, 
     pub image_num: usize,
     pub acquire_future: Option<SwapchainAcquireFuture<Window>>,
     pub recreate_swapchain: bool,
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
-    pub current_image_builder: Option<AutoCommandBufferBuilder<StandardCommandPoolBuilder>>,
+    pub command_buffer: Option<AutoCommandBufferBuilder<StandardCommandPoolBuilder>>,
     pub now: Option<std::time::Instant>,
     pub debugger: std::option::Option<vulkano::instance::debug::DebugCallback>,
 }
@@ -82,32 +83,18 @@ impl GraphicsContext {
         let ty = MessageType::all();
     
         let debug_callback = DebugCallback::new(&instance, severity, ty, |msg| {
-            let severity = if msg.severity.error {
-                "error"
-            } else if msg.severity.warning {
-                "warning"
-            } else if msg.severity.information {
-                "information"
-            } else if msg.severity.verbose {
-                "verbose"
-            } else {
-                panic!("no-impl");
-            };
+            let severity = if msg.severity.error { "error" } 
+            else if msg.severity.warning { "warning" } 
+            else if msg.severity.information { "information" } 
+            else if msg.severity.verbose { "verbose" } 
+            else { panic!("no-impl"); };
     
-            let ty = if msg.ty.general {
-                "general"
-            } else if msg.ty.validation {
-                "validation"
-            } else if msg.ty.performance {
-                "performance"
-            } else {
-                panic!("no-impl");
-            };
+            let ty = if msg.ty.general { "general" } 
+            else if msg.ty.validation { "validation" } 
+            else if msg.ty.performance { "performance" } 
+            else { panic!("no-impl"); };
     
-            // println!(
-            //     "[{}]: {} {}: {}",
-            //     ty, msg.layer_prefix, severity, msg.description
-            // );
+            // println!("[{}]: {} {}: {}", ty, msg.layer_prefix, severity, msg.description);
         })
         .ok();
 
@@ -195,12 +182,23 @@ impl GraphicsContext {
         );
 
         vulkano::impl_vertex!(Vertex, a_pos);
+        vulkano::impl_vertex!(InstanceData, a_uv, a_color);
+
+        // mvp uniform buffer
+        let mvp_uniform_buffer = vulkano::buffer::cpu_pool::CpuBufferPool::<vs::ty::mvp>
+            ::new(device.clone(), vulkano::buffer::BufferUsage::all());
+
+        // instance uniform buffer
+        let instance_uniform_buffer = vulkano::buffer::cpu_pool::CpuBufferPool::<vs::ty::instance_data>
+            ::new(device.clone(), vulkano::buffer::BufferUsage::all());
+
         let vs = vs::Shader::load(device.clone()).unwrap();
         let fs = fs::Shader::load(device.clone()).unwrap();
 
         let pipeline = Arc::new(
             GraphicsPipeline::start()
-                .vertex_input_single_buffer::<Vertex>()
+                // .vertex_input_single_buffer::<Vertex>()
+                .vertex_input(OneVertexOneInstanceDefinition::<Vertex, InstanceData>::new())
                 .vertex_shader(vs.main_entry_point(), ())
                 .triangle_strip()
                 .viewports_dynamic_scissors_irrelevant(1)
@@ -236,7 +234,7 @@ impl GraphicsContext {
         let framebuffers =
             window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
 
-        Self {
+        let mut graphics = Self {
             queue: queue,
             surface: surface,
             device: device,
@@ -245,19 +243,26 @@ impl GraphicsContext {
             framebuffers: framebuffers,
             render_pass: render_pass,
             dynamic_state: dynamic_state,
-            buffer_pool: buffer_pool,
+            vertex_buffer_pool: buffer_pool,
             pipeline: pipeline,
             image_num: 0,
             acquire_future: None,
             previous_frame_end: Some(default_future),
             recreate_swapchain: false,
-            current_image_builder: None,
+            command_buffer: None,
             now: None,
             debugger: debug_callback
-        }
+        };
+
+        graphics.begin_frame();
+        graphics
     }
 
-    pub fn begin_frame(&mut self) {
+    // Handles setup of anew frame, called when the graphics pipeline is first created and 
+    // at the end of every frame to start the next one. This is necessary because the swapchain
+    // could be out of date and the command_buffer needs to be recreated each frame, as well as
+    // Updating the image_num, optimality, and the swapcahin future.
+    fn begin_frame(&mut self) {
         self.now = Some(std::time::Instant::now());
         self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 
@@ -301,39 +306,15 @@ impl GraphicsContext {
                 .unwrap();
 
         let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
-        self.current_image_builder = Some(builder);
-        self.current_image_builder.as_mut().unwrap().begin_render_pass(self.framebuffers[image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
+        self.command_buffer = Some(builder);
+        self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[self.image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
     }
 
-    // pub fn draw(&mut self, sprite: &SpriteBatch) {
-    //     let data = &sprite.rect;
-    //     let vertex_buffer = self.buffer_pool.chunk(data.vertices.to_vec()).unwrap();
-        
-    //     self.current_image_builder.as_mut().unwrap().draw(
-    //         self.pipeline.clone(),
-    //         &self.dynamic_state,
-    //         vec!(Arc::new(vertex_buffer.clone())),
-    //         sprite.set.as_ref().unwrap().clone(),
-    //         (),
-    //     ).unwrap();
-    // }
-
-    // pub fn draw_color(&mut self, rect: &Rect) {
-    //     let data = &rect;
-    //     let vertex_buffer = self.buffer_pool.chunk(data.vertices.to_vec()).unwrap();
-        
-    //     self.current_image_builder.as_mut().unwrap().draw(
-    //         self.pipeline.clone(),
-    //         &self.dynamic_state,
-    //         vec!(Arc::new(vertex_buffer.clone())),
-    //         rect.set.as_ref().unwrap().clone(),
-    //         (),
-    //     ).unwrap();
-    // }
+    pub fn draw(&mut self, _sprite: &SpriteBatch) {}
 
     pub fn present(&mut self) {
-        self.current_image_builder.as_mut().unwrap().end_render_pass().unwrap();
-        let command_buffer = self.current_image_builder.take().unwrap().build().unwrap();
+        self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
+        let command_buffer = self.command_buffer.take().unwrap().build().unwrap();
 
         let future = self.previous_frame_end
             .take()
@@ -365,5 +346,7 @@ impl GraphicsContext {
             sleep_time = 0.0
         }
         std::thread::sleep(std::time::Duration::from_secs_f32(sleep_time));
+
+        self.begin_frame();
     }
 }
