@@ -35,7 +35,7 @@ use winit::{
 use std::sync::Arc;
 use crate::{
     lib::window_size_dependent_setup,
-    graphics::{Vertex, DrawSettings},
+    graphics::{Vertex},
     conf::*,
     graphics::{vs, fs},
 };
@@ -204,7 +204,6 @@ impl GraphicsContext {
         );
 
         vulkano::impl_vertex!(Vertex, a_pos);
-        vulkano::impl_vertex!(DrawSettings, a_uv, a_color);
 
         // mvp uniform buffer
         // let mvp_uniform_buffer = vulkano::buffer::cpu_pool::CpuBufferPool::<vs::ty::mvp>

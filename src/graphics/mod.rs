@@ -30,6 +30,6 @@ pub struct Vertex {
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct DrawSettings {
-    pub a_uv: [f32;2],
-    pub a_color: [f32;4],
+    pub texture_coords: [f32;2],
+    pub color: [f32;4],
 }
