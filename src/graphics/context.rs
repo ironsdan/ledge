@@ -18,7 +18,15 @@ use vulkano::{
     instance::debug::{DebugCallback, MessageSeverity, MessageType},
     instance::{self, InstanceExtensions},
 };
-use vulkano::pipeline::vertex::OneVertexOneInstanceDefinition;
+use vulkano::descriptor::descriptor_set::PersistentDescriptorSetImg;
+use vulkano::descriptor::descriptor_set::PersistentDescriptorSetSampler;
+use vulkano::descriptor::descriptor_set::PersistentDescriptorSetBuf;
+use vulkano::buffer::cpu_pool::CpuBufferPoolSubbuffer;
+use vulkano::buffer::cpu_pool::CpuBufferPoolChunk;
+use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
+use vulkano::image::ImmutableImage;
+use vulkano::format::Format;
+use vulkano::memory::pool::StdMemoryPool;
 use vulkano_win::VkSurfaceBuild;
 use winit::{
     window::{Window, WindowBuilder},
@@ -27,10 +35,17 @@ use winit::{
 use std::sync::Arc;
 use crate::{
     lib::window_size_dependent_setup,
-    graphics::{Vertex, DrawSettings, sprite::*},
+    graphics::{Vertex, DrawSettings},
     conf::*,
     graphics::{vs, fs},
 };
+
+// #[derive(Default)]
+pub struct FrameData {
+    // instance_properties: Option<CpuBufferPoolSubbuffer>,
+    pub vbuf: Option<CpuBufferPoolChunk<Vertex, Arc<StdMemoryPool>>>,
+    pub instance_descriptor_set: Option<Arc<PersistentDescriptorSet<((((), PersistentDescriptorSetBuf<CpuBufferPoolSubbuffer<vs::ty::instance_data, Arc<StdMemoryPool>>>), PersistentDescriptorSetImg<Arc<ImmutableImage<Format>>>), PersistentDescriptorSetSampler)>>>,
+}
 
 pub struct GraphicsContext {
     pub queue: std::sync::Arc<vulkano::device::Queue>,
@@ -42,6 +57,8 @@ pub struct GraphicsContext {
     pub render_pass: std::sync::Arc<dyn RenderPassAbstract + std::marker::Send + std::marker::Sync>,
     pub dynamic_state: vulkano::command_buffer::DynamicState,
     pub vertex_buffer_pool: vulkano::buffer::CpuBufferPool<Vertex>,
+    pub instance_pool: vulkano::buffer::CpuBufferPool<vs::ty::instance_data>,
+    pub frame_data: FrameData,
     pub pipeline: std::sync::Arc<dyn vulkano::pipeline::GraphicsPipelineAbstract + std::marker::Send + std::marker::Sync>, 
     pub image_num: usize,
     pub acquire_future: Option<SwapchainAcquireFuture<Window>>,
@@ -163,6 +180,11 @@ impl GraphicsContext {
         // Vertex Buffer Pool
         let buffer_pool: CpuBufferPool<Vertex> = CpuBufferPool::vertex_buffer(device.clone());
 
+        // Instance uniform buffer pool
+        let instance_buffer_pool = vulkano::buffer::cpu_pool::CpuBufferPool::<vs::ty::instance_data>::uniform_buffer(device.clone());
+
+        // let instance_buffer_pool = vulkano::buffer::cpu_pool::CpuBufferPool::<DrawSettings>::uniform_buffer(device.clone());
+
         let render_pass = Arc::new(
             vulkano::single_pass_renderpass!(device.clone(),
                 attachments: {
@@ -185,27 +207,15 @@ impl GraphicsContext {
         vulkano::impl_vertex!(DrawSettings, a_uv, a_color);
 
         // mvp uniform buffer
-        let mvp_uniform_buffer = vulkano::buffer::cpu_pool::CpuBufferPool::<vs::ty::mvp>
-            ::new(device.clone(), vulkano::buffer::BufferUsage::all());
-
-        // let test_mvp = vs::ty::mvp {
-        //     model: [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]],
-        //     view: [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]],
-        //     proj: [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]],
-        // };
-
-        // let subbuffer = mvp_uniform_buffer.next(test_mvp);
-
-        // instance uniform buffer
-        let instance_uniform_buffer = vulkano::buffer::cpu_pool::CpuBufferPool::<vs::ty::instance_data>
-            ::new(device.clone(), vulkano::buffer::BufferUsage::all());
+        // let mvp_uniform_buffer = vulkano::buffer::cpu_pool::CpuBufferPool::<vs::ty::mvp>
+        //     ::new(device.clone(), vulkano::buffer::BufferUsage::all());
 
         let vs = vs::Shader::load(device.clone()).unwrap();
         let fs = fs::Shader::load(device.clone()).unwrap();
 
         let pipeline = Arc::new(
             GraphicsPipeline::start()
-                .vertex_input(OneVertexOneInstanceDefinition::<Vertex, DrawSettings>::new())
+                .vertex_input_single_buffer::<Vertex>()
                 .vertex_shader(vs.main_entry_point(), ())
                 .triangle_strip()
                 .viewports_dynamic_scissors_irrelevant(1)
@@ -251,6 +261,8 @@ impl GraphicsContext {
             render_pass: render_pass,
             dynamic_state: dynamic_state,
             vertex_buffer_pool: buffer_pool,
+            instance_pool: instance_buffer_pool,
+            frame_data: FrameData{ vbuf: None, instance_descriptor_set: None },
             pipeline: pipeline,
             image_num: 0,
             acquire_future: None,
@@ -318,7 +330,15 @@ impl GraphicsContext {
         self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[self.image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
     }
 
-    pub fn draw(&mut self, _sprite: &SpriteBatch) {}
+    pub fn draw(&mut self) {
+        self.command_buffer.as_mut().unwrap().draw(
+            self.pipeline.clone(),
+            &self.dynamic_state,
+            vec!(Arc::new(self.frame_data.vbuf.as_ref().unwrap().clone())),
+            self.frame_data.instance_descriptor_set.as_ref().unwrap().clone(),
+            (),
+        ).unwrap();
+    }
 
     pub fn present(&mut self) {
         self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
@@ -349,7 +369,7 @@ impl GraphicsContext {
         };
 
         // Limits the frame rate since PresentMode::Immediate has to be used.
-        let mut sleep_time = 0.0005 - self.now.unwrap().elapsed().as_secs_f32();
+        let mut sleep_time = 0.016 - self.now.unwrap().elapsed().as_secs_f32();
         if sleep_time < 0.0 {
             sleep_time = 0.0
         }

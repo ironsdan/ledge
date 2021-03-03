@@ -3,10 +3,10 @@
 layout(location=0) in vec2 v_Uv;
 layout(location=1) in vec4 v_Color;
 
-layout(binding=0,set=0) uniform sampler2D t_Tex;
+layout(binding=2,set=0) uniform sampler2D t_Tex;
 
 layout(location=0) out vec4 f_Color;
 
 void main() {
-    f_Color = texture(t_Tex, v_Uv) * v_Color;
+    f_Color = /*texture(t_Tex, v_Uv) * */ v_Color;
 }
