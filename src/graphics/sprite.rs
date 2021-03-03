@@ -45,10 +45,18 @@ impl SpriteBatch {
             sprite_data: Vec::new(),
         }
     }
+
+    pub fn flush(&mut self, graphics_context: &mut GraphicsContext) {
+
+        
+        graphics_context.command_buffer.unwrap().update_buffer();
+    }
 }
 
 impl Drawable for SpriteBatch {
-    fn draw(&mut self, _context: &mut GraphicsContext) {
-        // context.draw(self);
+    fn draw(&mut self, graphics_context: &mut GraphicsContext) {
+        self.flush(graphics_context);
+
+
     }
 }

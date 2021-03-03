@@ -23,6 +23,6 @@ layout(location = 1) out vec4 v_color;
 void main() {
     v_uv = a_uv;
     v_color = a_color;
-    vec4 position = vec4(a_pos, 0.0, 1.0);
+    vec4 position = instance.transform * vec4(a_pos, 0.0, 1.0);
     gl_Position = camera.proj * camera.view * camera.model * position;
 }

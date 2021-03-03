@@ -26,8 +26,8 @@ use winit::{
 };
 use std::sync::Arc;
 use crate::{
-    lib::*,
-    graphics::sprite::*,
+    lib::window_size_dependent_setup,
+    graphics::{Vertex, DrawSettings, sprite::*},
     conf::*,
     graphics::{vs, fs},
 };
@@ -182,11 +182,19 @@ impl GraphicsContext {
         );
 
         vulkano::impl_vertex!(Vertex, a_pos);
-        vulkano::impl_vertex!(InstanceData, a_uv, a_color);
+        vulkano::impl_vertex!(DrawSettings, a_uv, a_color);
 
         // mvp uniform buffer
         let mvp_uniform_buffer = vulkano::buffer::cpu_pool::CpuBufferPool::<vs::ty::mvp>
             ::new(device.clone(), vulkano::buffer::BufferUsage::all());
+
+        // let test_mvp = vs::ty::mvp {
+        //     model: [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]],
+        //     view: [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]],
+        //     proj: [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]],
+        // };
+
+        // let subbuffer = mvp_uniform_buffer.next(test_mvp);
 
         // instance uniform buffer
         let instance_uniform_buffer = vulkano::buffer::cpu_pool::CpuBufferPool::<vs::ty::instance_data>
@@ -197,8 +205,7 @@ impl GraphicsContext {
 
         let pipeline = Arc::new(
             GraphicsPipeline::start()
-                // .vertex_input_single_buffer::<Vertex>()
-                .vertex_input(OneVertexOneInstanceDefinition::<Vertex, InstanceData>::new())
+                .vertex_input(OneVertexOneInstanceDefinition::<Vertex, DrawSettings>::new())
                 .vertex_shader(vs.main_entry_point(), ())
                 .triangle_strip()
                 .viewports_dynamic_scissors_irrelevant(1)
@@ -255,6 +262,7 @@ impl GraphicsContext {
         };
 
         graphics.begin_frame();
+
         graphics
     }
 

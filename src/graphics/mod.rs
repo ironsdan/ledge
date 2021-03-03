@@ -19,23 +19,17 @@ pub mod fs {
     }
 }
 
-pub mod vs_color {
-    vulkano_shaders::shader! {
-        ty: "vertex",
-        path: "src/graphics/color.vert"
-    }
-}
-
-pub mod fs_color {
-    vulkano_shaders::shader! {
-        ty: "fragment",
-        path: "src/graphics/color.frag"
-    }
-}
-
 pub trait Drawable {
     fn draw(&mut self, context: &mut GraphicsContext);
 }
 
-#[derive(Clone, PartialEq)]
-pub struct DrawSettings {}
+#[derive(Default, Debug, Clone, PartialEq)]
+pub struct Vertex {
+    pub a_pos: [f32; 2],
+}
+
+#[derive(Default, Debug, Clone, PartialEq)]
+pub struct DrawSettings {
+    pub a_uv: [f32;2],
+    pub a_color: [f32;4],
+}
