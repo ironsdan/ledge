@@ -35,7 +35,7 @@ impl EventHandler for GameState {
     }
 
     fn draw(&mut self, interface: &mut Interface, world: &mut World) -> GameResult {
-        interface.graphics_context.begin_frame();
+        // interface.graphics_context.begin_frame();
 
         self.space_stack.draw(world, &mut interface.graphics_context);
 

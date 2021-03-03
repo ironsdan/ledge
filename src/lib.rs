@@ -84,8 +84,12 @@ impl Rect {
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Vertex {
     pub a_pos: [f32; 2],
-    // pub tex_coords: [f32; 2],
-    // pub color: [f32; 4],
+}
+
+#[derive(Default, Debug, Clone, PartialEq)]
+pub struct InstanceData {
+    pub a_uv: [f32;2],
+    pub a_color: [f32;4],
 }
 
 // This method is called once during initialization, then again whenever the window is resized
