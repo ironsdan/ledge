@@ -26,7 +26,9 @@ use vulkano::buffer::cpu_pool::CpuBufferPoolChunk;
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::image::ImmutableImage;
 use vulkano::format::Format;
+use vulkano::pipeline::vertex::OneVertexOneInstanceDefinition;
 use vulkano::memory::pool::StdMemoryPool;
+use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer};
 use vulkano_win::VkSurfaceBuild;
 use winit::{
     window::{Window, WindowBuilder},
@@ -35,16 +37,17 @@ use winit::{
 use std::sync::Arc;
 use crate::{
     lib::window_size_dependent_setup,
-    graphics::{Vertex},
+    graphics::{Vertex, InstanceData},
     conf::*,
     graphics::{vs, fs},
 };
+
 
 // #[derive(Default)]
 pub struct FrameData {
     // instance_properties: Option<CpuBufferPoolSubbuffer>,
     pub vbuf: Option<CpuBufferPoolChunk<Vertex, Arc<StdMemoryPool>>>,
-    pub instance_descriptor_set: Option<Arc<PersistentDescriptorSet<((((), PersistentDescriptorSetBuf<CpuBufferPoolSubbuffer<vs::ty::instance_data, Arc<StdMemoryPool>>>), PersistentDescriptorSetImg<Arc<ImmutableImage<Format>>>), PersistentDescriptorSetSampler)>>>,
+    pub uniform_descriptor_set: Option<Arc<PersistentDescriptorSet<((((), PersistentDescriptorSetBuf<Arc<CpuAccessibleBuffer<vs::ty::mvp>>>), PersistentDescriptorSetImg<Arc<ImmutableImage<Format>>>), PersistentDescriptorSetSampler)>>>,
 }
 
 pub struct GraphicsContext {
@@ -57,7 +60,7 @@ pub struct GraphicsContext {
     pub render_pass: std::sync::Arc<dyn RenderPassAbstract + std::marker::Send + std::marker::Sync>,
     pub dynamic_state: vulkano::command_buffer::DynamicState,
     pub vertex_buffer_pool: vulkano::buffer::CpuBufferPool<Vertex>,
-    pub instance_pool: vulkano::buffer::CpuBufferPool<vs::ty::instance_data>,
+    pub mvp_buffer: std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<vs::ty::mvp>>,
     pub frame_data: FrameData,
     pub pipeline: std::sync::Arc<dyn vulkano::pipeline::GraphicsPipelineAbstract + std::marker::Send + std::marker::Sync>, 
     pub image_num: usize,
@@ -180,8 +183,10 @@ impl GraphicsContext {
         // Vertex Buffer Pool
         let buffer_pool: CpuBufferPool<Vertex> = CpuBufferPool::vertex_buffer(device.clone());
 
-        // Instance uniform buffer pool
-        let instance_buffer_pool = vulkano::buffer::cpu_pool::CpuBufferPool::<vs::ty::instance_data>::uniform_buffer(device.clone());
+        // Model View Projection buffer
+        let default_mvp_mat = vs::ty::mvp { mvp: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]};
+        let mvp_buffer = CpuAccessibleBuffer::from_data(device.clone(), BufferUsage::uniform_buffer(), false, default_mvp_mat).unwrap();
+        // let mvp_buffer = vulkano::buffer::cpu_pool::CpuBufferPool::<vs::ty::mvp>::uniform_buffer(device.clone());
 
         // let instance_buffer_pool = vulkano::buffer::cpu_pool::CpuBufferPool::<DrawSettings>::uniform_buffer(device.clone());
 
@@ -203,18 +208,16 @@ impl GraphicsContext {
             .unwrap(),
         );
 
-        vulkano::impl_vertex!(Vertex, a_pos);
-
-        // mvp uniform buffer
-        // let mvp_uniform_buffer = vulkano::buffer::cpu_pool::CpuBufferPool::<vs::ty::mvp>
-        //     ::new(device.clone(), vulkano::buffer::BufferUsage::all());
+        vulkano::impl_vertex!(Vertex, a_pos, a_uv, a_vert_color);
+        vulkano::impl_vertex!(InstanceData, a_src, a_color, a_transform);
 
         let vs = vs::Shader::load(device.clone()).unwrap();
         let fs = fs::Shader::load(device.clone()).unwrap();
 
         let pipeline = Arc::new(
             GraphicsPipeline::start()
-                .vertex_input_single_buffer::<Vertex>()
+                // .vertex_input_single_buffer::<Vertex>()
+                .vertex_input(OneVertexOneInstanceDefinition::<Vertex, InstanceData>::new())
                 .vertex_shader(vs.main_entry_point(), ())
                 .triangle_strip()
                 .viewports_dynamic_scissors_irrelevant(1)
@@ -260,8 +263,8 @@ impl GraphicsContext {
             render_pass: render_pass,
             dynamic_state: dynamic_state,
             vertex_buffer_pool: buffer_pool,
-            instance_pool: instance_buffer_pool,
-            frame_data: FrameData{ vbuf: None, instance_descriptor_set: None },
+            mvp_buffer: mvp_buffer,
+            frame_data: FrameData{ vbuf: None, uniform_descriptor_set: None },
             pipeline: pipeline,
             image_num: 0,
             acquire_future: None,
@@ -330,11 +333,25 @@ impl GraphicsContext {
     }
 
     pub fn draw(&mut self) {
+        let mut data = Vec::new();
+        data.push(InstanceData {
+            a_src: [0.0, 0.0, 1.0, 1.0],
+            a_color: [0.0, 0.0, 0.0, 1.0],
+            a_transform: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
+        });
+        let instance_data: Arc<CpuAccessibleBuffer<[InstanceData]>> = CpuAccessibleBuffer::from_iter(
+            self.device.clone(),
+            BufferUsage::all(),
+            false,
+            data.iter().cloned(),
+        )
+        .unwrap();
+
         self.command_buffer.as_mut().unwrap().draw(
             self.pipeline.clone(),
             &self.dynamic_state,
-            vec!(Arc::new(self.frame_data.vbuf.as_ref().unwrap().clone())),
-            self.frame_data.instance_descriptor_set.as_ref().unwrap().clone(),
+            vec!(Arc::new(self.frame_data.vbuf.as_ref().unwrap().clone()), Arc::new(instance_data)),
+            self.frame_data.uniform_descriptor_set.as_ref().unwrap().clone(),
             (),
         ).unwrap();
     }

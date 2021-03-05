@@ -55,19 +55,17 @@ impl SpriteBatch {
     }
 
     pub fn flush(&mut self, graphics_context: &mut GraphicsContext) {
-
-        let sprite_data = graphics::vs::ty::instance_data {
-            transform: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
-        };
-        let instance_buffer = graphics_context.instance_pool.next(sprite_data).unwrap();
+        let mvp_buffer = graphics_context.mvp_buffer.clone();
 
         let layout = graphics_context.pipeline.descriptor_set_layout(0).unwrap();
 
+    
         let (texture, _) = {
-            let image = image::load_from_memory_with_format(include_bytes!("../images/SweaterGuy.png"),
+            let image = image::load_from_memory_with_format(include_bytes!("../images/pokeball.png"),
                 ImageFormat::Png).unwrap().to_rgba8();
             let dimensions = image.dimensions();
             let image_data = image.into_raw().clone();
+
     
             ImmutableImage::from_iter(
                 image_data.iter().cloned(),
@@ -78,10 +76,10 @@ impl SpriteBatch {
             )
             .unwrap()
         };
-        
-        graphics_context.frame_data.instance_descriptor_set = Some(Arc::new(
+
+        graphics_context.frame_data.uniform_descriptor_set = Some(Arc::new(
             PersistentDescriptorSet::start(layout.clone())
-                .add_buffer(instance_buffer).unwrap()
+                .add_buffer(mvp_buffer).unwrap()
                 .add_sampled_image(texture, graphics_context.sampler.clone()).unwrap()
                 .build()
                 .unwrap(),
@@ -90,15 +88,23 @@ impl SpriteBatch {
         graphics_context.frame_data.vbuf = Some(graphics_context.vertex_buffer_pool.chunk(vec![
             Vertex {
                 a_pos: [0.0, 0.0],
+                a_uv: [0.0, 0.0],
+                a_vert_color: [0.0, 0.0, 0.0, 1.0],
             },
             Vertex {
-                a_pos: [0.0, 0.0 + 0.1],
+                a_pos: [0.0, 1.0],
+                a_uv: [0.0, 1.0],
+                a_vert_color: [0.0, 0.0, 0.0, 1.0],
             },
             Vertex {
-                a_pos: [0.0 + 0.1, 0.0],
+                a_pos: [1.0, 0.0],
+                a_uv: [1.0, 0.0],
+                a_vert_color: [0.0, 0.0, 0.0, 1.0],
             },
             Vertex {
-                a_pos: [0.0 + 0.1, 0.0 + 0.1],
+                a_pos: [1.0, 1.0],
+                a_uv: [1.0, 1.0],
+                a_vert_color: [0.0, 0.0, 0.0, 1.0],
             },
         ]).unwrap());
     }

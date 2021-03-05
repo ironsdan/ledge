@@ -26,10 +26,19 @@ pub trait Drawable {
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Vertex {
     pub a_pos: [f32; 2],
+    pub a_uv: [f32; 2],
+    pub a_vert_color: [f32; 4],
 }
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct DrawSettings {
-    pub texture_coords: [f32;2],
-    pub color: [f32;4],
+    pub texture_coords: [f32; 2],
+    pub color: [f32; 4],
+}
+
+#[derive(Default, Debug, Clone, PartialEq)]
+pub struct InstanceData {
+    a_src: [f32; 4],
+    a_color: [f32; 4],
+    a_transform: [[f32; 4]; 4],
 }

@@ -20,7 +20,7 @@ impl TimerState {
     pub fn tick(&mut self) {
         let now = time::Instant::now();
         let frame_time = now - self.last_instant;
-        println!("Frame time: {:?}", frame_time);
+        // println!("Frame time: {:?}", frame_time);
         self.frame_times.push(frame_time);
         self.last_instant = now;
         self.accumulator += frame_time;
