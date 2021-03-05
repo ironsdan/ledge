@@ -19,6 +19,9 @@ use scene::level::*;
 use graphics::sprite::SpriteBatch;
 use graphics::image::Image;
 use graphics::BlendMode;
+use graphics::DrawInfo;
+use graphics::Transform;
+use graphics::Rect;
 use game::GameState;
 use ecs::World;
 
@@ -41,7 +44,7 @@ fn main() {
     let rock_texture_handle;
     {
         // let texture_sweater = types::Texture::from_file_vulkano(include_bytes!("images/SweaterGuy.png"), &interface.graphics_context);
-        let texture_rock = types::Texture::from_file_vulkano(include_bytes!("images/rock.png"), &interface.graphics_context);
+        let texture_rock = types::Texture::from_file_vulkano(include_bytes!("images/pokeball.png"), &interface.graphics_context);
 
         let mut texture_assets = world.fetch_mut::<storage::AssetStorage<types::Texture>>();
         // sweater_texture_handle = texture_assets.insert(texture_sweater);
@@ -54,8 +57,42 @@ fn main() {
                                 512,
                                 512,
                             );
-    let rock_sprite = SpriteBatch::new(rock_image);
+    let mut rock_sprite = SpriteBatch::new(rock_image);
     rock_sprite.load_asset(&world, &mut interface.graphics_context);
+
+    let draw_info = DrawInfo {
+        texture_rect: Rect { x: 0.5, y: 0.5, w: 0.5, h: 0.5 },
+        color: [0.0, 0.0, 0.0, 1.0],
+        transform: Transform::Matrix([[0.5, 0.0, 0.0, 0.0], [0.0, 0.5, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+    };
+    let draw_info1 = DrawInfo {
+        texture_rect: Rect { x: 0.5, y: 0.5, w: 0.5, h: 0.5 },
+        color: [0.0, 0.0, 0.0, 1.0],
+        transform: Transform::Matrix([[-0.5, 0.0, 0.0, 0.0], [0.0, 0.5, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+    };
+    let draw_info2 = DrawInfo {
+        texture_rect: Rect { x: 0.5, y: 0.5, w: 0.5, h: 0.5 },
+        color: [0.0, 0.0, 0.0, 1.0],
+        transform: Transform::Matrix([[0.5, 0.0, 0.0, 0.0], [0.0, -0.5, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+    };
+    let draw_info3 = DrawInfo {
+        texture_rect: Rect { x: 0.5, y: 0.5, w: 0.5, h: 0.5 },
+        color: [0.0, 0.0, 0.0, 1.0],
+        transform: Transform::Matrix([[-0.5, 0.0, 0.0, 0.0], [0.0, -0.5, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+    };
+
+    rock_sprite.add(
+        draw_info
+    );
+    rock_sprite.add(
+        draw_info1
+    );
+    rock_sprite.add(
+        draw_info2
+    );
+    rock_sprite.add(
+        draw_info3
+    );
 
     // Entity Creation //
     let rock = world.create_entity().with::<SpriteBatch>(rock_sprite)

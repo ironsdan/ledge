@@ -86,14 +86,14 @@ impl DrawInfo {
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Rect {
-    x: f32,
-    y: f32,
-    z: f32,
-    w: f32,
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
 }
 
 impl Rect {
     pub fn as_vec(&self) -> [f32; 4] {
-        [self.x, self.y, self.z, self.w]
+        [self.x, self.y, self.w, self.h]
     }
 }

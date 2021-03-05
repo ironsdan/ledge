@@ -20,7 +20,7 @@ impl TimerState {
     pub fn tick(&mut self) {
         let now = time::Instant::now();
         let frame_time = now - self.last_instant;
-        // println!("Frame time: {:?}", frame_time);
+        print!("Frame time: {:.2}\r", frame_time.as_secs_f32() * 1000.0);
         self.frame_times.push(frame_time);
         self.last_instant = now;
         self.accumulator += frame_time;
@@ -33,7 +33,6 @@ impl TimerState {
 
     pub fn check_update_time(&mut self, target_fps: u32) -> bool {
         let target_dt = fps_as_duration(target_fps);
-        // println!("{:?} {:?}", self.accumulator, target_dt);
         if self.accumulator >= target_dt {
             self.accumulator -= target_dt;
             true

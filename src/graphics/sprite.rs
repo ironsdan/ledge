@@ -54,6 +54,10 @@ impl SpriteBatch {
         }
     }
 
+    pub fn add(&mut self, draw_info: DrawInfo) {
+        self.sprite_data.push(draw_info);
+    }
+
     pub fn load_asset(&self, world: &World, graphics_context: &mut GraphicsContext) {
         let texture_assets = world.fetch::<AssetStorage<Texture>>();
         let texture = texture_assets.get(&self.image.texture_handle).unwrap().as_raw_vk_texture();
@@ -92,15 +96,21 @@ impl SpriteBatch {
             },
         ]).unwrap());
         
-        // let mut data = Vec::new();
+        let mut instance_data = Vec::new();
 
-        let data = [InstanceData {
-            a_src: [0.0, 0.0, 1.0, 1.0],
-            a_color: [0.0, 0.0, 0.0, 1.0],
-            a_transform: [[-1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
-        }];
+        for sprite_data in self.sprite_data.iter() {
+            instance_data.push(sprite_data.into_instance_data());
+        }
 
-        graphics_context.command_buffer.as_mut().unwrap().update_buffer(graphics_context.frame_data.instance_data.clone(), data).unwrap();
+        graphics_context.frame_data.instance_data = Some(graphics_context.instance_buffer_pool.chunk(instance_data).unwrap());
+
+        // let data = [InstanceData {
+        //     a_src: [0.0, 0.0, 1.0, 1.0],
+        //     a_color: [0.0, 0.0, 0.0, 1.0],
+        //     a_transform: [[-1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
+        // }];
+
+        // graphics_context.command_buffer.as_mut().unwrap().update_buffer(graphics_context.frame_data.instance_data.clone(), data).unwrap();
 
     }
 }

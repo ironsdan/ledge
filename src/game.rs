@@ -25,13 +25,6 @@ impl GameState {
 
 impl EventHandler for GameState {
     fn update(&mut self, interface: &mut Interface, world: &mut World) -> GameResult {
-        // let mvp_mat = vs::ty::mvp { mvp: [[-1.0, 0.0, 0.0, 0.0], 
-        //                                   [0.0, 1.0, 0.0, 0.0], 
-        //                                   [0.0, 0.0, 1.0, 0.0], 
-        //                                   [0.0, 0.0, 0.0, 1.0]]};
-
-        // interface.graphics_context.command_buffer.as_mut().unwrap().update_buffer(interface.graphics_context.mvp_buffer.clone(), mvp_mat).unwrap();
-        
         const DESIRED_FPS: u32 = 60;
 
         while interface.timer_state.check_update_time(DESIRED_FPS) {
@@ -42,8 +35,6 @@ impl EventHandler for GameState {
     }
 
     fn draw(&mut self, interface: &mut Interface, world: &mut World) -> GameResult {
-        interface.graphics_context.begin_frame();
-
         self.space_stack.draw(world, &mut interface.graphics_context);
 
         interface.graphics_context.present();

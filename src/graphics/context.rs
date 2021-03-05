@@ -47,7 +47,7 @@ use crate::{
 pub struct FrameData {
     // instance_properties: Option<CpuBufferPoolSubbuffer>,
     pub vbuf: Option<CpuBufferPoolChunk<Vertex, Arc<StdMemoryPool>>>,
-    pub instance_data: Arc<CpuAccessibleBuffer<[InstanceData; 1]>>,
+    pub instance_data: Option<CpuBufferPoolChunk<InstanceData, Arc<StdMemoryPool>>>,
     pub uniform_descriptor_set: Option<Arc<PersistentDescriptorSet<((((), PersistentDescriptorSetBuf<Arc<CpuAccessibleBuffer<vs::ty::mvp>>>), PersistentDescriptorSetImg<Arc<ImmutableImage<Format>>>), PersistentDescriptorSetSampler)>>>,
 }
 
@@ -61,6 +61,7 @@ pub struct GraphicsContext {
     pub render_pass: std::sync::Arc<dyn RenderPassAbstract + std::marker::Send + std::marker::Sync>,
     pub dynamic_state: vulkano::command_buffer::DynamicState,
     pub vertex_buffer_pool: vulkano::buffer::CpuBufferPool<Vertex>,
+    pub instance_buffer_pool: vulkano::buffer::CpuBufferPool<InstanceData>,
     pub mvp_buffer: std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<vs::ty::mvp>>,
     pub frame_data: FrameData,
     pub pipeline: std::sync::Arc<dyn vulkano::pipeline::GraphicsPipelineAbstract + std::marker::Send + std::marker::Sync>, 
@@ -184,24 +185,11 @@ impl GraphicsContext {
         // Vertex Buffer Pool
         let buffer_pool: CpuBufferPool<Vertex> = CpuBufferPool::vertex_buffer(device.clone());
 
+        let instance_buffer_pool: CpuBufferPool<InstanceData> = CpuBufferPool::vertex_buffer(device.clone());
+
         // Model View Projection buffer
         let default_mvp_mat = vs::ty::mvp { mvp: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]};
         let mvp_buffer = CpuAccessibleBuffer::from_data(device.clone(), BufferUsage::uniform_buffer_transfer_destination(), false, default_mvp_mat).unwrap();
-
-        let mut data = [InstanceData {
-            a_src: [0.0, 0.0, 1.0, 1.0],
-            a_color: [0.0, 0.0, 0.0, 1.0],
-            a_transform: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
-        }];
-
-        let instance_data_buffer = CpuAccessibleBuffer::from_data(
-            device.clone(),
-            BufferUsage::all(),
-            false,
-            data,
-        )
-        .unwrap();
-        
         
         let render_pass = Arc::new(
             vulkano::single_pass_renderpass!(device.clone(),
@@ -276,8 +264,9 @@ impl GraphicsContext {
             render_pass: render_pass,
             dynamic_state: dynamic_state,
             vertex_buffer_pool: buffer_pool,
+            instance_buffer_pool: instance_buffer_pool, 
             mvp_buffer: mvp_buffer,
-            frame_data: FrameData{ vbuf: None, instance_data: instance_data_buffer, uniform_descriptor_set: None },
+            frame_data: FrameData{ vbuf: None, instance_data: None, uniform_descriptor_set: None },
             pipeline: pipeline,
             image_num: 0,
             acquire_future: None,
@@ -289,6 +278,7 @@ impl GraphicsContext {
         };
 
         graphics.create_command_buffer();
+        graphics.begin_frame();
         graphics
     }
 
@@ -341,13 +331,6 @@ impl GraphicsContext {
 
         self.image_num = image_num;
         self.acquire_future = Some(acquire_future);
-
-        // self.begin_render_pass();
-    }
-
-    fn begin_render_pass(&mut self) {
-        let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
-        self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[self.image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
     }
 
     pub fn draw(&mut self) {
@@ -356,7 +339,7 @@ impl GraphicsContext {
         self.command_buffer.as_mut().unwrap().draw(
             self.pipeline.clone(),
             &self.dynamic_state,
-            vec!(Arc::new(self.frame_data.vbuf.as_ref().unwrap().clone()), Arc::new(self.frame_data.instance_data.clone())),
+            vec!(Arc::new(self.frame_data.vbuf.as_ref().unwrap().clone()), Arc::new(self.frame_data.instance_data.as_ref().unwrap().clone())),
             self.frame_data.uniform_descriptor_set.as_ref().unwrap().clone(),
             (),
         ).unwrap();
@@ -364,7 +347,6 @@ impl GraphicsContext {
     }
 
     pub fn present(&mut self) {
-        // self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
         let command_buffer = self.command_buffer.take().unwrap().build().unwrap();
 
         let future = self.previous_frame_end
@@ -399,6 +381,6 @@ impl GraphicsContext {
         std::thread::sleep(std::time::Duration::from_secs_f32(sleep_time));
 
         self.create_command_buffer();
-        // self.begin_frame();
+        self.begin_frame();
     }
 }
