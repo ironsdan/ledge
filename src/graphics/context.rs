@@ -21,7 +21,7 @@ use vulkano::{
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSetImg;
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSetSampler;
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSetBuf;
-use vulkano::buffer::cpu_pool::CpuBufferPoolSubbuffer;
+// use vulkano::buffer::cpu_pool::CpuBufferPoolSubbuffer;
 use vulkano::buffer::cpu_pool::CpuBufferPoolChunk;
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::image::ImmutableImage;
@@ -47,6 +47,7 @@ use crate::{
 pub struct FrameData {
     // instance_properties: Option<CpuBufferPoolSubbuffer>,
     pub vbuf: Option<CpuBufferPoolChunk<Vertex, Arc<StdMemoryPool>>>,
+    pub instance_data: Arc<CpuAccessibleBuffer<[InstanceData; 1]>>,
     pub uniform_descriptor_set: Option<Arc<PersistentDescriptorSet<((((), PersistentDescriptorSetBuf<Arc<CpuAccessibleBuffer<vs::ty::mvp>>>), PersistentDescriptorSetImg<Arc<ImmutableImage<Format>>>), PersistentDescriptorSetSampler)>>>,
 }
 
@@ -103,13 +104,13 @@ impl GraphicsContext {
         let ty = MessageType::all();
     
         let debug_callback = DebugCallback::new(&instance, severity, ty, |msg| {
-            let severity = if msg.severity.error { "error" } 
+            let _severity = if msg.severity.error { "error" } 
             else if msg.severity.warning { "warning" } 
             else if msg.severity.information { "information" } 
             else if msg.severity.verbose { "verbose" } 
             else { panic!("no-impl"); };
     
-            let ty = if msg.ty.general { "general" } 
+            let _ty = if msg.ty.general { "general" } 
             else if msg.ty.validation { "validation" } 
             else if msg.ty.performance { "performance" } 
             else { panic!("no-impl"); };
@@ -185,11 +186,23 @@ impl GraphicsContext {
 
         // Model View Projection buffer
         let default_mvp_mat = vs::ty::mvp { mvp: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]};
-        let mvp_buffer = CpuAccessibleBuffer::from_data(device.clone(), BufferUsage::uniform_buffer(), false, default_mvp_mat).unwrap();
-        // let mvp_buffer = vulkano::buffer::cpu_pool::CpuBufferPool::<vs::ty::mvp>::uniform_buffer(device.clone());
+        let mvp_buffer = CpuAccessibleBuffer::from_data(device.clone(), BufferUsage::uniform_buffer_transfer_destination(), false, default_mvp_mat).unwrap();
 
-        // let instance_buffer_pool = vulkano::buffer::cpu_pool::CpuBufferPool::<DrawSettings>::uniform_buffer(device.clone());
+        let mut data = [InstanceData {
+            a_src: [0.0, 0.0, 1.0, 1.0],
+            a_color: [0.0, 0.0, 0.0, 1.0],
+            a_transform: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
+        }];
 
+        let instance_data_buffer = CpuAccessibleBuffer::from_data(
+            device.clone(),
+            BufferUsage::all(),
+            false,
+            data,
+        )
+        .unwrap();
+        
+        
         let render_pass = Arc::new(
             vulkano::single_pass_renderpass!(device.clone(),
                 attachments: {
@@ -264,7 +277,7 @@ impl GraphicsContext {
             dynamic_state: dynamic_state,
             vertex_buffer_pool: buffer_pool,
             mvp_buffer: mvp_buffer,
-            frame_data: FrameData{ vbuf: None, uniform_descriptor_set: None },
+            frame_data: FrameData{ vbuf: None, instance_data: instance_data_buffer, uniform_descriptor_set: None },
             pipeline: pipeline,
             image_num: 0,
             acquire_future: None,
@@ -275,16 +288,22 @@ impl GraphicsContext {
             debugger: debug_callback
         };
 
-        graphics.begin_frame();
-
+        graphics.create_command_buffer();
         graphics
     }
 
-    // Handles setup of anew frame, called when the graphics pipeline is first created and 
+    fn create_command_buffer(&mut self,) {
+        let builder =
+        AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queue.family())
+            .unwrap();
+        self.command_buffer = Some(builder);
+    }
+
+    // Handles setup of a new frame, called when the graphics pipeline is first created and 
     // at the end of every frame to start the next one. This is necessary because the swapchain
     // could be out of date and the command_buffer needs to be recreated each frame, as well as
     // Updating the image_num, optimality, and the swapcahin future.
-    fn begin_frame(&mut self) {
+    pub fn begin_frame(&mut self) {
         self.now = Some(std::time::Instant::now());
         self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 
@@ -323,41 +342,29 @@ impl GraphicsContext {
         self.image_num = image_num;
         self.acquire_future = Some(acquire_future);
 
-        let builder =
-            AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queue.family())
-                .unwrap();
+        // self.begin_render_pass();
+    }
 
+    fn begin_render_pass(&mut self) {
         let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
-        self.command_buffer = Some(builder);
         self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[self.image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
     }
 
     pub fn draw(&mut self) {
-        let mut data = Vec::new();
-        data.push(InstanceData {
-            a_src: [0.0, 0.0, 1.0, 1.0],
-            a_color: [0.0, 0.0, 0.0, 1.0],
-            a_transform: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
-        });
-        let instance_data: Arc<CpuAccessibleBuffer<[InstanceData]>> = CpuAccessibleBuffer::from_iter(
-            self.device.clone(),
-            BufferUsage::all(),
-            false,
-            data.iter().cloned(),
-        )
-        .unwrap();
-
+        let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
+        self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[self.image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
         self.command_buffer.as_mut().unwrap().draw(
             self.pipeline.clone(),
             &self.dynamic_state,
-            vec!(Arc::new(self.frame_data.vbuf.as_ref().unwrap().clone()), Arc::new(instance_data)),
+            vec!(Arc::new(self.frame_data.vbuf.as_ref().unwrap().clone()), Arc::new(self.frame_data.instance_data.clone())),
             self.frame_data.uniform_descriptor_set.as_ref().unwrap().clone(),
             (),
         ).unwrap();
+        self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
     }
 
     pub fn present(&mut self) {
-        self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
+        // self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
         let command_buffer = self.command_buffer.take().unwrap().build().unwrap();
 
         let future = self.previous_frame_end
@@ -391,6 +398,7 @@ impl GraphicsContext {
         }
         std::thread::sleep(std::time::Duration::from_secs_f32(sleep_time));
 
-        self.begin_frame();
+        self.create_command_buffer();
+        // self.begin_frame();
     }
 }

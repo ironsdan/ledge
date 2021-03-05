@@ -17,7 +17,7 @@ pub struct Rect {
 }
 
 impl Rect {
-    pub fn new(width: f32, height: f32, pos: [f32; 2], texture_coord: [[f32; 2]; 4]) -> Self {
+    pub fn new(width: f32, height: f32, pos: [f32; 2]) -> Self {
         // println!("pos X: {}, pos Y: {}, height: {}, width: {}", pos[0], pos[1], height, width);
         Self {
             height: height,
@@ -27,23 +27,15 @@ impl Rect {
             vertices: [
                 Vertex {
                     a_pos: [pos[0], pos[1]],
-                    // tex_coords: texture_coord[0],
-                    // color: [0.0, 0.0, 0.0, 0.0],
                 },
                 Vertex {
                     a_pos: [pos[0], pos[1] + height],
-                    // tex_coords: texture_coord[1],
-                    // color: [0.0, 0.0, 0.0, 0.0],
                 },
                 Vertex {
                     a_pos: [pos[0] + width, pos[1]],
-                    // tex_coords: texture_coord[2],
-                    // color: [0.0, 0.0, 0.0, 0.0],
                 },
                 Vertex {
                     a_pos: [pos[0] + width, pos[1] + height],
-                    // tex_coords: texture_coord[3],
-                    // color: [0.0, 0.0, 0.0, 0.0],
                 },
             ],
         }

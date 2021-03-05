@@ -17,6 +17,8 @@ use asset::*;
 use physics::*;
 use scene::level::*;
 use graphics::sprite::SpriteBatch;
+use graphics::image::Image;
+use graphics::BlendMode;
 use game::GameState;
 use ecs::World;
 
@@ -25,7 +27,7 @@ fn main() {
     let asset_storage = storage::AssetStorage::<types::Texture>::new();
     world.insert(asset_storage);
 
-    let (interface, event_loop) = InterfaceBuilder::new("test", "Dan").build().unwrap();
+    let (mut interface, event_loop) = InterfaceBuilder::new("test", "Dan").build().unwrap();
 
     // ECS //
     world.register::<SpriteBatch>();
@@ -35,30 +37,37 @@ fn main() {
     world.register::<RigidBody>();
 
     // Texture Creation //
-    let sweater_texture_handle;
+    // let sweater_texture_handle;
     let rock_texture_handle;
     {
-        let texture_sweater = types::Texture::from_file_vulkano(include_bytes!("images/SweaterGuy.png"), &interface.graphics_context);
-        let texture_rock = types::Texture::from_file_vulkano(include_bytes!("images/pokeball.png"), &interface.graphics_context);
+        // let texture_sweater = types::Texture::from_file_vulkano(include_bytes!("images/SweaterGuy.png"), &interface.graphics_context);
+        let texture_rock = types::Texture::from_file_vulkano(include_bytes!("images/rock.png"), &interface.graphics_context);
 
         let mut texture_assets = world.fetch_mut::<storage::AssetStorage<types::Texture>>();
-        sweater_texture_handle = texture_assets.insert(texture_sweater);
+        // sweater_texture_handle = texture_assets.insert(texture_sweater);
         rock_texture_handle = texture_assets.insert(texture_rock);
     }
-    let sweat_sprite = SpriteBatch::new(sweater_texture_handle.clone());
-    let rock_sprite = SpriteBatch::new(rock_texture_handle.clone());
+    // let sweat_sprite = SpriteBatch::new(sweater_texture_handle.clone());
+    let rock_image = Image::new(rock_texture_handle.clone(), 
+                                interface.graphics_context.sampler.clone(), 
+                                BlendMode::Default,
+                                512,
+                                512,
+                            );
+    let rock_sprite = SpriteBatch::new(rock_image);
+    rock_sprite.load_asset(&world, &mut interface.graphics_context);
 
     // Entity Creation //
-    let pokeball1 = world.create_entity().with::<SpriteBatch>(rock_sprite)
+    let rock = world.create_entity().with::<SpriteBatch>(rock_sprite)
                                        .is::<Visible>()
                                        .with::<Position>(Position { previous_position: (-1.0,-1.0), current_position: (-1.0, -1.0) }).build();
-    let pokeball = world.create_entity().with::<SpriteBatch>(sweat_sprite.clone())
-                                        .is::<Visible>()
-                                        .is::<DynamicObject>()
-                                        .with::<RigidBody>(RigidBody { velocity: (0.0, 0.0), previous_velocity: (0.0, 0.0), desired_velocity: (0.0, 0.0), transition_speed: (20.0, 20.0)})
-                                        .with::<Position>(Position { previous_position: (0.0, 0.0), current_position: (0.0, 0.0) }).build();
+    // let pokeball = world.create_entity().with::<SpriteBatch>(sweat_sprite.clone())
+    //                                     .is::<Visible>()
+    //                                     .is::<DynamicObject>()
+    //                                     .with::<RigidBody>(RigidBody { velocity: (0.0, 0.0), previous_velocity: (0.0, 0.0), desired_velocity: (0.0, 0.0), transition_speed: (20.0, 20.0)})
+    //                                     .with::<Position>(Position { previous_position: (0.0, 0.0), current_position: (0.0, 0.0) }).build();
     // Level Builder //
-    let level_space = LevelSpaceBuilder::new().with_entity(pokeball).with_entity(pokeball1).build();
+    let level_space = LevelSpaceBuilder::new().with_entity(rock).build();
 
     // Game Creation and Running //
     let mut game = GameState::new();

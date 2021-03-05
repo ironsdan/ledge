@@ -81,10 +81,6 @@
 //     }
 // }
 
-// pub enum BlendMode {
-
-// }
-
 // // This structure will tell Vulkan how input entries of our vertex shader look like
 // #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 // struct VertInput;

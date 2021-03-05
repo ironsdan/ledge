@@ -31,6 +31,15 @@ impl HandleId {
     }
 }
 
+impl<T: Asset> Default for Handle<T> {
+    fn default() -> Self {
+        Self {
+            id: HandleId::default(),
+            marker: PhantomData,
+        }
+    }
+}
+
 impl<T: Asset> From<HandleId> for Handle<T> {
     fn from(value: HandleId) -> Self {
         Self {

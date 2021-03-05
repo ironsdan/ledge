@@ -2,6 +2,7 @@ pub mod context;
 pub mod animation;
 pub mod sprite;
 pub mod shader;
+pub mod image;
 
 use crate::graphics::context::GraphicsContext;
 
@@ -19,6 +20,11 @@ pub mod fs {
     }
 }
 
+#[derive(Clone, PartialEq)]
+pub enum BlendMode {
+    Default,
+}
+
 pub trait Drawable {
     fn draw(&mut self, context: &mut GraphicsContext);
 }
@@ -31,14 +37,63 @@ pub struct Vertex {
 }
 
 #[derive(Default, Debug, Clone, PartialEq)]
-pub struct DrawSettings {
-    pub texture_coords: [f32; 2],
-    pub color: [f32; 4],
-}
-
-#[derive(Default, Debug, Clone, PartialEq)]
 pub struct InstanceData {
     a_src: [f32; 4],
     a_color: [f32; 4],
     a_transform: [[f32; 4]; 4],
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Transform {
+    Matrix([[f32; 4]; 4])
+}
+
+impl Default for Transform {
+    fn default() -> Self {
+        Transform::Matrix([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]])
+    }
+}
+
+impl Transform {
+    fn as_mat4(&self) -> [[f32; 4]; 4] {
+        match self {
+            Transform::Matrix(mat) => *mat,
+            // _ => 
+        }
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq)]
+pub struct DrawInfo {
+    pub texture_rect: Rect,
+    pub color: [f32; 4],
+    pub transform: Transform,
+}
+
+impl DrawInfo {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn into_instance_data(&self) -> InstanceData {
+        InstanceData {
+            a_src: self.texture_rect.as_vec(),
+            a_color: self.color,
+            a_transform: self.transform.as_mat4(),
+        }
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq)]
+pub struct Rect {
+    x: f32,
+    y: f32,
+    z: f32,
+    w: f32,
+}
+
+impl Rect {
+    pub fn as_vec(&self) -> [f32; 4] {
+        [self.x, self.y, self.z, self.w]
+    }
 }

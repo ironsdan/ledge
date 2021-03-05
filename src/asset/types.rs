@@ -9,12 +9,14 @@ use image::ImageFormat;
 #[derive(Clone, PartialEq)]
 pub struct Texture {
     pub vulkano_texture: Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>,
+    pub dimensions: (u32, u32),
 }
 
 impl Texture {
     pub fn new(texture: Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>) -> Self {
         Self {
             vulkano_texture: texture.clone(),
+            dimensions: (texture.dimensions().width(), texture.dimensions().height()),
         }
     }
     pub fn from_file_vulkano(file_contents: &[u8], context: &GraphicsContext) -> Self {
@@ -35,7 +37,12 @@ impl Texture {
         };
 
         Self {
-            vulkano_texture: texture,
+            vulkano_texture: texture.clone(),
+            dimensions: (texture.dimensions().width(), texture.dimensions().height()),
         }
+    }
+
+    pub fn as_raw_vk_texture(&self) -> &Arc<vulkano::image::ImmutableImage<vulkano::format::Format>> {
+        &self.vulkano_texture
     }
 }

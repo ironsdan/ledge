@@ -20,11 +20,7 @@ impl<A: Asset> AssetStorage<A> {
         Handle::from(id)
     }
 
-    pub fn get<H: Into<HandleId>>(&self, handle: H) -> Option<&A> {
-        self.assets.get(&handle.into())
+    pub fn get(&self, handle: &Handle<A>) -> Option<&A> {
+        self.assets.get(&handle.id)
     }
-
-    // pub fn get_handle() -> Option<Handle<A>> {
-
-    // }
 }
