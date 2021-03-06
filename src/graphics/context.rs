@@ -29,6 +29,11 @@ use vulkano::format::Format;
 use vulkano::pipeline::vertex::OneVertexOneInstanceDefinition;
 use vulkano::memory::pool::StdMemoryPool;
 use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer};
+use vulkano::{
+    framebuffer::{Framebuffer, FramebufferAbstract},
+    image::SwapchainImage,
+    pipeline::viewport::Viewport,
+};
 use vulkano_win::VkSurfaceBuild;
 use winit::{
     window::{Window, WindowBuilder},
@@ -36,12 +41,12 @@ use winit::{
 };
 use std::sync::Arc;
 use crate::{
-    lib::window_size_dependent_setup,
     graphics::{Vertex, InstanceData},
     conf::*,
     graphics::{vs, fs},
 };
 
+type MvpUniform = vs::ty::mvp;
 
 // #[derive(Default)]
 pub struct FrameData {
@@ -62,7 +67,7 @@ pub struct GraphicsContext {
     pub dynamic_state: vulkano::command_buffer::DynamicState,
     pub vertex_buffer_pool: vulkano::buffer::CpuBufferPool<Vertex>,
     pub instance_buffer_pool: vulkano::buffer::CpuBufferPool<InstanceData>,
-    pub mvp_buffer: std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<vs::ty::mvp>>,
+    pub mvp_buffer: std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<MvpUniform>>,
     pub frame_data: FrameData,
     pub pipeline: std::sync::Arc<dyn vulkano::pipeline::GraphicsPipelineAbstract + std::marker::Send + std::marker::Sync>, 
     pub image_num: usize,
@@ -188,7 +193,7 @@ impl GraphicsContext {
         let instance_buffer_pool: CpuBufferPool<InstanceData> = CpuBufferPool::vertex_buffer(device.clone());
 
         // Model View Projection buffer
-        let default_mvp_mat = vs::ty::mvp { mvp: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]};
+        let default_mvp_mat = MvpUniform { mvp: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]};
         let mvp_buffer = CpuAccessibleBuffer::from_data(device.clone(), BufferUsage::uniform_buffer_transfer_destination(), false, default_mvp_mat).unwrap();
         
         let render_pass = Arc::new(
@@ -383,4 +388,55 @@ impl GraphicsContext {
         self.create_command_buffer();
         self.begin_frame();
     }
+}
+
+// This method is called once during initialization, then again whenever the window is resized
+pub fn window_size_dependent_setup(
+    images: &[Arc<SwapchainImage<Window>>],
+    render_pass: Arc<dyn RenderPassAbstract + Send + Sync>,
+    dynamic_state: &mut DynamicState,
+) -> Vec<Arc<dyn FramebufferAbstract + Send + Sync>> {
+    let dimensions = images[0].dimensions();
+
+    let viewport = Viewport {
+        origin: [0.0, 0.0],
+        dimensions: [dimensions[0] as f32, dimensions[1] as f32],
+        depth_range: 0.0..1.0,
+    };
+    dynamic_state.viewports = Some(vec![viewport]);
+
+    images
+        .iter()
+        .map(|image| {
+            Arc::new(
+                Framebuffer::start(render_pass.clone())
+                    .add(image.clone())
+                    .unwrap()
+                    .build()
+                    .unwrap(),
+            ) as Arc<dyn FramebufferAbstract + Send + Sync>
+        })
+        .collect::<Vec<_>>()
+}
+
+pub fn convert_to_screen_space(size: [u32;2], dimensions: [u32; 2]) -> [f32; 2] {
+    let window_width = dimensions[0];
+    let window_height = dimensions[1];
+
+    let aspect_ratio;
+
+    if window_height > window_width {
+        aspect_ratio = window_height as f32 / window_width as f32;
+    } else {
+        aspect_ratio = window_width as f32 / window_height as f32;
+    }
+
+    let pixel_size_y = 1.0/window_height as f32;
+    let pixel_size_x = 1.0/window_width as f32;
+
+    let screen_width = 2.0*pixel_size_x*size[0] as f32;
+    let screen_height = 2.0*pixel_size_y*size[1] as f32;
+
+    let screen_size = [screen_width, screen_height];
+    return screen_size;
 }

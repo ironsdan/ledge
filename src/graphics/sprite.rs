@@ -103,15 +103,6 @@ impl SpriteBatch {
         }
 
         graphics_context.frame_data.instance_data = Some(graphics_context.instance_buffer_pool.chunk(instance_data).unwrap());
-
-        // let data = [InstanceData {
-        //     a_src: [0.0, 0.0, 1.0, 1.0],
-        //     a_color: [0.0, 0.0, 0.0, 1.0],
-        //     a_transform: [[-1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
-        // }];
-
-        // graphics_context.command_buffer.as_mut().unwrap().update_buffer(graphics_context.frame_data.instance_data.clone(), data).unwrap();
-
     }
 }
 

@@ -33,10 +33,10 @@ impl InterfaceBuilder {
 }
 
 pub struct Interface {
-    pub(crate) graphics_context: crate::graphics::context::GraphicsContext,
-    pub(crate) keyboard_context: crate::input::keyboard::KeyboardContext, 
-    pub(crate) mouse_context: crate::input::mouse::MouseContext, 
-    pub(crate) timer_state: crate::timer::TimerState,
+    pub graphics_context: crate::graphics::context::GraphicsContext,
+    pub keyboard_context: crate::input::keyboard::KeyboardContext, 
+    pub mouse_context: crate::input::mouse::MouseContext, 
+    pub timer_state: crate::timer::TimerState,
 }
 
 impl Interface {
