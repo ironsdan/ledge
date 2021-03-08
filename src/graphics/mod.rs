@@ -15,7 +15,8 @@ use crate::graphics::context::GraphicsContext;
 pub mod vs {
     vulkano_shaders::shader! {
         ty: "vertex",
-        path: "src/graphics/texture.vert"
+        path: "src/graphics/texture.vert",
+        // dump: true,
     }
 }
 
@@ -121,7 +122,6 @@ impl DrawInfo {
     }
 
     pub fn rotate(&mut self, x: f32, y: f32, z: f32) {
-
         self.transform.rotate(x, y, z);
     }
 

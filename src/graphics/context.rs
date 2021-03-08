@@ -42,6 +42,7 @@ use winit::{
 use std::sync::Arc;
 use crate::{
     graphics::{Vertex, InstanceData},
+    // graphics::shader::{Shader, ShaderProgram},
     conf::*,
     graphics::{vs, fs},
 };
@@ -70,6 +71,7 @@ pub struct GraphicsContext {
     pub mvp_buffer: std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<MvpUniform>>,
     pub frame_data: FrameData,
     pub pipeline: std::sync::Arc<dyn vulkano::pipeline::GraphicsPipelineAbstract + std::marker::Send + std::marker::Sync>, 
+    // pub shaders: Vec<Box<dyn ShaderProgram>>,
     pub image_num: usize,
     pub acquire_future: Option<SwapchainAcquireFuture<Window>>,
     pub recreate_swapchain: bool,
@@ -258,6 +260,8 @@ impl GraphicsContext {
 
         let framebuffers =
             window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
+
+        // let default_shader = Shader::new();
 
         let mut graphics = Self {
             queue: queue,
