@@ -40,19 +40,19 @@ impl Shaders {
     }
 }
 
-pub trait ShaderGeneric<I, O, L> {
-    fn main_entry_point(&self) -> vulkano::pipeline::shader::GraphicsEntryPoint<'_, (), I, O, L>;
-}
-
-impl<I, O, L> ShaderGeneric<I, O, L> for Shaders {
-    fn main_entry_point(&self) -> vulkano::pipeline::shader::GraphicsEntryPoint<'_, (), graphics::vs::MainInput, graphics::vs::MainOutput, graphics::vs::Layout>{
+impl<'a, I, O, L> ShaderGeneric<'a, I, O, L> for Shaders {
+    fn entry_point(&self) -> vulkano::pipeline::shader::GraphicsEntryPoint<(), ShaderInterfaceDefEntry, ShaderInterfaceDefEntry, Box<PipelineLayoutDesc>> {
         self.vs.main_entry_point()
     }
 }
 
+pub trait ShaderGeneric<'a, I, O, L> {
+    fn entry_point(&self) -> vulkano::pipeline::shader::GraphicsEntryPoint<(), ShaderInterfaceDefEntry, ShaderInterfaceDefEntry, Box<PipelineLayoutDesc>>;
+}
+
 // This structure is to store multiple pipelines for different blend modes.
 pub struct PipelineObjectSet {
-    pipelines: HashMap<BlendMode, PipelineState>,
+    pipelines: HashMap<BlendMode, Box<dyn PipelineStateGeneric>>,
 }
 
 impl PipelineObjectSet {
@@ -63,29 +63,33 @@ impl PipelineObjectSet {
     }
 }
 
-pub struct PipelineState {
+pub trait PipelineStateGeneric {
+
+}
+
+pub struct PipelineState  {
     pub pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync>,
 }
 
-impl PipelineState {
-    pub fn new(device: Arc<vulkano::device::Device>, 
+impl  PipelineState {
+    pub fn new<I, O, L>(device: Arc<vulkano::device::Device>, 
             render_pass: Arc<dyn RenderPassAbstract + Send + Sync>, 
-            vs_bytes: &[u8], fs_bytes: &[u8], vs_entry: Box<ShaderGeneric>) -> Self 
+            vs_bytes: &[u8], fs_bytes: &[u8], vs_entry: Box<dyn ShaderGeneric<I, O, L>>) -> Self 
     {
         unsafe {
             let vs: Arc<ShaderModule> = ShaderModule::new(device.clone(), vs_bytes).unwrap();
             let fs: Arc<ShaderModule> = ShaderModule::new(device.clone(), fs_bytes).unwrap();
 
-            // let vertex_shader_entry = vs.graphics_entry_point(
-            //     CStr::from_bytes_with_nul_unchecked(b"main\0"),
-            //     VertInput,
-            //     VertOutput,
-            //     VertLayout(ShaderStages {
-            //         vertex: true,
-            //         ..ShaderStages::none()
-            //     }),
-            //     GraphicsShaderType::Vertex,
-            // );
+            let vertex_shader_entry = vs.graphics_entry_point(
+                CStr::from_bytes_with_nul_unchecked(b"main\0"),
+                VertInput,
+                VertOutput,
+                VertLayout(ShaderStages {
+                    vertex: true,
+                    ..ShaderStages::none()
+                }),
+                GraphicsShaderType::Vertex,
+            );
 
             let fragment_shader_entry = fs.graphics_entry_point(
                 CStr::from_bytes_with_nul_unchecked(b"main\0"),
@@ -101,7 +105,7 @@ impl PipelineState {
             let pipeline = Arc::new(
                 GraphicsPipeline::start()
                     .vertex_input_single_buffer::<Vertex>()
-                    .vertex_shader(vs_entry.main_entry_point(), ())
+                    .vertex_shader(vertex_shader_entry, ())
                     .triangle_strip()
                     .viewports_dynamic_scissors_irrelevant(1)
                     .fragment_shader(fragment_shader_entry, ())
@@ -137,11 +141,6 @@ impl Iterator for VertInputIter {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        // There are things to consider when giving out entries:
-        // * There must be only one entry per one location, you can't have
-        //   `color' and `position' entries both at 0..1 locations.  They also
-        //   should not overlap.
-        // * Format of each element must be no larger than 128 bits.
         if self.0 == 0 {
             self.0 += 1;
             return Some(ShaderInterfaceDefEntry {
