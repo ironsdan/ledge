@@ -43,19 +43,21 @@ fn main() {
 
     let draw_info = DrawInfo::with_rect(Rect { x: 0.33, y: 0.33, w: 0.33, h: 0.33 });
 
+    println!("{:?}", draw_info.transform.as_mat4());
+
     let sprite_id = sprite_batch.add(draw_info.clone());
 
     // Entity Creation //
     let entity = world.create_entity().with::<DrawInfo>(draw_info)
                                     .is::<Visible>()
-                                    .is::<DynamicObject>()
-                                    .with::<SpriteId>(sprite_id)
-                                    .with::<RigidBody>(RigidBody { 
-                                        velocity: (0.0, 0.0), 
-                                        previous_velocity: (0.0, 0.0), 
-                                        desired_velocity: (0.0, 0.0), 
-                                        transition_speed: (20.0, 20.0)
-                                    })
+                                    // .is::<DynamicObject>()
+                                    // .with::<SpriteId>(sprite_id)
+                                    // .with::<RigidBody>(RigidBody { 
+                                    //     velocity: (0.0, 0.0), 
+                                    //     previous_velocity: (0.0, 0.0), 
+                                    //     desired_velocity: (0.0, 0.0), 
+                                    //     transition_speed: (20.0, 20.0)
+                                    // })
                                     .with::<Position>(Position { 
                                         previous_position: (-1.0,-1.0), 
                                         current_position: (-1.0, -1.0) 

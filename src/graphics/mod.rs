@@ -6,9 +6,11 @@ pub mod image;
 
 use cgmath::{
     Matrix4,
+    Vector4,
     Vector3,
     Vector2,
     Rad,
+    prelude::Angle,
 };
 
 use crate::graphics::context::GraphicsContext;
@@ -61,33 +63,54 @@ pub enum Transform {
         pos: Vector3<f32>,
         rotation: Rad<f32>,
         scale: Vector3<f32>,
+        offset: Vector3<f32>,
     },
     Matrix(Matrix4<f32>)
 }
 
 impl Default for Transform {
     fn default() -> Self {
-        Transform::Matrix(Matrix4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0))
+        Transform::identity()
     }
 }
 
 impl Transform {
     fn identity() -> Self {
-        Self::Matrix(Matrix4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0))
+        Self::Components {
+            pos: Vector3::from((0.0, 0.0, 0.0)),
+            rotation: Rad(0.0),
+            scale: Vector3::from((1.0, 1.0, 0.0)),
+            offset: Vector3::from((0.0, 0.0, 0.0)),
+        }
+        // Self::Matrix(Matrix4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0))
     }
 
-    fn as_mat4(&self) -> Matrix4<f32> {
+    pub fn as_mat4(&self) -> Matrix4<f32> {
         match self {
             Transform::Matrix(mat) => *mat,
             Transform::Components {
                 pos,
                 rotation,
                 scale,
+                offset,
             } => {
-                let translation = Matrix4::from_translation(*pos);
-                let scale = Matrix4::from_nonuniform_scale(scale[0], scale[1], scale[2]);
-                // let rotation = Matrix4::from_;
-                translation + scale
+                // let translation = Matrix4::from_translation(*pos);
+                // let scale = Matrix4::from_nonuniform_scale(scale[0], scale[1], scale[2]);
+                
+                let (sinr, cosr) = rotation.sin_cos();
+                let m00 = cosr * scale.x;
+                let m01 = -sinr * scale.y;
+                let m10 = sinr * scale.x;
+                let m11 = cosr * scale.y;
+                let m03 = offset.x * (1.0 - m00) - offset.y * m01 + pos.x;
+                let m13 = offset.y * (1.0 - m11) - offset.x * m10 + pos.y;
+                
+                Matrix4::from_cols(
+                    Vector4::new(m00, m01, 0.0, m03,), // oh rustfmt you so fine
+                    Vector4::new(m10, m11, 0.0, m13,), // you so fine you blow my mind
+                    Vector4::new(0.0, 0.0, 1.0, 0.0,), // but leave my matrix formatting alone
+                    Vector4::new(0.0, 0.0, 0.0, 1.0,), // plz
+                )
             }
         }
     }
@@ -96,6 +119,12 @@ impl Transform {
         match self {
             Transform::Matrix(mat) => {
                 *mat = *mat + Matrix4::from_translation(Vector3::new(x, y, z));
+            }
+            Transform::Components {
+                pos,
+                ..
+            } => {
+                *pos += Vector3::from((x, y, z));
             }
         }
     }
@@ -108,6 +137,12 @@ impl Transform {
             Transform::Matrix(mat) => {
                 *mat = *mat * rotation;
             }
+            Transform::Components {
+                rotation,
+                ..
+            } => {
+                // *rotation += Vector3::from((x, y, z));
+            }
         }
     }
 
@@ -115,6 +150,12 @@ impl Transform {
         match self {
             Transform::Matrix(mat) => {
                 *mat = *mat * Matrix4::from_nonuniform_scale(x, y, z);
+            }
+            Transform::Components {
+                scale,
+                ..
+            } => {
+                // *scale += Vector3::from((x, y, z));
             }
         }
     }
