@@ -90,7 +90,7 @@ impl<'a> System<'a> for MovementSystem {
             //     println!("[ERROR]: delta_time HIGHER than expexted.");
             // }
 
-            println!("{} {}", velocity.0, velocity.1);
+            // println!("{} {}", velocity.0, velocity.1);
 
             rigid_body.velocity = velocity;
         }
@@ -109,6 +109,7 @@ impl<'a> System<'a> for PositionSystem {
             pos.current_position.0 += (rigid_body.velocity.0 + rigid_body.previous_velocity.0)/2.0 * delta_time.as_secs_f32();
             pos.current_position.1 += (rigid_body.velocity.1 + rigid_body.previous_velocity.1)/2.0 * delta_time.as_secs_f32();
 
+            // println!("current pos: {:?}", pos.current_position);
             // pos.current_position.0 = pos.current_position.0 * (0.25 + alpha) + pos.previous_position.0 * (0.75 - alpha); 
             // pos.current_position.1 = pos.current_position.1 * (0.25 + alpha) + pos.previous_position.1 * (0.75 - alpha); 
         }
@@ -123,6 +124,7 @@ impl<'a> System<'a> for SpriteMove {
     fn run(&mut self, (mut sprite_batch, mut draw_info, sprite_id, pos): Self::SystemData) {
         for (draw_info, sprite_id, pos) in (&mut draw_info, &sprite_id, &pos).join() {
             draw_info.translate(pos.current_position.0, pos.current_position.1, 0.0);
+            println!("Updating: sprite[{:?}], to {:?}", sprite_id, draw_info);
             sprite_batch.set(sprite_id, draw_info);
         }
     }

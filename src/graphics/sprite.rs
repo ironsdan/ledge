@@ -14,6 +14,7 @@ use crate::asset::handle::Handle;
 use crate::interface::Interface;
 use crate::graphics::BlendMode;
 
+#[derive(Debug)]
 pub struct SpriteId(usize);
 
 impl Default for SpriteId {

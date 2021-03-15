@@ -96,12 +96,3 @@ impl<'a> System<'a> for KeyboardInputSystem {
         }
     }
 }
-
-// pub fn try_move_sprite_mouse<'a>(mouse_context: &MouseContext, mut pos: WriteStorage<'a, Position>, dynamic: ReadStorage<'a, DynamicObject>) {    
-//     let mouse_pos = mouse_context.last_position;
-    
-//     for (pos, _) in (&mut pos, &dynamic).join() {
-//         pos.0 = mouse_pos.0 as f32;
-//         pos.1 = mouse_pos.1 as f32;
-//     }
-// }

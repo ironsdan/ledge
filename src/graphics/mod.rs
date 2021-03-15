@@ -76,7 +76,7 @@ impl Transform {
     fn translate(&mut self, x: f32, y: f32, z: f32) {
         match self {
             Transform::Matrix(mat) => {
-                *mat = *mat * Matrix4::from_translation(Vector3::new(x, y, z));
+                *mat = *mat + Matrix4::from_translation(Vector3::new(x, y, z));
             }
         }
     }

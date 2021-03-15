@@ -2,7 +2,7 @@ use ledge_engine::interface::*;
 use ledge_engine::asset::*;
 use ledge_engine::physics::*;
 use ledge_engine::scene::level::*;
-use ledge_engine::graphics::sprite::SpriteBatch;
+use ledge_engine::graphics::sprite::{SpriteBatch, SpriteId};
 use ledge_engine::graphics::BlendMode;
 use ledge_engine::graphics::DrawInfo;
 use ledge_engine::graphics::Transform;
@@ -22,6 +22,8 @@ fn main() {
 
     // ECS //
     world.register::<SpriteBatch>();
+    world.register::<DrawInfo>();
+    world.register::<SpriteId>();
     world.register::<Visible>();
     world.register::<Position>();
     world.register::<DynamicObject>();
@@ -50,13 +52,15 @@ fn main() {
     // Entity Creation //
     let rock = world.create_entity().with::<DrawInfo>(draw_info)
                                     .is::<Visible>()
+                                    
                                     .with::<Position>(Position { 
                                         previous_position: (-1.0,-1.0), 
                                         current_position: (-1.0, -1.0) 
                                     }).build();
     
     // Level Builder //
-    let level_space = LevelSpaceBuilder::new().with_entity(rock).build();
+    let mut level_space = LevelSpaceBuilder::new().with_entity(rock).build();
+    level_space.sprite_batch = sprite_batch;
 
     // Game Creation and Running //
     let mut game = GameState::new();

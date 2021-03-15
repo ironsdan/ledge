@@ -68,12 +68,13 @@ impl Space<World> for LevelSpace {
     }
 
     fn draw(&mut self, world: &mut World, context: &mut GraphicsContext) -> GameResult<()> {
-        let mut sprite_system = SpriteDraw {
-            context
-        };
+        // let mut sprite_system = SpriteDraw {
+        //     context
+        // };
 
-        sprite_system.run((world.write_comp_storage::<SpriteBatch>(), world.read_comp_storage::<Visible>()));
+        // sprite_system.run((world.write_comp_storage::<SpriteBatch>(), world.read_comp_storage::<Visible>()));
 
+        self.sprite_batch.draw(context);
         Ok(())
     }
 
