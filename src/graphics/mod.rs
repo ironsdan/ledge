@@ -27,9 +27,11 @@ pub mod fs {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Hash, Eq)]
 pub enum BlendMode {
     Default,
+    Alpha,
+    
 }
 
 pub trait Drawable {

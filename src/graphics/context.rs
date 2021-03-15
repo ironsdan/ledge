@@ -41,7 +41,7 @@ use winit::{
 };
 use std::sync::Arc;
 use crate::{
-    graphics::{Vertex, InstanceData},
+    graphics::{Vertex, InstanceData, shader::PipelineObjectSet, shader::PipelineObject, BlendMode},
     // graphics::shader::{Shader, ShaderProgram},
     conf::*,
     graphics::{vs, fs},
@@ -51,7 +51,7 @@ type MvpUniform = vs::ty::mvp;
 
 // #[derive(Default)]
 pub struct FrameData {
-    // instance_properties: Option<CpuBufferPoolSubbuffer>,
+    pub blend_mode: BlendMode,
     pub vbuf: Option<CpuBufferPoolChunk<Vertex, Arc<StdMemoryPool>>>,
     pub instance_data: Option<CpuBufferPoolChunk<InstanceData, Arc<StdMemoryPool>>>,
     pub uniform_descriptor_set: Option<Arc<PersistentDescriptorSet<((((), PersistentDescriptorSetBuf<Arc<CpuAccessibleBuffer<vs::ty::mvp>>>), PersistentDescriptorSetImg<Arc<ImmutableImage<Format>>>), PersistentDescriptorSetSampler)>>>,
@@ -70,15 +70,14 @@ pub struct GraphicsContext {
     pub instance_buffer_pool: vulkano::buffer::CpuBufferPool<InstanceData>,
     pub mvp_buffer: std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<MvpUniform>>,
     pub frame_data: FrameData,
-    pub pipeline: std::sync::Arc<dyn vulkano::pipeline::GraphicsPipelineAbstract + std::marker::Send + std::marker::Sync>, 
-    // pub shaders: Vec<Box<dyn ShaderProgram>>,
+    pub default_pipeline_id: usize, 
+    pub pipeline_sets: Vec<PipelineObjectSet>,
     pub image_num: usize,
     pub acquire_future: Option<SwapchainAcquireFuture<Window>>,
     pub recreate_swapchain: bool,
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
     pub command_buffer: Option<AutoCommandBufferBuilder<StandardCommandPoolBuilder>>,
     pub now: Option<std::time::Instant>,
-    pub debugger: std::option::Option<vulkano::instance::debug::DebugCallback>,
 }
 
 impl GraphicsContext {
@@ -90,42 +89,42 @@ impl GraphicsContext {
             ..required_extensions
         };
     
-        println!("List of Vulkan debugging layers available to use:");
-        let mut layers = instance::layers_list().unwrap();
-        while let Some(l) = layers.next() {
-            println!("\t{}", l.name());
-        }
+        // println!("List of Vulkan debugging layers available to use:");
+        // let mut layers = instance::layers_list().unwrap();
+        // while let Some(l) = layers.next() {
+        //     println!("\t{}", l.name());
+        // }
     
-        let layer = "VK_LAYER_KHRONOS_validation";
-        let layers = vec![layer];
+        // let layer = "VK_LAYER_KHRONOS_validation";
+        // let layers = vec![layer];
     
         let instance =
-            Instance::new(None, &extensions, layers).expect("failed to create Vulkan instance");
+            Instance::new(None, &extensions, vec![]).expect("failed to create Vulkan instance");
 
-        let severity = MessageSeverity {
-            error: true,
-            warning: true,
-            information: true,
-            verbose: true,
-        };
+        // let severity = MessageSeverity {
+        //     error: true,
+        //     warning: true,
+        //     information: true,
+        //     verbose: true,
+        // };
     
-        let ty = MessageType::all();
+        // let ty = MessageType::all();
     
-        let debug_callback = DebugCallback::new(&instance, severity, ty, |msg| {
-            let _severity = if msg.severity.error { "error" } 
-            else if msg.severity.warning { "warning" } 
-            else if msg.severity.information { "information" } 
-            else if msg.severity.verbose { "verbose" } 
-            else { panic!("no-impl"); };
+        // let debug_callback = DebugCallback::new(&instance, severity, ty, |msg| {
+        //     let _severity = if msg.severity.error { "error" } 
+        //     else if msg.severity.warning { "warning" } 
+        //     else if msg.severity.information { "information" } 
+        //     else if msg.severity.verbose { "verbose" } 
+        //     else { panic!("no-impl"); };
     
-            let _ty = if msg.ty.general { "general" } 
-            else if msg.ty.validation { "validation" } 
-            else if msg.ty.performance { "performance" } 
-            else { panic!("no-impl"); };
+        //     let _ty = if msg.ty.general { "general" } 
+        //     else if msg.ty.validation { "validation" } 
+        //     else if msg.ty.performance { "performance" } 
+        //     else { panic!("no-impl"); };
     
-            // println!("[{}]: {} {}: {}", ty, msg.layer_prefix, severity, msg.description);
-        })
-        .ok();
+        //     // println!("[{}]: {} {}: {}", ty, msg.layer_prefix, severity, msg.description);
+        // })
+        // .ok();
 
         let physical = PhysicalDevice::enumerate(&instance).next().unwrap();
         println!(
@@ -222,6 +221,7 @@ impl GraphicsContext {
         let vs = vs::Shader::load(device.clone()).unwrap();
         let fs = fs::Shader::load(device.clone()).unwrap();
 
+
         let pipeline = Arc::new(
             GraphicsPipeline::start()
                 // .vertex_input_single_buffer::<Vertex>()
@@ -235,6 +235,10 @@ impl GraphicsContext {
                 .build(device.clone())
                 .unwrap()
         ) as Arc<dyn GraphicsPipelineAbstract + Send + Sync>;
+
+        let pipeline_object = PipelineObject::new(pipeline);
+        let mut pipeline_sets = PipelineObjectSet::new(128);
+        pipeline_sets.insert(BlendMode::Alpha, pipeline_object);
         
         let mut dynamic_state = DynamicState {
             line_width: None,
@@ -275,15 +279,16 @@ impl GraphicsContext {
             vertex_buffer_pool: buffer_pool,
             instance_buffer_pool: instance_buffer_pool, 
             mvp_buffer: mvp_buffer,
-            frame_data: FrameData{ vbuf: None, instance_data: None, uniform_descriptor_set: None },
-            pipeline: pipeline,
+            frame_data: FrameData{ vbuf: None, instance_data: None, uniform_descriptor_set: None, blend_mode: BlendMode::Alpha },
+            default_pipeline_id: 0,
+            pipeline_sets: vec![pipeline_sets],
             image_num: 0,
             acquire_future: None,
             previous_frame_end: Some(default_future),
             recreate_swapchain: false,
             command_buffer: None,
             now: None,
-            debugger: debug_callback
+            // debugger: debug_callback
         };
 
         graphics.create_command_buffer();
@@ -345,13 +350,15 @@ impl GraphicsContext {
     pub fn draw(&mut self) {
         let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
         self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[self.image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
+
         self.command_buffer.as_mut().unwrap().draw(
-            self.pipeline.clone(),
+            self.pipeline_sets[self.default_pipeline_id].get(&self.frame_data.blend_mode).unwrap().pipeline.clone(),
             &self.dynamic_state,
             vec!(Arc::new(self.frame_data.vbuf.as_ref().unwrap().clone()), Arc::new(self.frame_data.instance_data.as_ref().unwrap().clone())),
             self.frame_data.uniform_descriptor_set.as_ref().unwrap().clone(),
             (),
         ).unwrap();
+
         self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
     }
 
@@ -391,6 +398,10 @@ impl GraphicsContext {
 
         self.create_command_buffer();
         self.begin_frame();
+    }
+
+    pub fn get_default_pipeline(&self) -> &PipelineObject {
+        self.pipeline_sets[self.default_pipeline_id].get(&self.frame_data.blend_mode).unwrap()
     }
 }
 

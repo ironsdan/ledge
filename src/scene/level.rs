@@ -105,3 +105,12 @@ impl<'a> System<'a> for SpriteDraw<'a> {
         }
     }
 }
+
+// pub struct LevelDefinition {
+//     entities: Vec<EntityDescription>,
+
+// }
+
+// pub struct EntityDescription {
+
+// }

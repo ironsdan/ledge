@@ -1,31 +1,15 @@
-// use crate::lib::*;
 use std::sync::Arc;
-// use crate::graphics::animation::*;
-// use crate::interface::Interface;
 use crate::graphics::Drawable;
 use crate::graphics;
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
-// use vulkano::image::ImmutableImage;
-// use vulkano::format::Format;
-// use vulkano::descriptor::descriptor_set::PersistentDescriptorSetImg;
-// use vulkano::descriptor::descriptor_set::PersistentDescriptorSetSampler;
 use crate::asset::storage::AssetStorage;
 use crate::asset::types::Texture;
 use crate::graphics::context::GraphicsContext;
 use crate::ecs::component::Component;
 use crate::ecs::storage::VecStorage;
-// use std::marker::PhantomData;
 use crate::ecs::World;
 use graphics::{Vertex, DrawInfo};
-
-// use vulkano::image::ImmutableImage;
-// use vulkano::format::Format;
-// use vulkano::image::Dimensions;
-// use vulkano::image::MipmapsCount;
-// use crate::graphics::context::*;
-// use image::ImageFormat;
-use crate::graphics::InstanceData;
-use crate::graphics::image::Image;
+use graphics::image::Image;
 
 #[derive(Clone)]
 pub struct SpriteBatch {
@@ -62,7 +46,7 @@ impl SpriteBatch {
         let texture_assets = world.fetch::<AssetStorage<Texture>>();
         let texture = texture_assets.get(&self.image.texture_handle).unwrap().as_raw_vk_texture();
 
-        let layout = graphics_context.pipeline.descriptor_set_layout(0).unwrap();
+        let layout = graphics_context.get_default_pipeline().pipeline.descriptor_set_layout(0).unwrap();
         graphics_context.frame_data.uniform_descriptor_set = Some(Arc::new(
             PersistentDescriptorSet::start(layout.clone())
                 .add_buffer(graphics_context.mvp_buffer.clone()).unwrap()

@@ -19,10 +19,10 @@ use std::time::Duration;
 
 #[derive(Default)]
 pub struct RigidBody {
-    pub(crate) velocity: (f32, f32),
-    pub(crate) previous_velocity: (f32, f32),
-    pub(crate) transition_speed: (f32, f32),
-    pub(crate) desired_velocity: (f32, f32),
+    pub velocity: (f32, f32),
+    pub previous_velocity: (f32, f32),
+    pub transition_speed: (f32, f32),
+    pub desired_velocity: (f32, f32),
 }
 
 impl Component for RigidBody {
@@ -88,7 +88,7 @@ impl<'a> System<'a> for MovementSystem {
             //     println!("[ERROR]: delta_time HIGHER than expexted.");
             // }
 
-            // println!("{} {}", velocity.0, velocity.1);
+            println!("{} {}", velocity.0, velocity.1);
 
             rigid_body.velocity = velocity;
         }
@@ -118,9 +118,9 @@ pub struct SpriteMove {}
 impl<'a> System<'a> for SpriteMove {
     type SystemData = (WriteStorage<'a, SpriteBatch>, ReadStorage<'a, Position>);
 
-    fn run(&mut self, (mut sprite, pos): Self::SystemData) {
-        for (sprite, pos) in (&mut sprite, &pos).join() {
-            // sprite.update_rect([pos.current_position.0 as f32, pos.current_position.1 as f32]);
+    fn run(&mut self, (mut sprite_batch, pos): Self::SystemData) {
+        for (sprite_batch, pos) in (&mut sprite_batch, &pos).join() {
+            // sprite_batch.update_rect(index, [pos.current_position.0 as f32, pos.current_position.1 as f32]);
         }
     }
 }
