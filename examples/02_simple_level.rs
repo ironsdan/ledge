@@ -41,16 +41,12 @@ fn main() {
                                         512,
                                     );
 
+    let draw_info = DrawInfo::with_rect(Rect { x: 0.33, y: 0.33, w: 0.33, h: 0.33 });
 
-    let draw_info = DrawInfo {
-        texture_rect: Rect { x: 0.33, y: 0.33, w: 0.33, h: 0.33 },
-        color: [0.0, 0.0, 0.0, 1.0],
-        transform: Transform::Matrix(Matrix4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)),
-    };
     let sprite_id = sprite_batch.add(draw_info.clone());
 
     // Entity Creation //
-    let rock = world.create_entity().with::<DrawInfo>(draw_info)
+    let entity = world.create_entity().with::<DrawInfo>(draw_info)
                                     .is::<Visible>()
                                     .is::<DynamicObject>()
                                     .with::<SpriteId>(sprite_id)
@@ -66,7 +62,7 @@ fn main() {
                                     }).build();
     
     // Level Builder //
-    let mut level_space = LevelSpaceBuilder::new().with_entity(rock).build();
+    let mut level_space = LevelSpaceBuilder::new().with_entity(entity).build();
     level_space.sprite_batch = sprite_batch;
 
     // Game Creation and Running //

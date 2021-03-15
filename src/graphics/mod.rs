@@ -7,6 +7,7 @@ pub mod image;
 use cgmath::{
     Matrix4,
     Vector3,
+    Vector2,
     Rad,
 };
 
@@ -56,6 +57,11 @@ pub struct InstanceData {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Transform {
+    Components {
+        pos: Vector3<f32>,
+        rotation: Rad<f32>,
+        scale: Vector3<f32>,
+    },
     Matrix(Matrix4<f32>)
 }
 
@@ -66,10 +72,23 @@ impl Default for Transform {
 }
 
 impl Transform {
+    fn identity() -> Self {
+        Self::Matrix(Matrix4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0))
+    }
+
     fn as_mat4(&self) -> Matrix4<f32> {
         match self {
             Transform::Matrix(mat) => *mat,
-            // _ => 
+            Transform::Components {
+                pos,
+                rotation,
+                scale,
+            } => {
+                let translation = Matrix4::from_translation(*pos);
+                let scale = Matrix4::from_nonuniform_scale(scale[0], scale[1], scale[2]);
+                // let rotation = Matrix4::from_;
+                translation + scale
+            }
         }
     }
 
@@ -115,6 +134,30 @@ impl Component for DrawInfo {
 impl DrawInfo {
     pub fn new() -> Self {
         Self::default()
+    }
+    
+    pub fn with_rect(rect: Rect) -> Self {
+        Self {
+            texture_rect: rect,
+            color: [0.0, 0.0, 0.0, 1.0],
+            transform: Transform::identity(),
+        }
+    }
+
+    pub fn with_transform(transform: Transform) -> Self {
+        Self {
+            texture_rect: Rect::default(),
+            color: [0.0, 0.0, 0.0, 1.0],
+            transform: transform,
+        }
+    }
+
+    pub fn with_color(color: [f32; 4]) -> Self {
+        Self {
+            texture_rect: Rect::default(),
+            color: color,
+            transform: Transform::identity(),
+        }
     }
 
     pub fn into_instance_data(&self) -> InstanceData {
