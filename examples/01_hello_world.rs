@@ -33,7 +33,7 @@ fn main() {
     let rock_texture_handle;
     {
         // let texture_sweater = types::Texture::from_file_vulkano(include_bytes!("images/SweaterGuy.png"), &interface.graphics_context);
-        let texture_rock = types::Texture::from_file_vulkano(include_bytes!("../src/images/small-man-walk-se.png"), &interface.graphics_context);
+        let texture_rock = types::Texture::from_file_vulkano(include_bytes!("images/small-man-walk-se.png"), &interface.graphics_context);
 
         let mut texture_assets = world.fetch_mut::<storage::AssetStorage<types::Texture>>();
         // sweater_texture_handle = texture_assets.insert(texture_sweater);
