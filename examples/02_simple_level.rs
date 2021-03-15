@@ -66,8 +66,20 @@ fn main() {
     let player = world.create_entity().with::<SpriteBatch>(rock_sprite.clone())
                                         .is::<Visible>()
                                         .is::<DynamicObject>()
-                                        .with::<RigidBody>(RigidBody { velocity: (0.0, 0.0), previous_velocity: (0.0, 0.0), desired_velocity: (0.0, 0.0), transition_speed: (20.0, 20.0)})
-                                        .with::<Position>(Position { previous_position: (0.0, 0.0), current_position: (0.0, 0.0) }).build();
+                                        .with::<RigidBody>(RigidBody { 
+                                            velocity: (0.0, 0.0), 
+                                            previous_velocity: (0.0, 0.0), 
+                                            desired_velocity: (0.0, 0.0), 
+                                            transition_speed: (20.0, 20.0)
+                                        })
+                                        .with::<Position>(Position { 
+                                            previous_position: (0.0, 0.0), 
+                                            current_position: (0.0, 0.0) 
+                                        }).build();
+                                        
+    for i in 0..interface.graphics_context.surface.window.inner_size() / 50 {
+
+    }
     // Level Builder //
     let level_space = LevelSpaceBuilder::new().with_entity(player).build();
 

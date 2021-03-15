@@ -10,6 +10,9 @@ use crate::ecs::storage::VecStorage;
 use crate::ecs::World;
 use graphics::{Vertex, DrawInfo};
 use graphics::image::Image;
+use crate::asset::handle::Handle;
+use crate::interface::Interface;
+use crate::graphics::BlendMode;
 
 #[derive(Clone)]
 pub struct SpriteBatch {
@@ -31,11 +34,21 @@ impl Default for SpriteBatch {
 }
 
 impl SpriteBatch {
-    pub fn new(image: Image) -> Self {
-        Self {
+    pub fn new(texture_handle: Handle<Texture>, world: &World, interface: &mut Interface, blend_mode: BlendMode, width: u32, height: u32) -> Self {
+        let image = Image::new(texture_handle.clone(), 
+                               interface.graphics_context.sampler.clone(), 
+                               blend_mode,
+                               width,
+                               height,
+                              );
+        let sprite_batch = Self {
             image,
             sprite_data: Vec::new(),
-        }
+        };
+
+        sprite_batch.load_asset(world, &mut interface.graphics_context);
+
+        sprite_batch
     }
 
     pub fn add(&mut self, draw_info: DrawInfo) {
