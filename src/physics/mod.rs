@@ -11,7 +11,9 @@ use crate::{
         join::Joinable,
     },
     graphics::{
+        DrawInfo,
         sprite::SpriteBatch,
+        sprite::SpriteId,
     }
 };
 
@@ -116,11 +118,12 @@ impl<'a> System<'a> for PositionSystem {
 pub struct SpriteMove {}
 
 impl<'a> System<'a> for SpriteMove {
-    type SystemData = (WriteStorage<'a, SpriteBatch>, ReadStorage<'a, Position>);
+    type SystemData = (&'a mut SpriteBatch, WriteStorage<'a, DrawInfo>, ReadStorage<'a, SpriteId>, ReadStorage<'a, Position>);
 
-    fn run(&mut self, (mut sprite_batch, pos): Self::SystemData) {
-        for (sprite_batch, pos) in (&mut sprite_batch, &pos).join() {
-            // sprite_batch.update_rect(index, [pos.current_position.0 as f32, pos.current_position.1 as f32]);
+    fn run(&mut self, (mut sprite_batch, mut draw_info, sprite_id, pos): Self::SystemData) {
+        for (draw_info, sprite_id, pos) in (&mut draw_info, &sprite_id, &pos).join() {
+            draw_info.translate(pos.current_position.0, pos.current_position.1, 0.0);
+            sprite_batch.set(sprite_id, draw_info);
         }
     }
 }

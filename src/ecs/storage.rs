@@ -270,6 +270,28 @@ where
     }
 }
 
+impl<'a, 'b, A, B, C, D, E, F> Joinable for (&'a mut Storage<'b, A, B>, &'a Storage<'b, C, D>, &'a Storage<'b, E, F>)
+where
+    A: Component,
+    B: DerefMut<Target = TrackedStorage<A>>,
+    C: Component,
+    D: Deref<Target = TrackedStorage<C>>,
+    E: Component,
+    F: Deref<Target = TrackedStorage<E>>,
+{
+    type Value = (&'a mut A::Storage, &'a C::Storage, &'a E::Storage);
+    type Type = (&'a mut A, &'a C, &'a E);
+
+    fn view(self) -> (Vec<usize>, Self::Value) {
+        (LayeredBitMap::join_set(&[&self.0.data.bitset, &self.1.data.bitset, &self.2.data.bitset]), (&mut self.0.data.inner, &self.1.data.inner, &self.2.data.inner))
+    }
+
+    unsafe fn get(v: &mut Self::Value, index: usize) -> Self::Type {
+        let value: *mut Self::Value = v as *mut Self::Value;
+        ((*value).0.get_mut(index), (*value).1.get(index), (*value).2.get(index))
+    }
+}
+
 impl<'a, 'b, A, B, C, D, E, F, G, H> Joinable for (&'a Storage<'b, A, B>, &'a Storage<'b, C, D>, &'a Storage<'b, E, F>, &'a Storage<'b, G, H>)
 where
     A: Component,

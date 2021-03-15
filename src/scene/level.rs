@@ -9,7 +9,7 @@ use crate::ecs::system::System;
 use crate::ecs::join::Joinable;
 use crate::scene::*;
 use crate::scene::stack::*;
-use crate::graphics::sprite::SpriteBatch;
+use crate::graphics::sprite::{SpriteBatch, SpriteId};
 use crate::physics::*;
 use crate::event::KeyboardInputSystem;
 use crate::timer::*;
@@ -46,6 +46,7 @@ impl LevelSpaceBuilder {
 #[derive(Default, Clone)]
 pub struct LevelSpace {
     pub entities: Vec<Entity>,
+    pub sprite_batch: SpriteBatch,
 }
 
 impl Space<World> for LevelSpace {
@@ -61,7 +62,7 @@ impl Space<World> for LevelSpace {
         gravity_system.run((world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<Position>()));
         position_system.run((world.write_comp_storage::<Position>(), world.read_comp_storage::<RigidBody>(), fps_as_duration(60), interface.timer_state.alpha()));
         input_system.run((world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<DynamicObject>(), &interface.keyboard_context));
-        sprite_system.run((world.write_comp_storage::<SpriteBatch>(), world.read_comp_storage::<Position>()));
+        sprite_system.run((&mut self.sprite_batch, world.write_comp_storage::<DrawInfo>(), world.read_comp_storage::<SpriteId>(), world.read_comp_storage::<Position>()));
         
         SpaceSwitch::None
     }

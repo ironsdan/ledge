@@ -11,6 +11,8 @@ use cgmath::{
 };
 
 use crate::graphics::context::GraphicsContext;
+use crate::ecs::component::Component;
+use crate::ecs::storage::VecStorage;
 
 pub mod vs {
     vulkano_shaders::shader! {
@@ -104,6 +106,10 @@ pub struct DrawInfo {
     pub texture_rect: Rect,
     pub color: [f32; 4],
     pub transform: Transform,
+}
+
+impl Component for DrawInfo {
+    type Storage = VecStorage<Self>;
 }
 
 impl DrawInfo {

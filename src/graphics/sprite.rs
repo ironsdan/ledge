@@ -14,6 +14,18 @@ use crate::asset::handle::Handle;
 use crate::interface::Interface;
 use crate::graphics::BlendMode;
 
+pub struct SpriteId(usize);
+
+impl Default for SpriteId {
+    fn default() -> Self {
+        Self(0)
+    }
+}
+
+impl Component for SpriteId {
+    type Storage = VecStorage<Self>;
+}
+
 #[derive(Clone)]
 pub struct SpriteBatch {
     pub image: Image,
@@ -51,8 +63,9 @@ impl SpriteBatch {
         sprite_batch
     }
 
-    pub fn add(&mut self, draw_info: DrawInfo) {
+    pub fn add(&mut self, draw_info: DrawInfo) -> SpriteId {
         self.sprite_data.push(draw_info);
+        SpriteId(self.sprite_data.len() - 1)
     }
 
     pub fn load_asset(&self, world: &World, graphics_context: &mut GraphicsContext) {
@@ -100,6 +113,10 @@ impl SpriteBatch {
         }
 
         graphics_context.frame_data.instance_data = Some(graphics_context.instance_buffer_pool.chunk(instance_data).unwrap());
+    }
+
+    pub fn set(&mut self, id: &SpriteId, draw_info: &mut DrawInfo) {
+        self.sprite_data[id.0] = draw_info.clone();
     }
 }
 
