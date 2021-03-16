@@ -40,12 +40,15 @@ use winit::{
     dpi::PhysicalSize,
 };
 use std::sync::Arc;
+use std::collections::HashMap;
 use crate::{
-    graphics::{Vertex, InstanceData, shader::PipelineObjectSet, shader::PipelineObject, BlendMode},
+    graphics::{DrawInfo, Vertex, InstanceData, shader::PipelineObjectSet, shader::PipelineObject, BlendMode, sprite::SpriteBatch},
     // graphics::shader::{Shader, ShaderProgram},
     conf::*,
     graphics::{vs, fs},
 };
+use crate::asset::handle::HandleId;
+use crate::asset::types::Texture;
 
 type MvpUniform = vs::ty::mvp;
 
@@ -78,6 +81,7 @@ pub struct GraphicsContext {
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
     pub command_buffer: Option<AutoCommandBufferBuilder<StandardCommandPoolBuilder>>,
     pub now: Option<std::time::Instant>,
+    pub batches: HashMap<HandleId, SpriteBatch>,
 }
 
 impl GraphicsContext {
@@ -288,6 +292,7 @@ impl GraphicsContext {
             recreate_swapchain: false,
             command_buffer: None,
             now: None,
+            batches: HashMap::new(),
             // debugger: debug_callback
         };
 
@@ -360,6 +365,27 @@ impl GraphicsContext {
         ).unwrap();
 
         self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
+    }
+
+    pub fn batch(&mut self, handle_id: HandleId, draw_info: DrawInfo) {
+        // sprite batch wont draw until all sprites have been added, who knows when that'll be.
+        // so just add sprites till the user says "Okay, present the frame." then draw all sprite batches
+
+        match self.batches.get(&handle_id) {
+            Some(batch) => { // else add draw settings to existing sprite batch.
+                
+            },
+            None => { // if sprite batch texture handle isn't present.
+                // create a new sprite batch and store it.
+            }
+        }
+
+        // remove sprite how???
+            // 1. clear a vec every round.
+            // 2. or never save it just send it to the GPU.
+            // 3. create a remove command that the sprite entity can use like: sprite.remove(context).
+
+        // set context to draw on present.
     }
 
     pub fn present(&mut self) {

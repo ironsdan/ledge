@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use crate::asset::Asset;
 use rand::prelude::*;
 
-#[derive(Clone, PartialEq)]
+#[derive(Hash, PartialEq, PartialOrd, Eq, Clone)]
 pub struct Handle<A> 
 where
     A: Asset

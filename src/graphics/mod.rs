@@ -40,7 +40,7 @@ pub enum BlendMode {
 }
 
 pub trait Drawable {
-    fn draw(&mut self, context: &mut GraphicsContext);
+    fn draw(&self, context: &mut GraphicsContext);
 }
 
 #[derive(Default, Debug, Clone, PartialEq)]
@@ -82,7 +82,6 @@ impl Transform {
             scale: Vector3::from((1.0, 1.0, 0.0)),
             offset: Vector3::from((0.0, 0.0, 0.0)),
         }
-        // Self::Matrix(Matrix4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0))
     }
 
     pub fn as_mat4(&self) -> Matrix4<f32> {
@@ -94,22 +93,19 @@ impl Transform {
                 scale,
                 offset,
             } => {
-                // let translation = Matrix4::from_translation(*pos);
-                // let scale = Matrix4::from_nonuniform_scale(scale[0], scale[1], scale[2]);
-                
                 let (sinr, cosr) = rotation.sin_cos();
-                let m00 = cosr * scale.x;
-                let m01 = -sinr * scale.y;
-                let m10 = sinr * scale.x;
-                let m11 = cosr * scale.y;
-                let m03 = offset.x * (1.0 - m00) - offset.y * m01 + pos.x;
-                let m13 = offset.y * (1.0 - m11) - offset.x * m10 + pos.y;
+                let cr00 = cosr * scale.x;
+                let cr01 = -sinr * scale.y;
+                let cr10 = sinr * scale.x;
+                let cr11 = cosr * scale.y;
+                let cr03 = offset.x * (1.0 - cr00) - offset.y * cr01 + pos.x;
+                let cr13 = offset.y * (1.0 - cr11) - offset.x * cr10 + pos.y;
                 
                 Matrix4::from_cols(
-                    Vector4::new(m00, m01, 0.0, m03,), // oh rustfmt you so fine
-                    Vector4::new(m10, m11, 0.0, m13,), // you so fine you blow my mind
-                    Vector4::new(0.0, 0.0, 1.0, 0.0,), // but leave my matrix formatting alone
-                    Vector4::new(0.0, 0.0, 0.0, 1.0,), // plz
+                    Vector4::new(cr00, cr01, 0.0, cr03,),
+                    Vector4::new(cr10, cr11, 0.0, cr13,),
+                    Vector4::new(0.0, 0.0, 1.0, 0.0,),
+                    Vector4::new(0.0, 0.0, 0.0, 1.0,),
                 )
             }
         }

@@ -83,7 +83,7 @@ impl SpriteBatch {
         ));
     }
 
-    pub fn flush(&mut self, graphics_context: &mut GraphicsContext) {
+    pub fn flush(&self, graphics_context: &mut GraphicsContext) {
         graphics_context.frame_data.vbuf = Some(graphics_context.vertex_buffer_pool.chunk(vec![
             Vertex {
                 a_pos: [0.0, 0.0],
@@ -122,7 +122,7 @@ impl SpriteBatch {
 }
 
 impl Drawable for SpriteBatch {
-    fn draw(&mut self, graphics_context: &mut GraphicsContext) {
+    fn draw(&self, graphics_context: &mut GraphicsContext) {
         self.flush(graphics_context);
 
         graphics_context.draw();
