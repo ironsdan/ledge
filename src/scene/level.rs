@@ -46,7 +46,6 @@ impl LevelSpaceBuilder {
 #[derive(Default, Clone)]
 pub struct LevelSpace {
     pub entities: Vec<Entity>,
-    pub sprite_batch: SpriteBatch,
 }
 
 impl Space<World> for LevelSpace {
@@ -62,19 +61,18 @@ impl Space<World> for LevelSpace {
         gravity_system.run((world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<Position>()));
         position_system.run((world.write_comp_storage::<Position>(), world.read_comp_storage::<RigidBody>(), fps_as_duration(60), interface.timer_state.alpha()));
         input_system.run((world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<DynamicObject>(), &interface.keyboard_context));
-        sprite_system.run((&mut self.sprite_batch, world.write_comp_storage::<DrawInfo>(), world.read_comp_storage::<SpriteId>(), world.read_comp_storage::<Position>()));
+        sprite_system.run((world.write_comp_storage::<DrawInfo>(), world.read_comp_storage::<Position>()));
         
         SpaceSwitch::None
     }
 
     fn draw(&mut self, world: &mut World, context: &mut GraphicsContext) -> GameResult<()> {
-        // let mut sprite_system = SpriteDraw {
-        //     context
-        // };
+        let mut sprite_system = SpriteDraw {
+            context
+        };
 
-        // sprite_system.run((world.write_comp_storage::<SpriteBatch>(), world.read_comp_storage::<Visible>()));
+        sprite_system.run((world.write_comp_storage::<DrawInfo>(), world.read_comp_storage::<Visible>()));
 
-        self.sprite_batch.draw(context);
         Ok(())
     }
 
@@ -99,11 +97,12 @@ struct SpriteDraw<'a> {
 }
 
 impl<'a> System<'a> for SpriteDraw<'a> {
-    type SystemData = (WriteStorage<'a, SpriteBatch>, ReadStorage<'a, Visible>);
+    type SystemData = (WriteStorage<'a, DrawInfo>, ReadStorage<'a, Visible>);
 
     fn run(&mut self, (mut sprite, scene): Self::SystemData) {
         for (sprite, _) in (&mut sprite, &scene).join() {
-            sprite.draw(&mut self.context);
+            // println!("sprite draw");
+            sprite.batch(&mut self.context);
         }
     }
 }

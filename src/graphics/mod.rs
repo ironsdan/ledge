@@ -16,6 +16,8 @@ use cgmath::{
 use crate::graphics::context::GraphicsContext;
 use crate::ecs::component::Component;
 use crate::ecs::storage::VecStorage;
+use crate::asset::handle::Handle;
+use crate::asset::types::Texture;
 
 pub mod vs {
     vulkano_shaders::shader! {
@@ -159,6 +161,7 @@ impl Transform {
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct DrawInfo {
+    pub texture_handle: Handle<Texture>,
     pub texture_rect: Rect,
     pub color: [f32; 4],
     pub transform: Transform,
@@ -175,6 +178,7 @@ impl DrawInfo {
     
     pub fn with_rect(rect: Rect) -> Self {
         Self {
+            texture_handle: Handle::default(),
             texture_rect: rect,
             color: [0.0, 0.0, 0.0, 1.0],
             transform: Transform::identity(),
@@ -183,6 +187,7 @@ impl DrawInfo {
 
     pub fn with_transform(transform: Transform) -> Self {
         Self {
+            texture_handle: Handle::default(),
             texture_rect: Rect::default(),
             color: [0.0, 0.0, 0.0, 1.0],
             transform: transform,
@@ -191,6 +196,7 @@ impl DrawInfo {
 
     pub fn with_color(color: [f32; 4]) -> Self {
         Self {
+            texture_handle: Handle::default(),
             texture_rect: Rect::default(),
             color: color,
             transform: Transform::identity(),
@@ -215,6 +221,10 @@ impl DrawInfo {
 
     pub fn nonuniform_scale(&mut self, x: f32, y: f32, z: f32) {
         self.transform.nonuniform_scale(x, y, z);
+    }
+
+    pub fn batch(&self, context: &mut GraphicsContext) {
+        context.batch(self);
     }
 }
 

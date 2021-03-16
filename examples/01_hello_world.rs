@@ -43,11 +43,12 @@ fn main() {
 
 
     let draw_info = DrawInfo {
+        texture_handle: texture_handle,
         texture_rect: Rect { x: 0.33, y: 0.33, w: 0.33, h: 0.33 },
         color: [0.0, 0.0, 0.0, 1.0],
         transform: Transform::Matrix(Matrix4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)),
     };
-    sprite_batch.add(draw_info.clone());
+    // sprite_batch.add(draw_info.clone());
 
     // Entity Creation //
     let rock = world.create_entity().with::<DrawInfo>(draw_info)
@@ -60,7 +61,6 @@ fn main() {
     
     // Level Builder //
     let mut level_space = LevelSpaceBuilder::new().with_entity(rock).build();
-    level_space.sprite_batch = sprite_batch;
 
     // Game Creation and Running //
     let mut game = GameState::new();

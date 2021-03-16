@@ -33,7 +33,7 @@ fn main() {
     let texture = types::Texture::from_file_vulkano(include_bytes!("images/small-man-walk-se.png"), &interface.graphics_context);
     let texture_handle = world.fetch_mut::<storage::AssetStorage<types::Texture>>().insert(texture);
     
-    let mut sprite_batch = SpriteBatch::new(texture_handle.clone(), 
+    let sprite_batch = SpriteBatch::new(texture_handle.clone(), 
                                         &world,
                                         &mut interface, 
                                         BlendMode::Default,
@@ -41,17 +41,15 @@ fn main() {
                                         512,
                                     );
 
-    let draw_info = DrawInfo::with_rect(Rect { x: 0.33, y: 0.33, w: 0.33, h: 0.33 });
+    interface.graphics_context.register_batch(texture_handle.id.clone(), sprite_batch);
 
-    println!("{:?}", draw_info.transform.as_mat4());
-
-    let sprite_id = sprite_batch.add(draw_info.clone());
+    let mut draw_info = DrawInfo::with_rect(Rect { x: 0.33, y: 0.33, w: 0.33, h: 0.33 });
+    draw_info.texture_handle = texture_handle;
 
     // Entity Creation //
     let entity = world.create_entity().with::<DrawInfo>(draw_info)
                                     .is::<Visible>()
                                     // .is::<DynamicObject>()
-                                    // .with::<SpriteId>(sprite_id)
                                     // .with::<RigidBody>(RigidBody { 
                                     //     velocity: (0.0, 0.0), 
                                     //     previous_velocity: (0.0, 0.0), 
@@ -64,8 +62,7 @@ fn main() {
                                     }).build();
     
     // Level Builder //
-    let mut level_space = LevelSpaceBuilder::new().with_entity(entity).build();
-    level_space.sprite_batch = sprite_batch;
+    let level_space = LevelSpaceBuilder::new().with_entity(entity).build();
 
     // Game Creation and Running //
     let mut game = GameState::new();

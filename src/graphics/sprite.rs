@@ -119,6 +119,10 @@ impl SpriteBatch {
     pub fn set(&mut self, id: &SpriteId, draw_info: &mut DrawInfo) {
         self.sprite_data[id.0] = draw_info.clone();
     }
+
+    pub fn clear(&mut self) {
+        self.sprite_data.clear();
+    }
 }
 
 impl Drawable for SpriteBatch {

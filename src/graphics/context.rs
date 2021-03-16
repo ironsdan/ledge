@@ -41,8 +41,10 @@ use winit::{
 };
 use std::sync::Arc;
 use std::collections::HashMap;
+use std::rc::Rc;
+use std::cell::RefCell;
 use crate::{
-    graphics::{DrawInfo, Vertex, InstanceData, shader::PipelineObjectSet, shader::PipelineObject, BlendMode, sprite::SpriteBatch},
+    graphics::{DrawInfo, Drawable, Vertex, InstanceData, shader::PipelineObjectSet, shader::PipelineObject, BlendMode, sprite::SpriteBatch},
     // graphics::shader::{Shader, ShaderProgram},
     conf::*,
     graphics::{vs, fs},
@@ -81,7 +83,7 @@ pub struct GraphicsContext {
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
     pub command_buffer: Option<AutoCommandBufferBuilder<StandardCommandPoolBuilder>>,
     pub now: Option<std::time::Instant>,
-    pub batches: HashMap<HandleId, SpriteBatch>,
+    pub batches: Rc<RefCell<HashMap<HandleId, SpriteBatch>>>,
 }
 
 impl GraphicsContext {
@@ -292,7 +294,7 @@ impl GraphicsContext {
             recreate_swapchain: false,
             command_buffer: None,
             now: None,
-            batches: HashMap::new(),
+            batches: Rc::new(RefCell::new(HashMap::new())),
             // debugger: debug_callback
         };
 
@@ -367,21 +369,21 @@ impl GraphicsContext {
         self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
     }
 
-    pub fn batch(&mut self, handle_id: HandleId, draw_info: DrawInfo) {
+    pub fn batch(&mut self, draw_info: &DrawInfo) -> bool {
         // sprite batch wont draw until all sprites have been added, who knows when that'll be.
         // so just add sprites till the user says "Okay, present the frame." then draw all sprite batches
-
-        match self.batches.get(&handle_id) {
+        match self.batches.borrow_mut().get_mut(&draw_info.texture_handle.id) {
             Some(batch) => { // else add draw settings to existing sprite batch.
-                
+                batch.add(draw_info.clone());
+                return true;
             },
             None => { // if sprite batch texture handle isn't present.
-                // create a new sprite batch and store it.
+                return false;
             }
         }
 
         // remove sprite how???
-            // 1. clear a vec every round.
+            // 1. clear a vec every round. [Used for now]
             // 2. or never save it just send it to the GPU.
             // 3. create a remove command that the sprite entity can use like: sprite.remove(context).
 
@@ -389,6 +391,10 @@ impl GraphicsContext {
     }
 
     pub fn present(&mut self) {
+        for batch in self.batches.clone().borrow_mut().values_mut() {
+            batch.draw(self);
+            batch.clear();
+        }
         let command_buffer = self.command_buffer.take().unwrap().build().unwrap();
 
         let future = self.previous_frame_end
@@ -424,6 +430,10 @@ impl GraphicsContext {
 
         self.create_command_buffer();
         self.begin_frame();
+    }
+
+    pub fn register_batch(&mut self, texture_handle_id: HandleId, sprite_batch: SpriteBatch) {
+        self.batches.borrow_mut().insert(texture_handle_id.clone(), sprite_batch);
     }
 
     pub fn get_default_pipeline(&self) -> &PipelineObject {

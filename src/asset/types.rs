@@ -6,7 +6,7 @@ use vulkano::image::MipmapsCount;
 use crate::graphics::context::*;
 use image::ImageFormat;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Texture {
     pub vulkano_texture: Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>,
     pub dimensions: (u32, u32),

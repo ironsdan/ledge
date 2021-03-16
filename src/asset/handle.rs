@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use crate::asset::Asset;
 use rand::prelude::*;
 
-#[derive(Hash, PartialEq, PartialOrd, Eq, Clone)]
+#[derive(Hash, PartialEq, PartialOrd, Eq, Clone, Debug)]
 pub struct Handle<A> 
 where
     A: Asset
@@ -11,7 +11,7 @@ where
     pub marker: PhantomData<A>
 }
 
-#[derive(Hash, PartialEq, PartialOrd, Eq, Clone)]
+#[derive(Hash, PartialEq, PartialOrd, Eq, Clone, Debug)]
 pub enum HandleId {
     Id(u64),
 }

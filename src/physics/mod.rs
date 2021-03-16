@@ -119,13 +119,12 @@ impl<'a> System<'a> for PositionSystem {
 pub struct SpriteMove {}
 
 impl<'a> System<'a> for SpriteMove {
-    type SystemData = (&'a mut SpriteBatch, WriteStorage<'a, DrawInfo>, ReadStorage<'a, SpriteId>, ReadStorage<'a, Position>);
+    type SystemData = (WriteStorage<'a, DrawInfo>, ReadStorage<'a, Position>);
 
-    fn run(&mut self, (mut sprite_batch, mut draw_info, sprite_id, pos): Self::SystemData) {
-        for (draw_info, sprite_id, pos) in (&mut draw_info, &sprite_id, &pos).join() {
-            draw_info.translate(pos.current_position.0, pos.current_position.1, 0.0);
-            println!("Updating: sprite[{:?}], to {:?}", sprite_id, draw_info);
-            sprite_batch.set(sprite_id, draw_info);
+    fn run(&mut self, ( mut draw_info, pos): Self::SystemData) {
+        for (draw_info, pos) in (&mut draw_info, &pos).join() {
+            // draw_info.translate(pos.current_position.0, pos.current_position.1, 0.0);
+            // println!("Updating: sprite, to {:?}", draw_info);
         }
     }
 }
