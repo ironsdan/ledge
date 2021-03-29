@@ -43,26 +43,32 @@ fn main() {
 
     interface.graphics_context.register_batch(texture_handle.id.clone(), sprite_batch);
 
-    let mut draw_info = DrawInfo::with_rect(Rect { x: 0.33, y: 0.33, w: 0.33, h: 0.33 });
-    draw_info.texture_handle = texture_handle;
+    let mut level_space_builder = LevelSpaceBuilder::new();
 
-    // Entity Creation //
-    let entity = world.create_entity().with::<DrawInfo>(draw_info)
-                                    .is::<Visible>()
-                                    // .is::<DynamicObject>()
-                                    // .with::<RigidBody>(RigidBody { 
-                                    //     velocity: (0.0, 0.0), 
-                                    //     previous_velocity: (0.0, 0.0), 
-                                    //     desired_velocity: (0.0, 0.0), 
-                                    //     transition_speed: (20.0, 20.0)
-                                    // })
-                                    .with::<Position>(Position { 
-                                        previous_position: (-1.0,-1.0), 
-                                        current_position: (-1.0, -1.0) 
-                                    }).build();
+    for i in 0..3 {
+        for j in 0..3 {
+            let mut draw_info = DrawInfo {
+                texture_handle: texture_handle.clone(),
+                texture_rect: Rect { x: i as f32 * 0.33, y: j as f32 * 0.33, w: 0.33, h: 0.33 },
+                color: [0.0, 0.0, 0.0, 1.0],
+                transform: Transform::default(),
+            };
+
+            // println!("{:?}", draw_info.texture_rect);
     
-    // Level Builder //
-    let level_space = LevelSpaceBuilder::new().with_entity(entity).build();
+            draw_info.translate(-1.0 + (i as f32 /3.0) , -1.0 + (j as f32 /3.0), 0.0);
+            draw_info.scale(0.33);
+            let entity = world.create_entity().with::<DrawInfo>(draw_info)
+                                                .is::<Visible>()
+                                                .with::<Position>(Position { 
+                                                    previous_position: (-1.0,-1.0), 
+                                                    current_position: (-1.0, -1.0) 
+                                                }).build();
+            level_space_builder = level_space_builder.with_entity(entity);
+        }
+    }
+
+    let level_space = level_space_builder.build();
 
     // Game Creation and Running //
     let mut game = GameState::new();

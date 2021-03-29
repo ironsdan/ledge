@@ -40,17 +40,12 @@ use winit::{
     dpi::PhysicalSize,
 };
 use std::sync::Arc;
-use std::collections::HashMap;
-use std::rc::Rc;
-use std::cell::RefCell;
+
 use crate::{
-    graphics::{DrawInfo, Drawable, Vertex, InstanceData, shader::PipelineObjectSet, shader::PipelineObject, BlendMode, sprite::SpriteBatch},
-    // graphics::shader::{Shader, ShaderProgram},
+    graphics::{Vertex, InstanceData, shader::PipelineObjectSet, shader::PipelineObject, BlendMode, sprite::SpriteBatch},
     conf::*,
     graphics::{vs, fs},
 };
-use crate::asset::handle::HandleId;
-use crate::asset::types::Texture;
 
 type MvpUniform = vs::ty::mvp;
 
@@ -83,7 +78,6 @@ pub struct GraphicsContext {
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
     pub command_buffer: Option<AutoCommandBufferBuilder<StandardCommandPoolBuilder>>,
     pub now: Option<std::time::Instant>,
-    pub batches: Rc<RefCell<HashMap<HandleId, SpriteBatch>>>,
 }
 
 impl GraphicsContext {
@@ -95,49 +89,14 @@ impl GraphicsContext {
             ..required_extensions
         };
     
-        // println!("List of Vulkan debugging layers available to use:");
-        // let mut layers = instance::layers_list().unwrap();
-        // while let Some(l) = layers.next() {
-        //     println!("\t{}", l.name());
-        // }
-    
-        // let layer = "VK_LAYER_KHRONOS_validation";
-        // let layers = vec![layer];
-    
         let instance =
             Instance::new(None, &extensions, vec![]).expect("failed to create Vulkan instance");
 
-        // let severity = MessageSeverity {
-        //     error: true,
-        //     warning: true,
-        //     information: true,
-        //     verbose: true,
-        // };
-    
-        // let ty = MessageType::all();
-    
-        // let debug_callback = DebugCallback::new(&instance, severity, ty, |msg| {
-        //     let _severity = if msg.severity.error { "error" } 
-        //     else if msg.severity.warning { "warning" } 
-        //     else if msg.severity.information { "information" } 
-        //     else if msg.severity.verbose { "verbose" } 
-        //     else { panic!("no-impl"); };
-    
-        //     let _ty = if msg.ty.general { "general" } 
-        //     else if msg.ty.validation { "validation" } 
-        //     else if msg.ty.performance { "performance" } 
-        //     else { panic!("no-impl"); };
-    
-        //     // println!("[{}]: {} {}: {}", ty, msg.layer_prefix, severity, msg.description);
-        // })
-        // .ok();
-
         let physical = PhysicalDevice::enumerate(&instance).next().unwrap();
         println!(
-            "Using device: {} (type: {:?})\nExtensions: {:?}",
+            "Using device: {} (type: {:?})\n",
             physical.name(),
             physical.ty(),
-            required_extensions,
         );
 
         let surface = WindowBuilder::new()
@@ -221,8 +180,8 @@ impl GraphicsContext {
             .unwrap(),
         );
 
-        vulkano::impl_vertex!(Vertex, a_pos, a_uv, a_vert_color);
-        vulkano::impl_vertex!(InstanceData, a_src, a_color, a_transform);
+        // vulkano::impl_vertex!(Vertex, a_pos, a_uv, a_vert_color);
+        // vulkano::impl_vertex!(InstanceData, a_src, a_color, a_transform);
 
         let vs = vs::Shader::load(device.clone()).unwrap();
         let fs = fs::Shader::load(device.clone()).unwrap();
@@ -294,16 +253,15 @@ impl GraphicsContext {
             recreate_swapchain: false,
             command_buffer: None,
             now: None,
-            batches: Rc::new(RefCell::new(HashMap::new())),
             // debugger: debug_callback
         };
 
-        graphics.create_command_buffer();
-        graphics.begin_frame();
+        // graphics.create_command_buffer();
+        // graphics.begin_frame();
         graphics
     }
 
-    fn create_command_buffer(&mut self,) {
+    pub fn create_command_buffer(&mut self,) {
         let builder =
         AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queue.family())
             .unwrap();
@@ -352,12 +310,11 @@ impl GraphicsContext {
 
         self.image_num = image_num;
         self.acquire_future = Some(acquire_future);
+        let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
+        self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[self.image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
     }
 
     pub fn draw(&mut self) {
-        let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
-        self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[self.image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
-
         self.command_buffer.as_mut().unwrap().draw(
             self.pipeline_sets[self.default_pipeline_id].get(&self.frame_data.blend_mode).unwrap().pipeline.clone(),
             &self.dynamic_state,
@@ -365,36 +322,10 @@ impl GraphicsContext {
             self.frame_data.uniform_descriptor_set.as_ref().unwrap().clone(),
             (),
         ).unwrap();
-
-        self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
-    }
-
-    pub fn batch(&mut self, draw_info: &DrawInfo) -> bool {
-        // sprite batch wont draw until all sprites have been added, who knows when that'll be.
-        // so just add sprites till the user says "Okay, present the frame." then draw all sprite batches
-        match self.batches.borrow_mut().get_mut(&draw_info.texture_handle.id) {
-            Some(batch) => { // else add draw settings to existing sprite batch.
-                batch.add(draw_info.clone());
-                return true;
-            },
-            None => { // if sprite batch texture handle isn't present.
-                return false;
-            }
-        }
-
-        // remove sprite how???
-            // 1. clear a vec every round. [Used for now]
-            // 2. or never save it just send it to the GPU.
-            // 3. create a remove command that the sprite entity can use like: sprite.remove(context).
-
-        // set context to draw on present.
     }
 
     pub fn present(&mut self) {
-        for batch in self.batches.clone().borrow_mut().values_mut() {
-            batch.draw(self);
-            batch.clear();
-        }
+        self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
         let command_buffer = self.command_buffer.take().unwrap().build().unwrap();
 
         let future = self.previous_frame_end
@@ -428,12 +359,8 @@ impl GraphicsContext {
         }
         std::thread::sleep(std::time::Duration::from_secs_f32(sleep_time));
 
-        self.create_command_buffer();
-        self.begin_frame();
-    }
-
-    pub fn register_batch(&mut self, texture_handle_id: HandleId, sprite_batch: SpriteBatch) {
-        self.batches.borrow_mut().insert(texture_handle_id.clone(), sprite_batch);
+        // self.create_command_buffer();
+        // self.begin_frame();
     }
 
     pub fn get_default_pipeline(&self) -> &PipelineObject {
@@ -473,14 +400,6 @@ pub fn window_size_dependent_setup(
 pub fn convert_to_screen_space(size: [u32;2], dimensions: [u32; 2]) -> [f32; 2] {
     let window_width = dimensions[0];
     let window_height = dimensions[1];
-
-    let aspect_ratio;
-
-    if window_height > window_width {
-        aspect_ratio = window_height as f32 / window_width as f32;
-    } else {
-        aspect_ratio = window_width as f32 / window_height as f32;
-    }
 
     let pixel_size_y = 1.0/window_height as f32;
     let pixel_size_x = 1.0/window_width as f32;

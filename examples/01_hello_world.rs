@@ -58,6 +58,19 @@ fn main() {
                                         previous_position: (-1.0,-1.0), 
                                         current_position: (-1.0, -1.0) 
                                     }).build();
+    // let entity = world.create_entity().with::<DrawInfo>(draw_info)
+    //                                 .is::<Visible>()
+    //                                 // .is::<DynamicObject>()
+    //                                 // .with::<RigidBody>(RigidBody { 
+    //                                 //     velocity: (0.0, 0.0), 
+    //                                 //     previous_velocity: (0.0, 0.0), 
+    //                                 //     desired_velocity: (0.0, 0.0), 
+    //                                 //     transition_speed: (20.0, 20.0)
+    //                                 // })
+    //                                 .with::<Position>(Position { 
+    //                                     previous_position: (-1.0,-1.0), 
+    //                                     current_position: (-1.0, -1.0) 
+    //                                 }).build();
     
     // Level Builder //
     let mut level_space = LevelSpaceBuilder::new().with_entity(rock).build();

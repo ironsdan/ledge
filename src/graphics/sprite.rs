@@ -30,7 +30,7 @@ impl Component for SpriteId {
 #[derive(Clone)]
 pub struct SpriteBatch {
     pub image: Image,
-    sprite_data: Vec<DrawInfo>,
+    pub sprite_data: Vec<DrawInfo>,
 }
 
 impl Component for SpriteBatch {
@@ -47,19 +47,19 @@ impl Default for SpriteBatch {
 }
 
 impl SpriteBatch {
-    pub fn new(texture_handle: Handle<Texture>, world: &World, interface: &mut Interface, blend_mode: BlendMode, width: u32, height: u32) -> Self {
-        let image = Image::new(texture_handle.clone(), 
+    pub fn new(texture: Texture, interface: &Interface, blend_mode: BlendMode) -> Self {
+        let image = Image::new(texture.clone(), 
                                interface.graphics_context.sampler.clone(), 
                                blend_mode,
-                               width,
-                               height,
+                               texture.dimensions.0,
+                               texture.dimensions.1,
                               );
         let sprite_batch = Self {
             image,
             sprite_data: Vec::new(),
         };
 
-        sprite_batch.load_asset(world, &mut interface.graphics_context);
+        // sprite_batch.load_asset(world, &mut interface.graphics_context);
 
         sprite_batch
     }
@@ -69,21 +69,29 @@ impl SpriteBatch {
         SpriteId(self.sprite_data.len() - 1)
     }
 
-    pub fn load_asset(&self, world: &World, graphics_context: &mut GraphicsContext) {
-        let texture_assets = world.fetch::<AssetStorage<Texture>>();
-        let texture = texture_assets.get(&self.image.texture_handle).unwrap().as_raw_vk_texture();
+    // pub fn load_asset(&self, world: &World, graphics_context: &mut GraphicsContext) {
+    //     let texture_assets = world.fetch::<AssetStorage<Texture>>();
+    //     let texture = texture_assets.get(&self.image.texture_handle).unwrap().as_raw_vk_texture();
 
+    //     let layout = graphics_context.get_default_pipeline().pipeline.descriptor_set_layout(0).unwrap();
+    //     graphics_context.frame_data.uniform_descriptor_set = Some(Arc::new(
+    //         PersistentDescriptorSet::start(layout.clone())
+    //             .add_buffer(graphics_context.mvp_buffer.clone()).unwrap()
+    //             .add_sampled_image(texture.clone(), graphics_context.sampler.clone()).unwrap()
+    //             .build()
+    //             .unwrap(),
+    //     ));
+    // }
+
+    pub fn flush(&self, graphics_context: &mut GraphicsContext) {
         let layout = graphics_context.get_default_pipeline().pipeline.descriptor_set_layout(0).unwrap();
         graphics_context.frame_data.uniform_descriptor_set = Some(Arc::new(
             PersistentDescriptorSet::start(layout.clone())
                 .add_buffer(graphics_context.mvp_buffer.clone()).unwrap()
-                .add_sampled_image(texture.clone(), graphics_context.sampler.clone()).unwrap()
+                .add_sampled_image(self.image.texture.as_raw_vk_texture().clone(), graphics_context.sampler.clone()).unwrap()
                 .build()
                 .unwrap(),
         ));
-    }
-
-    pub fn flush(&self, graphics_context: &mut GraphicsContext) {
         graphics_context.frame_data.vbuf = Some(graphics_context.vertex_buffer_pool.chunk(vec![
             Vertex {
                 a_pos: [0.0, 0.0],

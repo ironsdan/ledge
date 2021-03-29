@@ -6,16 +6,16 @@ use vulkano::image::MipmapsCount;
 use crate::graphics::context::*;
 use image::ImageFormat;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Default)]
 pub struct Texture {
-    pub vulkano_texture: Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>,
+    pub vulkano_texture: Option<Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>>,
     pub dimensions: (u32, u32),
 }
 
 impl Texture {
     pub fn new(texture: Arc<vulkano::image::ImmutableImage<vulkano::format::Format>>) -> Self {
         Self {
-            vulkano_texture: texture.clone(),
+            vulkano_texture: Some(texture.clone()),
             dimensions: (texture.dimensions().width(), texture.dimensions().height()),
         }
     }
@@ -37,12 +37,12 @@ impl Texture {
         };
 
         Self {
-            vulkano_texture: texture.clone(),
+            vulkano_texture: Some(texture.clone()),
             dimensions: (texture.dimensions().width(), texture.dimensions().height()),
         }
     }
 
     pub fn as_raw_vk_texture(&self) -> &Arc<vulkano::image::ImmutableImage<vulkano::format::Format>> {
-        &self.vulkano_texture
+        self.vulkano_texture.as_ref().unwrap()
     }
 }

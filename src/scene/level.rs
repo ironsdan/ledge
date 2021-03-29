@@ -102,7 +102,7 @@ impl<'a> System<'a> for SpriteDraw<'a> {
     fn run(&mut self, (mut sprite, scene): Self::SystemData) {
         for (sprite, _) in (&mut sprite, &scene).join() {
             // println!("sprite draw");
-            sprite.batch(&mut self.context);
+            // sprite.batch(&mut self.context);
         }
     }
 }

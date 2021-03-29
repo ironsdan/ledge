@@ -28,7 +28,7 @@ impl EventHandler for GameState {
         const DESIRED_FPS: u32 = 60;
 
         while interface.timer_state.check_update_time(DESIRED_FPS) {
-            self.space_stack.update(interface, world);
+            self.space_stack.update(world, interface);
         }
 
         Ok(())

@@ -23,7 +23,7 @@ impl<C> SpaceStack<C> {
         }
     }
 
-    pub fn update(&mut self, interface: &mut Interface, world: &mut World) {
+    pub fn update(&mut self, world: &mut World, interface: &mut Interface) {
         for scene in self.scenes.iter_mut() {
             scene.update(interface, world);
         }

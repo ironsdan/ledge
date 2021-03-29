@@ -3,8 +3,11 @@ pub mod animation;
 pub mod sprite;
 pub mod shader;
 pub mod image;
+pub mod backend;
+pub mod encoder;
 
 use cgmath::{
+    Matrix,
     Matrix4,
     Vector4,
     Vector3,
@@ -108,7 +111,7 @@ impl Transform {
                     Vector4::new(cr10, cr11, 0.0, cr13,),
                     Vector4::new(0.0, 0.0, 1.0, 0.0,),
                     Vector4::new(0.0, 0.0, 0.0, 1.0,),
-                )
+                ).transpose()
             }
         }
     }
@@ -136,10 +139,22 @@ impl Transform {
                 *mat = *mat * rotation;
             }
             Transform::Components {
+                // rotation,
+                ..
+            } => {
+                // *rotation += Rad(3.14);
+            }
+        }
+    }
+
+    fn rotate_value(&mut self, r: Rad<f32>) {
+        match self {
+            Transform::Matrix(mat) => {}
+            Transform::Components {
                 rotation,
                 ..
             } => {
-                // *rotation += Vector3::from((x, y, z));
+                *rotation = r;
             }
         }
     }
@@ -153,15 +168,14 @@ impl Transform {
                 scale,
                 ..
             } => {
-                // *scale += Vector3::from((x, y, z));
+                *scale = Vector3::from((x, y, z));
             }
         }
     }
 }
 
-#[derive(Default, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DrawInfo {
-    pub texture_handle: Handle<Texture>,
     pub texture_rect: Rect,
     pub color: [f32; 4],
     pub transform: Transform,
@@ -171,14 +185,27 @@ impl Component for DrawInfo {
     type Storage = VecStorage<Self>;
 }
 
+impl Default for DrawInfo {
+    fn default() -> Self {
+        Self {
+            texture_rect: Rect::default(),
+            color: [0.0, 0.0, 0.0, 1.0],
+            transform: Transform::identity(),
+        }
+    }
+}
+
 impl DrawInfo {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            texture_rect: Rect::default(),
+            color: [0.0, 0.0, 0.0, 1.0],
+            transform: Transform::identity(),
+        }
     }
     
     pub fn with_rect(rect: Rect) -> Self {
         Self {
-            texture_handle: Handle::default(),
             texture_rect: rect,
             color: [0.0, 0.0, 0.0, 1.0],
             transform: Transform::identity(),
@@ -187,7 +214,6 @@ impl DrawInfo {
 
     pub fn with_transform(transform: Transform) -> Self {
         Self {
-            texture_handle: Handle::default(),
             texture_rect: Rect::default(),
             color: [0.0, 0.0, 0.0, 1.0],
             transform: transform,
@@ -196,7 +222,6 @@ impl DrawInfo {
 
     pub fn with_color(color: [f32; 4]) -> Self {
         Self {
-            texture_handle: Handle::default(),
             texture_rect: Rect::default(),
             color: color,
             transform: Transform::identity(),
@@ -219,12 +244,16 @@ impl DrawInfo {
         self.transform.rotate(x, y, z);
     }
 
+    pub fn rotate_value(&mut self, r: f32) {
+        self.transform.rotate_value(Rad(r));
+    }
+
     pub fn nonuniform_scale(&mut self, x: f32, y: f32, z: f32) {
         self.transform.nonuniform_scale(x, y, z);
     }
 
-    pub fn batch(&self, context: &mut GraphicsContext) {
-        context.batch(self);
+    pub fn scale(&mut self, s: f32) {
+        self.transform.nonuniform_scale(s, s, s);
     }
 }
 

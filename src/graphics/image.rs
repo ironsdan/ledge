@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 #[derive(Clone, Default)]
 pub struct Image {
-    pub texture_handle: Handle<Texture>,
+    pub texture: Texture,
     sampler: Option<Arc<Sampler>>,
     blend_mode: Option<BlendMode>,
     width: u32,
@@ -15,9 +15,9 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn new(texture_handle: Handle<Texture>, sampler: Arc<Sampler>, blend_mode: BlendMode, width: u32, height: u32,) -> Self {
+    pub fn new(texture: Texture, sampler: Arc<Sampler>, blend_mode: BlendMode, width: u32, height: u32,) -> Self {
         Self {
-            texture_handle,
+            texture,
             sampler: Some(sampler),
             blend_mode: Some(blend_mode),
             width,
