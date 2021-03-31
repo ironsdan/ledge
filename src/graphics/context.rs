@@ -172,6 +172,7 @@ impl GraphicsContext {
         let instance_buffer_pool: CpuBufferPool<InstanceData> = CpuBufferPool::vertex_buffer(device.clone());
 
         let rot = Rad(-20.0);
+        
         // Model View Projection buffer
         let default_mvp_mat = MvpUniform { 
             model: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
