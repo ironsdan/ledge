@@ -42,7 +42,7 @@ fn main() {
                 transform: Transform::default(),
             };
     
-            draw_info.translate((i as f32 /3.0) , (j as f32 /3.0), 0.0);
+            draw_info.translate(i as f32 /3.0 , j as f32 /3.0, 0.0);
             draw_info.scale(0.33);
 
             sprite_batch2.add(draw_info);

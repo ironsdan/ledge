@@ -5,7 +5,9 @@ pub struct PerspectiveCamera {
     aspect_ratio: f32,
     near: usize,
     far: usize,
-    matrix: Matrix4<f32>,
+    model: Matrix4<f32>,
+    view: Matrix4<f32>,
+    proj: Matrix4<f32>,
 }
 
 impl Default for PerspectiveCamera {
@@ -21,7 +23,9 @@ impl Default for PerspectiveCamera {
             aspect_ratio: 4.0/3.0,
             near: 1,
             far: 1000,
-            matrix,
+            model: matrix.clone(),
+            view: matrix.clone(),
+            proj: matrix.clone(),
         }
     }
 }
@@ -39,7 +43,32 @@ impl PerspectiveCamera {
             aspect_ratio,
             near,
             far,
-            matrix,
+            model: matrix.clone(),
+            view: matrix.clone(),
+            proj: matrix.clone(),
         }
+    }
+
+    pub fn model_array(&self) -> [[f32; 4]; 4] {
+        return self.model.into();
+    }
+
+    pub fn view_array(&self) -> [[f32; 4]; 4] {
+        return self.view.into();
+    }
+
+    pub fn proj_array(&self) -> [[f32; 4]; 4] {
+        return self.proj.into();
+    }
+
+    pub fn mv_array(&self) -> [[f32; 4]; 4] {
+        let mv = self.model * self.view;
+        return mv.into();
+    }
+
+    pub fn mvp_array(&self) -> [[f32; 4]; 4] {
+        let mvp = self.model * self.view * self.proj;
+
+        return mvp.into();
     }
 }

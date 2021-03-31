@@ -160,6 +160,12 @@ impl GraphicsContext {
             .unwrap()
         };
 
+        vulkano::impl_vertex!(Vertex, a_pos, a_uv, a_vert_color);
+        vulkano::impl_vertex!(InstanceData, a_src, a_color, a_transform);
+
+        let vs = vs::Shader::load(device.clone()).unwrap();
+        let fs = fs::Shader::load(device.clone()).unwrap();
+
         // Vertex Buffer Pool
         let vertex_buffer_pool: CpuBufferPool<Vertex> = CpuBufferPool::vertex_buffer(device.clone());
 
@@ -167,7 +173,12 @@ impl GraphicsContext {
 
         let rot = Rad(-20.0);
         // Model View Projection buffer
-        let mut default_mvp_mat = MvpUniform { mvp: [[1.0, 0.0, 0.0, 0.0], [0.0, rot.cos(), rot.sin(), 0.0], [0.0, -rot.sin(), rot.cos(), 0.0], [0.0, 1.0, 0.0, 1.0]]};
+        let default_mvp_mat = MvpUniform { 
+            model: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
+            view: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
+            projection: [[1.0, 0.0, 0.0, 0.0], [0.0, rot.cos(), rot.sin(), 0.0], [0.0, -rot.sin(), rot.cos(), 0.0], [0.0, 1.0, 0.0, 1.0]],
+        };
+
         let mvp_buffer = CpuAccessibleBuffer::from_data(device.clone(), BufferUsage::uniform_buffer_transfer_destination(), false, default_mvp_mat).unwrap();
         
         let render_pass = Arc::new(
