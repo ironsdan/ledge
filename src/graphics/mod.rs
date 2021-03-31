@@ -5,22 +5,20 @@ pub mod shader;
 pub mod image;
 pub mod backend;
 pub mod encoder;
+pub mod camera;
+
+use crate::graphics::context::GraphicsContext;
+use vulkano::buffer::BufferAccess;
+use std::collections::HashMap;
 
 use cgmath::{
     Matrix,
     Matrix4,
     Vector4,
     Vector3,
-    Vector2,
     Rad,
     prelude::Angle,
 };
-
-use crate::graphics::context::GraphicsContext;
-use crate::ecs::component::Component;
-use crate::ecs::storage::VecStorage;
-use crate::asset::handle::Handle;
-use crate::asset::types::Texture;
 
 pub mod vs {
     vulkano_shaders::shader! {
@@ -181,10 +179,6 @@ pub struct DrawInfo {
     pub transform: Transform,
 }
 
-impl Component for DrawInfo {
-    type Storage = VecStorage<Self>;
-}
-
 impl Default for DrawInfo {
     fn default() -> Self {
         Self {
@@ -270,3 +264,9 @@ impl Rect {
         [self.x, self.y, self.w, self.h]
     }
 }
+
+// pub struct Descriptor<T> {
+//     inner: T,
+//     attributes: HashMap<String, Box<dyn BufferAccess>>,
+
+// }

@@ -31,8 +31,26 @@ fn main() {
             sprite_batch.add(draw_info);
         }
     }
+    let texture = types::Texture::from_file_vulkano(include_bytes!("images/background.png"), &interface.graphics_context);
+    let mut sprite_batch2 = SpriteBatch::new(texture, &interface, BlendMode::Alpha);
+
+    for i in 0..3 {
+        for j in 0..3 {
+            let mut draw_info = DrawInfo {
+                texture_rect: Rect { x: i as f32 * 0.33, y: j as f32 * 0.33, w: 0.33, h: 0.33 },
+                color: [0.0, 0.0, 0.0, 1.0],
+                transform: Transform::default(),
+            };
+    
+            draw_info.translate((i as f32 /3.0) , (j as f32 /3.0), 0.0);
+            draw_info.scale(0.33);
+
+            sprite_batch2.add(draw_info);
+        }
+    }
 
     let mut rotate = 0.0;
+    let mut i = 0;
 
     event_loop.run(move |event, _, control_flow| {
         let interface = &mut interface;
@@ -67,7 +85,12 @@ fn main() {
                 
                 interface.graphics_context.begin_frame();
                 render(&mut sprite_batch, &mut rotate);
+                sprite_batch2.draw(&mut interface.graphics_context);
                 sprite_batch.draw(&mut interface.graphics_context);
+
+                i+=1;
+
+                println!("i: {}", i);
 
                 interface.graphics_context.present();
             },

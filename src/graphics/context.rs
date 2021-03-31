@@ -41,6 +41,12 @@ use winit::{
 };
 use std::sync::Arc;
 
+use cgmath::{
+    Matrix4,
+    Rad,
+    Angle,
+};
+
 use crate::{
     graphics::{Vertex, InstanceData, shader::PipelineObjectSet, shader::PipelineObject, BlendMode, sprite::SpriteBatch},
     conf::*,
@@ -69,6 +75,7 @@ pub struct GraphicsContext {
     pub vertex_buffer_pool: vulkano::buffer::CpuBufferPool<Vertex>,
     pub instance_buffer_pool: vulkano::buffer::CpuBufferPool<InstanceData>,
     pub mvp_buffer: std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<MvpUniform>>,
+    pub camera: crate::graphics::camera::PerspectiveCamera,
     pub frame_data: FrameData,
     pub default_pipeline_id: usize, 
     pub pipeline_sets: Vec<PipelineObjectSet>,
@@ -154,12 +161,13 @@ impl GraphicsContext {
         };
 
         // Vertex Buffer Pool
-        let buffer_pool: CpuBufferPool<Vertex> = CpuBufferPool::vertex_buffer(device.clone());
+        let vertex_buffer_pool: CpuBufferPool<Vertex> = CpuBufferPool::vertex_buffer(device.clone());
 
         let instance_buffer_pool: CpuBufferPool<InstanceData> = CpuBufferPool::vertex_buffer(device.clone());
 
+        let rot = Rad(-20.0);
         // Model View Projection buffer
-        let default_mvp_mat = MvpUniform { mvp: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]};
+        let mut default_mvp_mat = MvpUniform { mvp: [[1.0, 0.0, 0.0, 0.0], [0.0, rot.cos(), rot.sin(), 0.0], [0.0, -rot.sin(), rot.cos(), 0.0], [0.0, 1.0, 0.0, 1.0]]};
         let mvp_buffer = CpuAccessibleBuffer::from_data(device.clone(), BufferUsage::uniform_buffer_transfer_destination(), false, default_mvp_mat).unwrap();
         
         let render_pass = Arc::new(
@@ -186,10 +194,8 @@ impl GraphicsContext {
         let vs = vs::Shader::load(device.clone()).unwrap();
         let fs = fs::Shader::load(device.clone()).unwrap();
 
-
         let pipeline = Arc::new(
             GraphicsPipeline::start()
-                // .vertex_input_single_buffer::<Vertex>()
                 .vertex_input(OneVertexOneInstanceDefinition::<Vertex, InstanceData>::new())
                 .vertex_shader(vs.main_entry_point(), ())
                 .triangle_strip()
@@ -204,6 +210,8 @@ impl GraphicsContext {
         let pipeline_object = PipelineObject::new(pipeline);
         let mut pipeline_sets = PipelineObjectSet::new(128);
         pipeline_sets.insert(BlendMode::Alpha, pipeline_object);
+
+        let default_pipeline_id = 0;
         
         let mut dynamic_state = DynamicState {
             line_width: None,
@@ -230,22 +238,26 @@ impl GraphicsContext {
         let framebuffers =
             window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
 
-        // let default_shader = Shader::new();
+        let camera = crate::graphics::camera::PerspectiveCamera::default();
 
+        let frame_data = FrameData{ vbuf: None, instance_data: None, uniform_descriptor_set: None, blend_mode: BlendMode::Alpha };
+
+        
         let mut graphics = Self {
-            queue: queue,
-            surface: surface,
-            device: device,
-            swapchain: swapchain,
-            sampler: sampler,
-            framebuffers: framebuffers,
-            render_pass: render_pass,
-            dynamic_state: dynamic_state,
-            vertex_buffer_pool: buffer_pool,
-            instance_buffer_pool: instance_buffer_pool, 
-            mvp_buffer: mvp_buffer,
-            frame_data: FrameData{ vbuf: None, instance_data: None, uniform_descriptor_set: None, blend_mode: BlendMode::Alpha },
-            default_pipeline_id: 0,
+            queue,
+            surface,
+            device,
+            swapchain,
+            sampler,
+            framebuffers,
+            render_pass,
+            dynamic_state,
+            vertex_buffer_pool,
+            instance_buffer_pool, 
+            mvp_buffer,
+            camera,
+            frame_data,
+            default_pipeline_id,
             pipeline_sets: vec![pipeline_sets],
             image_num: 0,
             acquire_future: None,
@@ -253,11 +265,8 @@ impl GraphicsContext {
             recreate_swapchain: false,
             command_buffer: None,
             now: None,
-            // debugger: debug_callback
         };
-
-        // graphics.create_command_buffer();
-        // graphics.begin_frame();
+    
         graphics
     }
 

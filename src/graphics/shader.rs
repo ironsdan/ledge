@@ -71,10 +71,6 @@ impl PipelineObjectSet {
     }
 }
 
-// pub trait PipelineStateGeneric {
-
-// }
-
 pub struct PipelineObject {
     pub pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync>,
 }

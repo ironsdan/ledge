@@ -51,7 +51,7 @@ pub struct LevelSpace {
 impl Space<World> for LevelSpace {
     
     fn update(&mut self, interface: &mut Interface, world: &mut World) -> SpaceSwitch<World> {
-        let mut sprite_system = SpriteMove {};
+        // let mut sprite_system = SpriteMove {};
         let mut movement_system = MovementSystem {};
         let mut position_system = PositionSystem {};
         let mut input_system = KeyboardInputSystem {};
@@ -61,7 +61,7 @@ impl Space<World> for LevelSpace {
         gravity_system.run((world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<Position>()));
         position_system.run((world.write_comp_storage::<Position>(), world.read_comp_storage::<RigidBody>(), fps_as_duration(60), interface.timer_state.alpha()));
         input_system.run((world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<DynamicObject>(), &interface.keyboard_context));
-        sprite_system.run((world.write_comp_storage::<DrawInfo>(), world.read_comp_storage::<Position>()));
+        // sprite_system.run((world.write_comp_storage::<DrawInfo>(), world.read_comp_storage::<Position>()));
         
         SpaceSwitch::None
     }
@@ -71,7 +71,7 @@ impl Space<World> for LevelSpace {
             context
         };
 
-        sprite_system.run((world.write_comp_storage::<DrawInfo>(), world.read_comp_storage::<Visible>()));
+        // sprite_system.run((world.write_comp_storage::<DrawInfo>(), world.read_comp_storage::<Visible>()));
 
         Ok(())
     }
@@ -96,22 +96,13 @@ struct SpriteDraw<'a> {
     context: &'a mut GraphicsContext,
 }
 
-impl<'a> System<'a> for SpriteDraw<'a> {
-    type SystemData = (WriteStorage<'a, DrawInfo>, ReadStorage<'a, Visible>);
+// impl<'a> System<'a> for SpriteDraw<'a> {
+//     type SystemData = (WriteStorage<'a, DrawInfo>, ReadStorage<'a, Visible>);
 
-    fn run(&mut self, (mut sprite, scene): Self::SystemData) {
-        for (sprite, _) in (&mut sprite, &scene).join() {
-            // println!("sprite draw");
-            // sprite.batch(&mut self.context);
-        }
-    }
-}
-
-// pub struct LevelDefinition {
-//     entities: Vec<EntityDescription>,
-
-// }
-
-// pub struct EntityDescription {
-
+//     fn run(&mut self, (mut sprite, scene): Self::SystemData) {
+//         for (sprite, _) in (&mut sprite, &scene).join() {
+//             // println!("sprite draw");
+//             // sprite.batch(&mut self.context);
+//         }
+//     }
 // }
