@@ -1,7 +1,7 @@
 #version 450
 
 layout (location = 0) in mediump vec3 position;
-layout (location = 1) in uint scale;
+layout (location = 1) in mediump float scale;
 
 layout(binding=0, set=0) uniform mvp { // Model-View-Projection matrices
     mat4 model;
@@ -10,11 +10,13 @@ layout(binding=0, set=0) uniform mvp { // Model-View-Projection matrices
 } u_camera;
 
 void main() {
-    vec4 mvPosition = u_camera.model * u_camera.view * vec4( position, 1.0 );
+    vec4 mvPosition =  u_camera.view * u_camera.model * vec4( position, 1.0 );
     float distance_adjust = mvPosition.z;
     if(distance_adjust == 0) {
         distance_adjust = 1.0;
     }
-    gl_PointSize = scale * ( 200 / distance_adjust);
-    gl_Position = u_camera.projection * mvPosition;
+    gl_PointSize = scale * ( 300 / distance_adjust);
+    vec4 test = u_camera.projection * mvPosition;
+    test /= test.w;
+    gl_Position =  test;
 }

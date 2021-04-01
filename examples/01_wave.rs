@@ -1,3 +1,4 @@
+
 use ledge_engine::interface::*;
 use winit::{
     event_loop::{ControlFlow},
@@ -9,12 +10,17 @@ use vulkano::{
     descriptor::descriptor_set::PersistentDescriptorSet,
     buffer::{BufferUsage, CpuAccessibleBuffer},
 };
+use cgmath::{
+    Deg,
+    Rad,
+    Angle,
+};
 use std::sync::Arc;
 
 #[derive(Default, Copy, Clone)]
 struct ParticleVertex {
     position: [f32; 3],
-    scale: u32,
+    scale: f32,
 }
 
 vulkano::impl_vertex!(ParticleVertex, position, scale);
@@ -33,9 +39,9 @@ pub mod fs {
     }
 }
 
-const SEPARATION: f32 = 10.0;
-const AMOUNTX: usize = 100;
-const AMOUNTY: usize = 100;
+const SEPARATION: f32 = 12.0;
+const AMOUNTX: isize = 100;
+const AMOUNTY: isize = 100;
 
 fn main() {
     let (mut interface, event_loop) = InterfaceBuilder::new("Example01", "Dan").build().unwrap();
@@ -56,30 +62,7 @@ fn main() {
             .unwrap()
     ) as Arc<dyn GraphicsPipelineAbstract + Send + Sync>;
 
-    let mut particles = [ParticleVertex::default(); AMOUNTX * AMOUNTY];
-    let mut i = 0;
-    for ix in 0..AMOUNTX  {
-        for iy in 0..AMOUNTY {
-            let mut position: [f32; 3] = [0.0,0.0,0.0];
-            position[0] = (ix as f32 * SEPARATION)  - (((AMOUNTX as f32 * SEPARATION) / 2.0)); // x
-            position[1] = 0.0; // y
-            position[2] = (iy as f32 * SEPARATION) - (((AMOUNTY as f32 * SEPARATION) / 2.0)); // z
-            
-            let particle = ParticleVertex {
-                position: position,
-                scale: 1,
-            };
-            particles[i] = particle;
-            i+=1;
-        }
-    }
-
-    let particle = CpuAccessibleBuffer::from_data(
-        interface.graphics_context.device.clone(), 
-        BufferUsage::vertex_buffer(), 
-        false, 
-        particles
-    ).unwrap();
+    let mut particles = [ParticleVertex::default(); (AMOUNTX * AMOUNTY) as usize];
 
     let color = CpuAccessibleBuffer::from_data(
         interface.graphics_context.device.clone(), 
@@ -95,6 +78,8 @@ fn main() {
             .build()
             .unwrap(),
     );
+
+    let mut count = 0.0;
 
     event_loop.run(move |event, _, control_flow| {
         let interface = &mut interface;
@@ -125,10 +110,14 @@ fn main() {
 
                 interface.graphics_context.create_command_buffer();
 
-                while interface.timer_state.check_update_time(DESIRED_FPS) {}
+                let particle = update(interface, &mut count);
 
-                interface.graphics_context.command_buffer.as_mut().unwrap().update_buffer(color.clone(), [1.0 as f32, 0.0 as f32, 1.0 as f32]).unwrap();
-                
+                while interface.timer_state.check_update_time(DESIRED_FPS) {
+                    let particle = update(interface, &mut count);
+                }
+
+                // interface.graphics_context.command_buffer.as_mut().unwrap().update_buffer(color.clone(), [1.0 as f32, 0.0 as f32, 1.0 as f32]).unwrap();
+            
                 interface.graphics_context.begin_frame();
 
                 interface.graphics_context.command_buffer.as_mut().unwrap().draw(
@@ -144,6 +133,35 @@ fn main() {
             Event::RedrawRequested(_) => {},
             Event::RedrawEventsCleared => {},
         }
-        
     });
+}
+
+fn update(interface: &Interface, count: &mut f32) -> std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<[ParticleVertex; (AMOUNTX * AMOUNTY) as usize]>> {
+    let mut i = 0;
+    let mut particle_data = [ParticleVertex::default(); (AMOUNTX * AMOUNTY) as usize];
+    
+    for ix in 0..AMOUNTX {
+        for iy in 0..AMOUNTY {
+            let factor = 5.0;
+            let scale = 2.0;
+            let sin_ix = Rad((ix as f32 + *count) * 0.5).sin();
+            let sin_iy = Rad((iy as f32 + *count) * 0.5).sin();
+
+            particle_data[i].position[0] = (ix as f32 * SEPARATION) - (((AMOUNTX as f32 * SEPARATION) / 2.0));
+            particle_data[i].position[1] = ( sin_ix * factor) + ( sin_iy * factor);
+            particle_data[i].position[2] = (iy as f32 * SEPARATION) - (((AMOUNTY as f32 * SEPARATION) / 2.0));
+
+            particle_data[i].scale = ( sin_ix + 1.5 ) * scale +
+                            ( sin_iy + 1.5 ) * scale;
+
+            i += 1;
+        }
+    }
+    *count += 0.03;
+    return CpuAccessibleBuffer::from_data(
+        interface.graphics_context.device.clone(), 
+        BufferUsage::vertex_buffer(), 
+        false, 
+        particle_data
+    ).unwrap()
 }

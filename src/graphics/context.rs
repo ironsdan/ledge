@@ -174,10 +174,12 @@ impl GraphicsContext {
         let rot = Rad(-20.0);
         
         // Model View Projection buffer
+        let camera = crate::graphics::camera::PerspectiveCamera::default();
+
         let default_mvp_mat = MvpUniform { 
-            model: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
-            view: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
-            projection: [[1.0, 0.0, 0.0, 0.0], [0.0, rot.cos(), rot.sin(), 0.0], [0.0, -rot.sin(), rot.cos(), 0.0], [0.0, 1.0, 0.0, 1.0]],
+            model: camera.model_array(),
+            view: camera.view_array(),
+            projection: camera.proj_array(),
         };
 
         let mvp_buffer = CpuAccessibleBuffer::from_data(device.clone(), BufferUsage::uniform_buffer_transfer_destination(), false, default_mvp_mat).unwrap();
@@ -249,8 +251,6 @@ impl GraphicsContext {
 
         let framebuffers =
             window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
-
-        let camera = crate::graphics::camera::PerspectiveCamera::default();
 
         let frame_data = FrameData{ vbuf: None, instance_data: None, uniform_descriptor_set: None, blend_mode: BlendMode::Alpha };
 
