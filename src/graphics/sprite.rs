@@ -84,14 +84,14 @@ impl SpriteBatch {
     // }
 
     pub fn flush(&self, graphics_context: &mut GraphicsContext) {
-        let layout = graphics_context.get_default_pipeline().pipeline.descriptor_set_layout(0).unwrap();
-        graphics_context.frame_data.uniform_descriptor_set = Some(Arc::new(
-            PersistentDescriptorSet::start(layout.clone())
-                .add_buffer(graphics_context.mvp_buffer.clone()).unwrap()
-                .add_sampled_image(self.image.texture.as_raw_vk_texture().clone(), graphics_context.sampler.clone()).unwrap()
-                .build()
-                .unwrap(),
-        ));
+        // let layout = graphics_context.get_default_pipeline().pipeline.descriptor_set_layout(0).unwrap();
+        // graphics_context.frame_data.uniform_descriptor_set = Some(Arc::new(
+        //     PersistentDescriptorSet::start(layout.clone())
+        //         .add_buffer(graphics_context.mvp_buffer.clone()).unwrap()
+        //         .add_sampled_image(self.image.texture.as_raw_vk_texture().clone(), graphics_context.sampler.clone()).unwrap()
+        //         .build()
+        //         .unwrap(),
+        // ));
         graphics_context.frame_data.vbuf = Some(graphics_context.vertex_buffer_pool.chunk(vec![
             Vertex {
                 a_pos: [0.0, 0.0],
@@ -137,6 +137,6 @@ impl Drawable for SpriteBatch {
     fn draw(&self, graphics_context: &mut GraphicsContext) {
         self.flush(graphics_context);
 
-        graphics_context.draw();
+        // graphics_context.draw();
     }
 }

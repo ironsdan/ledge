@@ -33,6 +33,7 @@ use vulkano::{
     framebuffer::{Framebuffer, FramebufferAbstract},
     image::SwapchainImage,
     pipeline::viewport::Viewport,
+    image::view::ImageView,
 };
 use vulkano_win::VkSurfaceBuild;
 use winit::{
@@ -45,23 +46,24 @@ use cgmath::{
     Matrix4,
     Rad,
     Angle,
+    Deg,
 };
 
 use crate::{
-    graphics::{Vertex, InstanceData, shader::PipelineObjectSet, shader::PipelineObject, BlendMode, sprite::SpriteBatch},
+    graphics::{Vertex, InstanceData, shader::PipelineObject, BlendMode},
     conf::*,
-    graphics::{vs, fs},
+    // graphics::{vs, fs},
 };
 
-type MvpUniform = vs::ty::mvp;
+// type MvpUniform = vs::ty::mvp;
 
 // #[derive(Default)]
-pub struct FrameData {
-    pub blend_mode: BlendMode,
-    pub vbuf: Option<CpuBufferPoolChunk<Vertex, Arc<StdMemoryPool>>>,
-    pub instance_data: Option<CpuBufferPoolChunk<InstanceData, Arc<StdMemoryPool>>>,
-    pub uniform_descriptor_set: Option<Arc<PersistentDescriptorSet<((((), PersistentDescriptorSetBuf<Arc<CpuAccessibleBuffer<vs::ty::mvp>>>), PersistentDescriptorSetImg<Arc<ImmutableImage<Format>>>), PersistentDescriptorSetSampler)>>>,
-}
+// pub struct FrameData {
+//     pub blend_mode: BlendMode,
+//     pub vbuf: Option<CpuBufferPoolChunk<Vertex, Arc<StdMemoryPool>>>,
+//     pub instance_data: Option<CpuBufferPoolChunk<InstanceData, Arc<StdMemoryPool>>>,
+//     pub uniform_descriptor_set: Option<Arc<PersistentDescriptorSet<((((), PersistentDescriptorSetBuf<Arc<CpuAccessibleBuffer<vs::ty::mvp>>>), PersistentDescriptorSetImg<Arc<ImmutableImage<Format>>>), PersistentDescriptorSetSampler)>>>,
+// }
 
 pub struct GraphicsContext {
     pub queue: std::sync::Arc<vulkano::device::Queue>,
@@ -74,11 +76,10 @@ pub struct GraphicsContext {
     pub dynamic_state: vulkano::command_buffer::DynamicState,
     pub vertex_buffer_pool: vulkano::buffer::CpuBufferPool<Vertex>,
     pub instance_buffer_pool: vulkano::buffer::CpuBufferPool<InstanceData>,
-    pub mvp_buffer: std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<MvpUniform>>,
-    pub camera: crate::graphics::camera::PerspectiveCamera,
-    pub frame_data: FrameData,
+    // pub mvp_buffer: std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<MvpUniform>>,
+    // pub frame_data: FrameData,
     pub default_pipeline_id: usize, 
-    pub pipeline_sets: Vec<PipelineObjectSet>,
+    // pub pipeline_sets: Vec<PipelineObjectSet>,
     pub image_num: usize,
     pub acquire_future: Option<SwapchainAcquireFuture<Window>>,
     pub recreate_swapchain: bool,
@@ -163,26 +164,29 @@ impl GraphicsContext {
         vulkano::impl_vertex!(Vertex, a_pos, a_uv, a_vert_color);
         vulkano::impl_vertex!(InstanceData, a_src, a_color, a_transform);
 
-        let vs = vs::Shader::load(device.clone()).unwrap();
-        let fs = fs::Shader::load(device.clone()).unwrap();
+        // let vs = vs::Shader::load(device.clone()).unwrap();
+        // let fs = fs::Shader::load(device.clone()).unwrap();
 
         // Vertex Buffer Pool
         let vertex_buffer_pool: CpuBufferPool<Vertex> = CpuBufferPool::vertex_buffer(device.clone());
 
         let instance_buffer_pool: CpuBufferPool<InstanceData> = CpuBufferPool::vertex_buffer(device.clone());
 
-        let rot = Rad(-20.0);
+        // let rot = Deg(90.0);
         
         // Model View Projection buffer
-        let camera = crate::graphics::camera::PerspectiveCamera::default();
+        // let mut camera = crate::graphics::camera::PerspectiveCamera::default();
 
-        let default_mvp_mat = MvpUniform { 
-            model: camera.model_array(),
-            view: camera.view_array(),
-            projection: camera.proj_array(),
-        };
+        // // camera.rotate_x(rot);
+        // camera.translate_z(100.0);
 
-        let mvp_buffer = CpuAccessibleBuffer::from_data(device.clone(), BufferUsage::uniform_buffer_transfer_destination(), false, default_mvp_mat).unwrap();
+        // let default_mvp_mat = MvpUniform { 
+        //     model: camera.model_array(),
+        //     view: camera.view_array(),
+        //     projection: camera.proj_array(),
+        // };
+
+        // let mvp_buffer = CpuAccessibleBuffer::from_data(device.clone(), BufferUsage::uniform_buffer_transfer_destination(), false, default_mvp_mat).unwrap();
         
         let render_pass = Arc::new(
             vulkano::single_pass_renderpass!(device.clone(),
@@ -205,25 +209,25 @@ impl GraphicsContext {
         // vulkano::impl_vertex!(Vertex, a_pos, a_uv, a_vert_color);
         // vulkano::impl_vertex!(InstanceData, a_src, a_color, a_transform);
 
-        let vs = vs::Shader::load(device.clone()).unwrap();
-        let fs = fs::Shader::load(device.clone()).unwrap();
+        // let vs = vs::Shader::load(device.clone()).unwrap();
+        // let fs = fs::Shader::load(device.clone()).unwrap();
 
-        let pipeline = Arc::new(
-            GraphicsPipeline::start()
-                .vertex_input(OneVertexOneInstanceDefinition::<Vertex, InstanceData>::new())
-                .vertex_shader(vs.main_entry_point(), ())
-                .triangle_strip()
-                .viewports_dynamic_scissors_irrelevant(1)
-                .fragment_shader(fs.main_entry_point(), ())
-                .blend_alpha_blending()
-                .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
-                .build(device.clone())
-                .unwrap()
-        ) as Arc<dyn GraphicsPipelineAbstract + Send + Sync>;
+        // let pipeline = Arc::new(
+        //     GraphicsPipeline::start()
+        //         .vertex_input(OneVertexOneInstanceDefinition::<Vertex, InstanceData>::new())
+        //         .vertex_shader(vs.main_entry_point(), ())
+        //         .triangle_strip()
+        //         .viewports_dynamic_scissors_irrelevant(1)
+        //         .fragment_shader(fs.main_entry_point(), ())
+        //         .blend_alpha_blending()
+        //         .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
+        //         .build(device.clone())
+        //         .unwrap()
+        // ) as Arc<dyn GraphicsPipelineAbstract + Send + Sync>;
 
-        let pipeline_object = PipelineObject::new(pipeline);
-        let mut pipeline_sets = PipelineObjectSet::new(128);
-        pipeline_sets.insert(BlendMode::Alpha, pipeline_object);
+        // let pipeline_object = PipelineObject::from_pipeline(pipeline);
+        // let mut pipeline_sets = PipelineObjectSet::new(128);
+        // pipeline_sets.insert(BlendMode::Alpha, pipeline_object);
 
         let default_pipeline_id = 0;
         
@@ -252,7 +256,7 @@ impl GraphicsContext {
         let framebuffers =
             window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
 
-        let frame_data = FrameData{ vbuf: None, instance_data: None, uniform_descriptor_set: None, blend_mode: BlendMode::Alpha };
+        // let frame_data = FrameData{ vbuf: None, instance_data: None, uniform_descriptor_set: None, blend_mode: BlendMode::Alpha };
 
         
         let mut graphics = Self {
@@ -266,11 +270,10 @@ impl GraphicsContext {
             dynamic_state,
             vertex_buffer_pool,
             instance_buffer_pool, 
-            mvp_buffer,
-            camera,
-            frame_data,
+            // mvp_buffer,
+            // frame_data,
             default_pipeline_id,
-            pipeline_sets: vec![pipeline_sets],
+            // pipeline_sets: vec![pipeline_sets],
             image_num: 0,
             acquire_future: None,
             previous_frame_end: Some(default_future),
@@ -335,15 +338,15 @@ impl GraphicsContext {
         self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[self.image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
     }
 
-    pub fn draw(&mut self) {
-        self.command_buffer.as_mut().unwrap().draw(
-            self.pipeline_sets[self.default_pipeline_id].get(&self.frame_data.blend_mode).unwrap().pipeline.clone(),
-            &self.dynamic_state,
-            vec!(Arc::new(self.frame_data.vbuf.as_ref().unwrap().clone()), Arc::new(self.frame_data.instance_data.as_ref().unwrap().clone())),
-            self.frame_data.uniform_descriptor_set.as_ref().unwrap().clone(),
-            (),
-        ).unwrap();
-    }
+    // pub fn draw(&mut self) {
+    //     self.command_buffer.as_mut().unwrap().draw(
+    //         self.pipeline_sets[self.default_pipeline_id].get(&self.frame_data.blend_mode).unwrap().pipeline.clone(),
+    //         &self.dynamic_state,
+    //         vec!(Arc::new(self.frame_data.vbuf.as_ref().unwrap().clone()), Arc::new(self.frame_data.instance_data.as_ref().unwrap().clone())),
+    //         self.frame_data.uniform_descriptor_set.as_ref().unwrap().clone(),
+    //         (),
+    //     ).unwrap();
+    // }
 
     pub fn present(&mut self) {
         self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
@@ -373,20 +376,14 @@ impl GraphicsContext {
             }
         };
 
-        // Limits the frame rate since PresentMode::Immediate has to be used.
-        let mut sleep_time = 0.016 - self.now.unwrap().elapsed().as_secs_f32();
-        if sleep_time < 0.0 {
-            sleep_time = 0.0
-        }
-        std::thread::sleep(std::time::Duration::from_secs_f32(sleep_time));
-
+        // Limit the frame rate since PresentMode::Immediate has to be used.
         // self.create_command_buffer();
         // self.begin_frame();
     }
 
-    pub fn get_default_pipeline(&self) -> &PipelineObject {
-        self.pipeline_sets[self.default_pipeline_id].get(&self.frame_data.blend_mode).unwrap()
-    }
+    // pub fn get_default_pipeline(&self) -> &PipelineObject {
+    //     self.pipeline_sets[self.default_pipeline_id].get(&self.frame_data.blend_mode).unwrap()
+    // }
 }
 
 // This method is called once during initialization, then again whenever the window is resized
@@ -409,7 +406,7 @@ pub fn window_size_dependent_setup(
         .map(|image| {
             Arc::new(
                 Framebuffer::start(render_pass.clone())
-                    .add(image.clone())
+                    .add(ImageView::new(image.clone()).unwrap())
                     .unwrap()
                     .build()
                     .unwrap(),

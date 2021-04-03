@@ -1,11 +1,11 @@
 pub mod context;
 pub mod animation;
-pub mod sprite;
 pub mod shader;
 pub mod image;
 pub mod backend;
 pub mod encoder;
 pub mod camera;
+pub mod buffer;
 
 use crate::graphics::context::GraphicsContext;
 use vulkano::buffer::BufferAccess;
@@ -20,20 +20,20 @@ use cgmath::{
     prelude::Angle,
 };
 
-pub mod vs {
-    vulkano_shaders::shader! {
-        ty: "vertex",
-        path: "src/graphics/texture.vert",
-        // dump: true,
-    }
-}
+// pub mod vs {
+//     vulkano_shaders::shader! {
+//         ty: "vertex",
+//         path: "src/graphics/texture.vert",
+//         // dump: true,
+//     }
+// }
 
-pub mod fs {
-    vulkano_shaders::shader! {
-        ty: "fragment",
-        path: "src/graphics/texture.frag"
-    }
-}
+// pub mod fs {
+//     vulkano_shaders::shader! {
+//         ty: "fragment",
+//         path: "src/graphics/texture.frag"
+//     }
+// }
 
 #[derive(Clone, PartialEq, Hash, Eq)]
 pub enum BlendMode {
@@ -265,8 +265,20 @@ impl Rect {
     }
 }
 
-// pub struct Descriptor<T> {
-//     inner: T,
-//     attributes: HashMap<String, Box<dyn BufferAccess>>,
+pub struct Descriptor<T> {
+    inner: T,
+    attributes: HashMap<String, Box<dyn BufferAccess>>,
+}
 
-// }
+pub struct DescriptorBuilder<T> {
+    inner: T,
+    // attributes: HashMap<String, Box<dyn BufferAccess>>,
+}
+
+impl<T> DescriptorBuilder<T> {
+    pub fn new(s: T) -> Self {
+        Self {
+            inner: s,
+        }
+    }
+}

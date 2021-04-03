@@ -1,5 +1,5 @@
-
 use ledge_engine::interface::*;
+use ledge_engine::graphics::buffer::*;
 use winit::{
     event_loop::{ControlFlow},
     event::{Event, WindowEvent}
@@ -10,12 +10,12 @@ use vulkano::{
     descriptor::descriptor_set::PersistentDescriptorSet,
     buffer::{BufferUsage, CpuAccessibleBuffer},
 };
-use cgmath::{
-    Deg,
-    Rad,
-    Angle,
-};
+use cgmath::{Deg, Rad, Angle};
 use std::sync::Arc;
+use ledge_engine::graphics::camera::PerspectiveCamera;
+use ledge_engine::graphics::shader::PipelineObject;
+use ledge_engine::graphics::shader::Shader;
+use vulkano::SafeDeref;
 
 #[derive(Default, Copy, Clone)]
 struct ParticleVertex {
@@ -35,7 +35,7 @@ pub mod vs {
 pub mod fs {
     vulkano_shaders::shader! {
         ty: "fragment",
-        path: "src/particle.frag"
+        path: "src/particle.frag",
     }
 }
 
@@ -44,37 +44,45 @@ const AMOUNTX: isize = 100;
 const AMOUNTY: isize = 100;
 
 fn main() {
-    let (mut interface, event_loop) = InterfaceBuilder::new("Example01", "Dan").build().unwrap();
+    let (mut interface, event_loop) = InterfaceBuilder::new("Wave01", "Dan").build().unwrap();
 
     let vs = vs::Shader::load(interface.graphics_context.device.clone()).unwrap();
     let fs = fs::Shader::load(interface.graphics_context.device.clone()).unwrap();
 
-    let pipeline = Arc::new(
-        GraphicsPipeline::start()
-            .vertex_input_single_buffer::<ParticleVertex>()
-            .vertex_shader(vs.main_entry_point(), ())
-            .point_list()
-            .viewports_dynamic_scissors_irrelevant(1)
-            .fragment_shader(fs.main_entry_point(), ())
-            .blend_alpha_blending()
-            .render_pass(Subpass::from(interface.graphics_context.render_pass.clone(), 0).unwrap())
-            .build(interface.graphics_context.device.clone())
-            .unwrap()
-    ) as Arc<dyn GraphicsPipelineAbstract + Send + Sync>;
+    let vertex_shader = Shader {
+        entry_point: vs.main_entry_point(),
+        specialization_constants: (),
+    };
 
-    let mut particles = [ParticleVertex::default(); (AMOUNTX * AMOUNTY) as usize];
+    let fragment_shader = Shader {
+        entry_point: fs.main_entry_point(),
+        specialization_constants: (),
+    };
 
-    let color = CpuAccessibleBuffer::from_data(
-        interface.graphics_context.device.clone(), 
-        BufferUsage::uniform_buffer_transfer_destination(), 
-        false,
-        [1.0 as f32, 1.0 as f32, 1.0 as f32],
-    ).unwrap();
+    // let pipeline = PipelineObject::new(&interface.graphics_context, vertex_shader, fragment_shader);
+
+    let pipeline = PipelineObject::new(&mut interface.graphics_context, ParticleVertex::default(), vertex_shader, fragment_shader);
+
+    let mut camera = PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0);
+    camera.rotate_x(Deg(20.0));
+    camera.translate_z(100.0);
+
+    let color = BufferAttribute::from_data([1.0 as f32, 1.0 as f32, 1.0 as f32], interface.graphics_context.device.clone());
     
+    let mvp_data = vs::ty::mvp {
+        model: camera.model_array(),
+        view: camera.view_array(),
+        projection: camera.proj_array(),
+    };
+    
+    let mvp = BufferAttribute::from_data(mvp_data, interface.graphics_context.device.clone());
+
+    // let descriptor = DescriptorBuilder::new();
+
     let descriptor = Arc::new(
         PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).unwrap().clone())
-            .add_buffer(interface.graphics_context.mvp_buffer.clone()).unwrap()
-            .add_buffer(color.clone()).unwrap()
+            .add_buffer(color.inner.clone()).unwrap()
+            .add_buffer(mvp.inner.clone()).unwrap()
             .build()
             .unwrap(),
     );
@@ -83,8 +91,7 @@ fn main() {
 
     event_loop.run(move |event, _, control_flow| {
         let interface = &mut interface;
-
-        interface.process_event(&event);
+        let now = std::time::Instant::now();
         
         match event {
             Event::WindowEvent { event, .. } => match event {
@@ -110,25 +117,27 @@ fn main() {
 
                 interface.graphics_context.create_command_buffer();
 
-                let particle = update(interface, &mut count);
-
-                while interface.timer_state.check_update_time(DESIRED_FPS) {
-                    let particle = update(interface, &mut count);
-                }
-
-                // interface.graphics_context.command_buffer.as_mut().unwrap().update_buffer(color.clone(), [1.0 as f32, 0.0 as f32, 1.0 as f32]).unwrap();
+                while interface.timer_state.check_update_time(DESIRED_FPS) {}
+                let particles = update(interface, &mut count);
             
                 interface.graphics_context.begin_frame();
 
                 interface.graphics_context.command_buffer.as_mut().unwrap().draw(
                     pipeline.clone(),
                     &interface.graphics_context.dynamic_state,
-                    vec![Arc::new(particle.clone())],
+                    vec![Arc::new(particles.clone())],
                     descriptor.clone(),
                     (),
+                    vec![],
                 ).unwrap();
 
                 interface.graphics_context.present();
+
+                let mut sleep_time = 0.016 - now.elapsed().as_secs_f32();
+                if sleep_time < 0.0 {
+                    sleep_time = 0.0
+                }
+                std::thread::sleep(std::time::Duration::from_secs_f32(sleep_time));
             },
             Event::RedrawRequested(_) => {},
             Event::RedrawEventsCleared => {},

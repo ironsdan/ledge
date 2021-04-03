@@ -3,7 +3,7 @@
 layout (location = 0) in mediump vec3 position;
 layout (location = 1) in mediump float scale;
 
-layout(binding=0, set=0) uniform mvp { // Model-View-Projection matrices
+layout(binding=1, set=0) uniform mvp { // Model-View-Projection matrices
     mat4 model;
     mat4 view;
     mat4 projection;

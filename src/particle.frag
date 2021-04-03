@@ -2,7 +2,7 @@
 
 layout (location=0) out mediump vec4 f_color;
 
-layout(binding=1,set=0) uniform color {
+layout(binding=0,set=0) uniform color {
     mediump vec3 value;
 } v_color;
 
