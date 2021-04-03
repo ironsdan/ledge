@@ -1,24 +1,27 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 use vulkano::{
     framebuffer::{Subpass},
     pipeline::{GraphicsPipeline, GraphicsPipelineAbstract},
 };
-use vulkano::descriptor::pipeline_layout::PipelineLayoutDesc;
 use vulkano::pipeline::shader::GraphicsEntryPointAbstract;
 use vulkano::pipeline::shader::SpecializationConstants;
-use std::marker::PhantomData;
 
-use crate::graphics::{Vertex, BlendMode, context::GraphicsContext};
-use vulkano::descriptor::pipeline_layout::PipelineLayoutAbstract;
+use crate::graphics::context::GraphicsContext;
 use vulkano::pipeline::vertex::VertexDefinition;
-use vulkano::pipeline::shader::ShaderInterfaceDefMatch;
-use vulkano::pipeline::vertex::SingleBufferDefinition;
 use vulkano::pipeline::shader::EntryPointAbstract;
 
-pub struct Shader<Vs, Vss> {
-    pub entry_point: Vs,
-    pub specialization_constants: Vss,
+pub struct Shader<S, C> {
+    pub entry_point: S,
+    pub specialization_constants: C,
+}
+
+impl<S, C> Shader<S, C> {
+    pub fn new(entry_point: S, specialization_constants: C) -> Self {
+        Self {
+            entry_point,
+            specialization_constants,
+        }
+    }
 }
 
 // pub trait ShaderAbstract {
@@ -46,15 +49,13 @@ pub struct Shader<Vs, Vss> {
 //     }
 // }
 
-pub struct PipelineObject {
-    // _phantom: (PhantomData<Vd>, PhantomData<Vs>, PhantomData<Vss>, PhantomData<Fs>, PhantomData<Fss>),
-}
+pub struct PipelineObject {}
 
 impl PipelineObject {
     pub fn new<Vd, Vs, Vss, Fs, Fss>(context: &mut GraphicsContext, vertex_type: Vd, vertex_shader: Shader<Vs, Vss>, fragment_shader: Shader<Fs, Fss>) 
     -> Arc<dyn GraphicsPipelineAbstract + Send + Sync> 
     where
-        Vd: VertexDefinition<Vs::InputDefinition> + Clone + 'static + Sync + Send,
+        Vd: VertexDefinition<Vs::InputDefinition> + 'static + Sync + Send,
         Vs: GraphicsEntryPointAbstract<SpecializationConstants = Vss>,
         <Vs as EntryPointAbstract>::PipelineLayout: Clone + 'static + Send + Sync,
         Vss: SpecializationConstants, 

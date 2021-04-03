@@ -41,9 +41,9 @@ pub struct Interface {
 
 impl Interface {
     pub fn from_conf(instance_conf: Conf) -> GameResult<(Self, winit::event_loop::EventLoop<()>)> {
-        let event_loop = winit::event_loop::EventLoop::new();
+        let (graphics_context, event_loop) = crate::graphics::context::GraphicsContext::new(instance_conf);
         let interface_ctx = Interface {
-            graphics_context: crate::graphics::context::GraphicsContext::new(&event_loop, instance_conf),
+            graphics_context,
             keyboard_context: crate::input::keyboard::KeyboardContext::new(),
             mouse_context: crate::input::mouse::MouseContext::new(),
             timer_state: crate::timer::TimerState::new(),

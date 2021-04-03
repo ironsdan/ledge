@@ -89,7 +89,7 @@ pub struct GraphicsContext {
 }
 
 impl GraphicsContext {
-    pub fn new(event_loop: &winit::event_loop::EventLoop<()>, conf: Conf) -> Self{
+    pub fn new(conf: Conf) -> (Self, winit::event_loop::EventLoop<()>) {
         let required_extensions = vulkano_win::required_extensions();
 
         let extensions = InstanceExtensions {
@@ -107,13 +107,15 @@ impl GraphicsContext {
             physical.ty(),
         );
 
+        let event_loop = winit::event_loop::EventLoop::new();
+
         let surface = WindowBuilder::new()
             .with_inner_size(PhysicalSize::new(conf.window_mode.width, conf.window_mode.height))
             .with_min_inner_size(PhysicalSize::new(conf.window_mode.min_width, conf.window_mode.min_height))
             .with_resizable(conf.window_mode.resizable)
             .with_title(conf.window_setup.title)
             .with_maximized(conf.window_mode.maximized)
-            .build_vk_surface(event_loop, instance.clone())
+            .build_vk_surface(&event_loop, instance.clone())
             .unwrap();
 
         let queue_family = physical
@@ -282,7 +284,7 @@ impl GraphicsContext {
             now: None,
         };
     
-        graphics
+        (graphics, event_loop)
     }
 
     pub fn create_command_buffer(&mut self,) {
