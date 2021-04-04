@@ -1,11 +1,9 @@
 pub mod context;
-pub mod animation;
 pub mod shader;
 pub mod image;
-pub mod backend;
-pub mod encoder;
 pub mod camera;
 pub mod buffer;
+pub mod material;
 
 use crate::graphics::context::GraphicsContext;
 use vulkano::buffer::BufferAccess;
@@ -19,6 +17,14 @@ use cgmath::{
     Rad,
     prelude::Angle,
 };
+
+use vulkano::{
+    descriptor::descriptor_set::PersistentDescriptorSet,
+    descriptor::descriptor_set::PersistentDescriptorSetBuilder,
+    pipeline::GraphicsPipelineAbstract,
+};
+
+use std::sync::Arc;
 
 // pub mod vs {
 //     vulkano_shaders::shader! {
@@ -270,15 +276,15 @@ pub struct Descriptor<T> {
     attributes: HashMap<String, Box<dyn BufferAccess>>,
 }
 
-pub struct DescriptorBuilder<T> {
-    inner: T,
+pub struct DescriptorBuilder {
+    inner: PersistentDescriptorSetBuilder<()>,
     // attributes: HashMap<String, Box<dyn BufferAccess>>,
 }
 
-impl<T> DescriptorBuilder<T> {
-    pub fn new(s: T) -> Self {
+impl DescriptorBuilder {
+    pub fn new(pipeline: &Arc<GraphicsPipelineAbstract>) -> Self {
         Self {
-            inner: s,
+            inner: PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).unwrap().clone())
         }
     }
 }

@@ -24,8 +24,9 @@ impl<S, C> Shader<S, C> {
     }
 }
 
-// pub trait ShaderAbstract {
-//     // fn entry_point(&self) -> dyn GraphicsEntryPointAbstract;
+// pub trait ShaderAbstract<S, C> {
+//     fn entry_point(&self) -> S;
+//     fn specialization_constants(&self) -> C;
 // }
 
 // This structure is to store multiple pipelines for different blend modes.

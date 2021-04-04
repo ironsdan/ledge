@@ -1,7 +1,6 @@
 pub struct Encoder<C> {
     command_buffer: C,
     render_pass_began: bool,
-    command_queue: Vec<GpuCommand>,
 }
 
 impl<C> Encoder<C> {

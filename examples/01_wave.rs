@@ -1,4 +1,3 @@
-use ledge_engine::interface::*;
 use ledge_engine::graphics::buffer::*;
 use winit::{
     event_loop::{ControlFlow},
@@ -16,6 +15,7 @@ use ledge_engine::graphics::shader::Shader;
 use ledge_engine::graphics::context::GraphicsContext;
 use ledge_engine::conf::Conf;
 use vulkano::pipeline::vertex::SingleBufferDefinition;
+use ledge_engine::graphics::DescriptorBuilder;
 
 #[derive(Default, Copy, Clone)]
 struct ParticleVertex {
@@ -67,6 +67,8 @@ fn main() {
     };
     
     let mvp = BufferAttribute::from_data(mvp_data, graphics_context.device.clone());
+
+    // let descriptor_test = DescriptorBuilder::new(&pipeline);
 
     let descriptor = Arc::new(
         PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).unwrap().clone())
