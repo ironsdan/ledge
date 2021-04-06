@@ -1,11 +1,9 @@
 use vulkano::{
-    buffer::CpuBufferPool,
     command_buffer::{AutoCommandBufferBuilder, DynamicState},
     device::{Device, DeviceExtensions},
-    framebuffer::{Subpass, RenderPassAbstract},
+    framebuffer::{RenderPassAbstract},
     image::ImageUsage,
     instance::{Instance, PhysicalDevice},
-    pipeline::{GraphicsPipeline, GraphicsPipelineAbstract},
     sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode},
     swapchain::{
         self, AcquireError, ColorSpace, FullscreenExclusive, PresentMode, SurfaceTransform, Swapchain,
@@ -15,20 +13,8 @@ use vulkano::{
     command_buffer::pool::standard::StandardCommandPoolBuilder,
     swapchain::SwapchainAcquireFuture,
     command_buffer::SubpassContents,
-    instance::debug::{DebugCallback, MessageSeverity, MessageType},
-    instance::{self, InstanceExtensions},
+    instance::InstanceExtensions,
 };
-use vulkano::descriptor::descriptor_set::PersistentDescriptorSetImg;
-use vulkano::descriptor::descriptor_set::PersistentDescriptorSetSampler;
-use vulkano::descriptor::descriptor_set::PersistentDescriptorSetBuf;
-// use vulkano::buffer::cpu_pool::CpuBufferPoolSubbuffer;
-use vulkano::buffer::cpu_pool::CpuBufferPoolChunk;
-use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
-use vulkano::image::ImmutableImage;
-use vulkano::format::Format;
-use vulkano::pipeline::vertex::OneVertexOneInstanceDefinition;
-use vulkano::memory::pool::StdMemoryPool;
-use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer};
 use vulkano::{
     framebuffer::{Framebuffer, FramebufferAbstract},
     image::SwapchainImage,
@@ -41,29 +27,7 @@ use winit::{
     dpi::PhysicalSize,
 };
 use std::sync::Arc;
-
-use cgmath::{
-    Matrix4,
-    Rad,
-    Angle,
-    Deg,
-};
-
-use crate::{
-    graphics::{Vertex, InstanceData, shader::PipelineObject, BlendMode},
-    conf::*,
-    // graphics::{vs, fs},
-};
-
-// type MvpUniform = vs::ty::mvp;
-
-// #[derive(Default)]
-// pub struct FrameData {
-//     pub blend_mode: BlendMode,
-//     pub vbuf: Option<CpuBufferPoolChunk<Vertex, Arc<StdMemoryPool>>>,
-//     pub instance_data: Option<CpuBufferPoolChunk<InstanceData, Arc<StdMemoryPool>>>,
-//     pub uniform_descriptor_set: Option<Arc<PersistentDescriptorSet<((((), PersistentDescriptorSetBuf<Arc<CpuAccessibleBuffer<vs::ty::mvp>>>), PersistentDescriptorSetImg<Arc<ImmutableImage<Format>>>), PersistentDescriptorSetSampler)>>>,
-// }
+use crate::conf::*;
 
 pub struct GraphicsContext {
     pub queue: std::sync::Arc<vulkano::device::Queue>,
@@ -74,12 +38,6 @@ pub struct GraphicsContext {
     pub framebuffers: std::vec::Vec<std::sync::Arc<dyn vulkano::framebuffer::FramebufferAbstract + std::marker::Send + std::marker::Sync>>,
     pub render_pass: std::sync::Arc<dyn RenderPassAbstract + std::marker::Send + std::marker::Sync>,
     pub dynamic_state: vulkano::command_buffer::DynamicState,
-    pub vertex_buffer_pool: vulkano::buffer::CpuBufferPool<Vertex>,
-    pub instance_buffer_pool: vulkano::buffer::CpuBufferPool<InstanceData>,
-    // pub mvp_buffer: std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<MvpUniform>>,
-    // pub frame_data: FrameData,
-    pub default_pipeline_id: usize, 
-    // pub pipeline_sets: Vec<PipelineObjectSet>,
     pub image_num: usize,
     pub acquire_future: Option<SwapchainAcquireFuture<Window>>,
     pub recreate_swapchain: bool,
@@ -163,33 +121,6 @@ impl GraphicsContext {
             .unwrap()
         };
 
-        vulkano::impl_vertex!(Vertex, a_pos, a_uv, a_vert_color);
-        vulkano::impl_vertex!(InstanceData, a_src, a_color, a_transform);
-
-        // let vs = vs::Shader::load(device.clone()).unwrap();
-        // let fs = fs::Shader::load(device.clone()).unwrap();
-
-        // Vertex Buffer Pool
-        let vertex_buffer_pool: CpuBufferPool<Vertex> = CpuBufferPool::vertex_buffer(device.clone());
-
-        let instance_buffer_pool: CpuBufferPool<InstanceData> = CpuBufferPool::vertex_buffer(device.clone());
-
-        // let rot = Deg(90.0);
-        
-        // Model View Projection buffer
-        // let mut camera = crate::graphics::camera::PerspectiveCamera::default();
-
-        // // camera.rotate_x(rot);
-        // camera.translate_z(100.0);
-
-        // let default_mvp_mat = MvpUniform { 
-        //     model: camera.model_array(),
-        //     view: camera.view_array(),
-        //     projection: camera.proj_array(),
-        // };
-
-        // let mvp_buffer = CpuAccessibleBuffer::from_data(device.clone(), BufferUsage::uniform_buffer_transfer_destination(), false, default_mvp_mat).unwrap();
-        
         let render_pass = Arc::new(
             vulkano::single_pass_renderpass!(device.clone(),
                 attachments: {
@@ -208,39 +139,7 @@ impl GraphicsContext {
             .unwrap(),
         );
 
-        // vulkano::impl_vertex!(Vertex, a_pos, a_uv, a_vert_color);
-        // vulkano::impl_vertex!(InstanceData, a_src, a_color, a_transform);
-
-        // let vs = vs::Shader::load(device.clone()).unwrap();
-        // let fs = fs::Shader::load(device.clone()).unwrap();
-
-        // let pipeline = Arc::new(
-        //     GraphicsPipeline::start()
-        //         .vertex_input(OneVertexOneInstanceDefinition::<Vertex, InstanceData>::new())
-        //         .vertex_shader(vs.main_entry_point(), ())
-        //         .triangle_strip()
-        //         .viewports_dynamic_scissors_irrelevant(1)
-        //         .fragment_shader(fs.main_entry_point(), ())
-        //         .blend_alpha_blending()
-        //         .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
-        //         .build(device.clone())
-        //         .unwrap()
-        // ) as Arc<dyn GraphicsPipelineAbstract + Send + Sync>;
-
-        // let pipeline_object = PipelineObject::from_pipeline(pipeline);
-        // let mut pipeline_sets = PipelineObjectSet::new(128);
-        // pipeline_sets.insert(BlendMode::Alpha, pipeline_object);
-
-        let default_pipeline_id = 0;
-        
-        let mut dynamic_state = DynamicState {
-            line_width: None,
-            viewports: None,
-            scissors: None,
-            compare_mask: None,
-            write_mask: None,
-            reference: None,
-        };
+        let mut dynamic_state = DynamicState::none();
 
         let sampler = Sampler::new( 
             device.clone(),
@@ -257,11 +156,8 @@ impl GraphicsContext {
 
         let framebuffers =
             window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
-
-        // let frame_data = FrameData{ vbuf: None, instance_data: None, uniform_descriptor_set: None, blend_mode: BlendMode::Alpha };
-
         
-        let mut graphics = Self {
+        let graphics = Self {
             queue,
             surface,
             device,
@@ -270,12 +166,6 @@ impl GraphicsContext {
             framebuffers,
             render_pass,
             dynamic_state,
-            vertex_buffer_pool,
-            instance_buffer_pool, 
-            // mvp_buffer,
-            // frame_data,
-            default_pipeline_id,
-            // pipeline_sets: vec![pipeline_sets],
             image_num: 0,
             acquire_future: None,
             previous_frame_end: Some(default_future),
@@ -355,11 +245,9 @@ impl GraphicsContext {
         let command_buffer = self.command_buffer.take().unwrap().build().unwrap();
 
         let future = self.previous_frame_end
-            .take()
-            .unwrap()
+            .take().unwrap()
             .join(self.acquire_future.take().unwrap())
-            .then_execute(self.queue.clone(), command_buffer)
-            .unwrap()
+            .then_execute(self.queue.clone(), command_buffer).unwrap()
             .then_swapchain_present(self.queue.clone(), self.swapchain.clone(), self.image_num);
 
         let future = future.then_signal_fence_and_flush();
@@ -379,13 +267,7 @@ impl GraphicsContext {
         };
 
         // Limit the frame rate since PresentMode::Immediate has to be used.
-        // self.create_command_buffer();
-        // self.begin_frame();
     }
-
-    // pub fn get_default_pipeline(&self) -> &PipelineObject {
-    //     self.pipeline_sets[self.default_pipeline_id].get(&self.frame_data.blend_mode).unwrap()
-    // }
 }
 
 // This method is called once during initialization, then again whenever the window is resized

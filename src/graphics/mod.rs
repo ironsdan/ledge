@@ -21,6 +21,7 @@ use cgmath::{
 use vulkano::{
     descriptor::descriptor_set::PersistentDescriptorSet,
     descriptor::descriptor_set::PersistentDescriptorSetBuilder,
+    descriptor::descriptor_set::PersistentDescriptorSetBuf,
     pipeline::GraphicsPipelineAbstract,
 };
 
@@ -271,20 +272,33 @@ impl Rect {
     }
 }
 
-pub struct Descriptor<T> {
-    inner: T,
+pub struct DescriptorBuilder<R> {
+    builder: PersistentDescriptorSetBuilder<R>,
     attributes: HashMap<String, Box<dyn BufferAccess>>,
 }
 
-pub struct DescriptorBuilder {
-    inner: PersistentDescriptorSetBuilder<()>,
-    // attributes: HashMap<String, Box<dyn BufferAccess>>,
-}
-
-impl DescriptorBuilder {
-    pub fn new(pipeline: &Arc<GraphicsPipelineAbstract>) -> Self {
+impl DescriptorBuilder<()> {
+    pub fn new(pipeline: &Arc<dyn GraphicsPipelineAbstract + Send + Sync>) -> Self {
         Self {
-            inner: PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).unwrap().clone())
+            builder: PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).unwrap().clone()),
+            attributes: HashMap::new(),
         }
     }
+}
+
+impl<R> DescriptorBuilder<R> {
+    pub fn add<T>(self, buffer: T) -> DescriptorBuilder<(R, PersistentDescriptorSetBuf<T>)>
+    where
+        T: BufferAccess
+    {
+        let builder = self.builder.add_buffer(buffer).unwrap();
+        DescriptorBuilder {
+            builder,
+            attributes: self.attributes
+        }
+    }
+
+    // pub fn build(self) -> PersistentDescriptorSet<R, StdDescriptorPoolAlloc> {
+
+    // }
 }

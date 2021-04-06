@@ -36,39 +36,49 @@ pub mod fs {
     vulkano_shaders::shader! {
         ty: "fragment",
         path: "src/particle.frag",
+        // dump: true,
     }
 }
 
+#[derive(Clone, Copy)]
+#[allow(unused)]
+struct CameraMvp {
+    model: [[f32; 4]; 4],
+    view: [[f32; 4]; 4],
+    proj: [[f32; 4]; 4],
+}
+
 const SEPARATION: f32 = 12.0;
-const AMOUNTX: isize = 100;
-const AMOUNTY: isize = 100;
+const AMOUNTX: isize = 50;
+const AMOUNTY: isize = 50;
 
 fn main() {
-    let (mut graphics_context, event_loop) = GraphicsContext::new(Conf::new("Wave"));
+    let (mut context, event_loop) = GraphicsContext::new(Conf::new("Wave"));
 
-    let vs = vs::Shader::load(graphics_context.device.clone()).unwrap();
-    let fs = fs::Shader::load(graphics_context.device.clone()).unwrap();
+    let vs = vs::Shader::load(context.device.clone()).unwrap();
+    let fs = fs::Shader::load(context.device.clone()).unwrap();
 
     let vertex_shader = Shader::new(vs.main_entry_point(), ());
     let fragment_shader = Shader::new(fs.main_entry_point(), ());
 
-    let pipeline = PipelineObject::new(&mut graphics_context, SingleBufferDefinition::<ParticleVertex>::new(), vertex_shader, fragment_shader);
+    let pipeline = PipelineObject::new(&mut context, SingleBufferDefinition::<ParticleVertex>::new(), vertex_shader, fragment_shader);
 
     let mut camera = PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0);
     camera.rotate_x(Deg(20.0));
     camera.translate_z(100.0);
 
-    let color = BufferAttribute::from_data([1.0 as f32, 1.0 as f32, 1.0 as f32], graphics_context.device.clone());
+    let color = BufferAttribute::from_data([1.0 as f32, 1.0 as f32, 1.0 as f32], context.device.clone());
     
-    let mvp_data = vs::ty::mvp {
+    let mvp_data = CameraMvp {
         model: camera.model_array(),
         view: camera.view_array(),
-        projection: camera.proj_array(),
+        proj: camera.proj_array(),
     };
     
-    let mvp = BufferAttribute::from_data(mvp_data, graphics_context.device.clone());
+    let mvp = BufferAttribute::from_data(mvp_data, context.device.clone());
 
-    // let descriptor_test = DescriptorBuilder::new(&pipeline);
+    let descriptor_test = DescriptorBuilder::new(&pipeline);
+    descriptor_test.add(color.inner.clone());
 
     let descriptor = Arc::new(
         PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).unwrap().clone())
@@ -81,7 +91,7 @@ fn main() {
     let mut count = 0.0;
 
     event_loop.run(move |event, _, control_flow| {
-        let graphics_context = &mut graphics_context;
+        let context = &mut context;
         let now = std::time::Instant::now();
         
         match event {
@@ -90,48 +100,41 @@ fn main() {
                     *control_flow = ControlFlow::Exit;
                 },
                 WindowEvent::Resized(_) => {
-                    graphics_context.recreate_swapchain = true;
+                    context.recreate_swapchain = true;
                 },
                 _ => {},
             },
-            Event::DeviceEvent { event, .. } => match event {
-                _ => (),
-            },
-            Event::Resumed => {},
-            Event::Suspended => {},
-            Event::NewEvents(_) => {},
-            Event::UserEvent(_) => {},
-            Event::LoopDestroyed => {},
             Event::MainEventsCleared => { 
-                graphics_context.create_command_buffer();
+                context.create_command_buffer();
 
-                let particles = update(graphics_context, &mut count);
+                let particles = update(context, &mut count);
             
-                graphics_context.begin_frame();
+                context.begin_frame();
 
-                graphics_context.command_buffer.as_mut().unwrap().draw(
+                context.command_buffer.as_mut().unwrap().draw(
                     pipeline.clone(),
-                    &graphics_context.dynamic_state,
+                    &context.dynamic_state,
                     vec![Arc::new(particles.clone())],
                     descriptor.clone(),
                     (), vec![],
                 ).unwrap();
 
-                graphics_context.present();
+                context.present();
 
-                let mut sleep_time = 0.016 - now.elapsed().as_secs_f32();
+                let mut sleep_time: f64 = 0.016 - now.elapsed().as_secs_f64();
                 if sleep_time < 0.0 {
                     sleep_time = 0.0
                 }
-                std::thread::sleep(std::time::Duration::from_secs_f32(sleep_time));
+
+                std::thread::sleep(std::time::Duration::from_secs_f64(sleep_time));
+                print!("{:.2}\r", now.elapsed().as_secs_f32() * 1000.0);
             },
-            Event::RedrawRequested(_) => {},
-            Event::RedrawEventsCleared => {},
+            _ => {}
         }
     });
 }
 
-fn update(graphics_context: &mut GraphicsContext, count: &mut f32) -> std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<[ParticleVertex; (AMOUNTX * AMOUNTY) as usize]>> {
+fn update(context: &mut GraphicsContext, count: &mut f32) -> std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<[ParticleVertex; (AMOUNTX * AMOUNTY) as usize]>> {
     let mut i = 0;
     let mut particle_data = [ParticleVertex::default(); (AMOUNTX * AMOUNTY) as usize];
     
@@ -154,7 +157,7 @@ fn update(graphics_context: &mut GraphicsContext, count: &mut f32) -> std::sync:
     }
     *count += 0.03;
     return CpuAccessibleBuffer::from_data(
-        graphics_context.device.clone(), 
+        context.device.clone(), 
         BufferUsage::vertex_buffer(), 
         false, 
         particle_data
