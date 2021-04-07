@@ -14,12 +14,12 @@ use vulkano::{
     swapchain::SwapchainAcquireFuture,
     command_buffer::SubpassContents,
     instance::InstanceExtensions,
-};
-use vulkano::{
     framebuffer::{Framebuffer, FramebufferAbstract},
     image::SwapchainImage,
     pipeline::viewport::Viewport,
     image::view::ImageView,
+    buffer::{BufferAccess, BufferUsage, CpuAccessibleBuffer},
+    descriptor::descriptor_set::DescriptorSet,
 };
 use vulkano_win::VkSurfaceBuild;
 use winit::{
@@ -27,7 +27,12 @@ use winit::{
     dpi::PhysicalSize,
 };
 use std::sync::Arc;
-use crate::conf::*;
+use crate::{
+    conf::*,
+    graphics::{PipelineData},
+    graphics::shader::ShaderHandle,
+    graphics::image::Image,
+};
 
 pub struct GraphicsContext {
     pub queue: std::sync::Arc<vulkano::device::Queue>,
@@ -43,7 +48,8 @@ pub struct GraphicsContext {
     pub recreate_swapchain: bool,
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
     pub command_buffer: Option<AutoCommandBufferBuilder<StandardCommandPoolBuilder>>,
-    pub now: Option<std::time::Instant>,
+
+    pub pipe_data: std::sync::Arc<PipelineData>,
 }
 
 impl GraphicsContext {
@@ -156,6 +162,23 @@ impl GraphicsContext {
 
         let framebuffers =
             window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
+
+        let pipe_data = Arc::new(PipelineData {
+            vert_buf: Arc::new(CpuAccessibleBuffer::from_data(
+                device.clone(),
+                BufferUsage::vertex_buffer(),
+                false,
+                &[0]
+            ).unwrap()),
+            texture: Image::empty(),
+            instance_data: Arc::new(CpuAccessibleBuffer::from_data(
+                device.clone(),
+                BufferUsage::vertex_buffer(),
+                false,
+                &[0]
+            ).unwrap()),
+            descriptor: None,
+        });
         
         let graphics = Self {
             queue,
@@ -171,7 +194,7 @@ impl GraphicsContext {
             previous_frame_end: Some(default_future),
             recreate_swapchain: false,
             command_buffer: None,
-            now: None,
+            pipe_data,
         };
     
         (graphics, event_loop)
@@ -189,7 +212,6 @@ impl GraphicsContext {
     // could be out of date and the command_buffer needs to be recreated each frame, as well as
     // Updating the image_num, optimality, and the swapcahin future.
     pub fn begin_frame(&mut self) {
-        self.now = Some(std::time::Instant::now());
         self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 
         if self.recreate_swapchain {
@@ -230,15 +252,9 @@ impl GraphicsContext {
         self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[self.image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
     }
 
-    // pub fn draw(&mut self) {
-    //     self.command_buffer.as_mut().unwrap().draw(
-    //         self.pipeline_sets[self.default_pipeline_id].get(&self.frame_data.blend_mode).unwrap().pipeline.clone(),
-    //         &self.dynamic_state,
-    //         vec!(Arc::new(self.frame_data.vbuf.as_ref().unwrap().clone()), Arc::new(self.frame_data.instance_data.as_ref().unwrap().clone())),
-    //         self.frame_data.uniform_descriptor_set.as_ref().unwrap().clone(),
-    //         (),
-    //     ).unwrap();
-    // }
+    pub fn draw(&mut self, vertices: Arc<dyn BufferAccess + Send + Sync>, shader_handle: Arc<dyn ShaderHandle>, descriptor: Arc<dyn DescriptorSet + Send + Sync>) {
+        shader_handle.draw(self, vertices, descriptor).unwrap();
+    }
 
     pub fn present(&mut self) {
         self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();

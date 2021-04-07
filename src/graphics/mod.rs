@@ -4,6 +4,7 @@ pub mod image;
 pub mod camera;
 pub mod buffer;
 pub mod material;
+pub mod error;
 
 use crate::graphics::context::GraphicsContext;
 use vulkano::buffer::BufferAccess;
@@ -23,30 +24,23 @@ use vulkano::{
     descriptor::descriptor_set::PersistentDescriptorSetBuilder,
     descriptor::descriptor_set::PersistentDescriptorSetBuf,
     pipeline::GraphicsPipelineAbstract,
+    descriptor::descriptor_set::DescriptorSet,
 };
 
 use std::sync::Arc;
+use crate::graphics::image::Image;
 
-// pub mod vs {
-//     vulkano_shaders::shader! {
-//         ty: "vertex",
-//         path: "src/graphics/texture.vert",
-//         // dump: true,
-//     }
-// }
 
-// pub mod fs {
-//     vulkano_shaders::shader! {
-//         ty: "fragment",
-//         path: "src/graphics/texture.frag"
-//     }
-// }
-
-#[derive(Clone, PartialEq, Hash, Eq)]
+#[derive(Clone, Copy, PartialEq, Hash, Eq)]
 pub enum BlendMode {
-    Default,
+    Add,
+    Subtract,
     Alpha,
-    
+    Invert,
+    // Multiply,
+    // Replace,
+    // Lighten,
+    // Darken,
 }
 
 pub trait Drawable {
@@ -154,7 +148,7 @@ impl Transform {
 
     fn rotate_value(&mut self, r: Rad<f32>) {
         match self {
-            Transform::Matrix(mat) => {}
+            Transform::Matrix(_) => {}
             Transform::Components {
                 rotation,
                 ..
@@ -297,8 +291,12 @@ impl<R> DescriptorBuilder<R> {
             attributes: self.attributes
         }
     }
+}
 
-    // pub fn build(self) -> PersistentDescriptorSet<R, StdDescriptorPoolAlloc> {
-
-    // }
+#[allow(unused)]
+pub struct PipelineData {
+    vert_buf: Arc<dyn BufferAccess>,
+    texture: Image,
+    instance_data: Arc<dyn BufferAccess>,
+    descriptor: Option<Arc<dyn DescriptorSet>>,
 }

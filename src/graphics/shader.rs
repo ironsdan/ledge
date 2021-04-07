@@ -9,6 +9,17 @@ use vulkano::pipeline::shader::SpecializationConstants;
 use crate::graphics::context::GraphicsContext;
 use vulkano::pipeline::vertex::VertexDefinition;
 use vulkano::pipeline::shader::EntryPointAbstract;
+use std::collections::HashMap;
+use crate::graphics::BlendMode;
+use vulkano::buffer::BufferAccess;
+use crate::graphics::error::*;
+use vulkano::pipeline::blend::AttachmentBlend;
+use vulkano::pipeline::blend::AttachmentsBlend;
+use vulkano::pipeline::blend::Blend;
+use vulkano::pipeline::blend::LogicOp;
+use vulkano::pipeline::blend::BlendOp;
+use vulkano::pipeline::blend::BlendFactor;
+use vulkano::descriptor::descriptor_set::DescriptorSet;
 
 pub struct Shader<S, C> {
     pub entry_point: S,
@@ -24,36 +35,155 @@ impl<S, C> Shader<S, C> {
     }
 }
 
-// pub trait ShaderAbstract<S, C> {
-//     fn entry_point(&self) -> S;
-//     fn specialization_constants(&self) -> C;
-// }
+pub struct ShaderProgram {
+    // buffer: Arc<dyn BufferAccess>,
+    pipelines: PipelineObjectSet,
+    current_mode: BlendMode,
+}
+
+pub trait ShaderHandle {
+    fn draw(&self, context: &mut GraphicsContext, slice: Arc<dyn BufferAccess + Send + Sync>, descriptor: Arc<dyn DescriptorSet + Send + Sync>) -> Result<(), GraphicsError>;
+    fn set_blend_mode(&mut self, mode: BlendMode) -> Result<(), GraphicsError>;
+    fn blend_mode(&self) -> BlendMode;
+}
+
+impl ShaderHandle for ShaderProgram {
+    fn draw(&self, context: &mut GraphicsContext, slice: Arc<dyn BufferAccess + Send + Sync>, descriptor: Arc<dyn DescriptorSet + Send + Sync>) -> Result<(), GraphicsError> {
+        let pipeline = self.pipelines.mode(&self.current_mode)?;
+        context.command_buffer.as_mut().unwrap().draw(
+            pipeline.clone(),
+            &context.dynamic_state,
+            vec![Arc::new(slice.clone())],
+            descriptor.clone(),
+            (), vec![], // TODO implement push constants.
+        ).unwrap(); // TODO fix to return useful error.
+        Ok(())
+    }
+
+    fn set_blend_mode(&mut self, mode: BlendMode) -> Result<(), GraphicsError> {
+        let _ = self.pipelines.mode(&mode)?;
+        self.current_mode = mode;
+        Ok(())
+    }
+
+    fn blend_mode(&self) -> BlendMode {
+        self.current_mode
+    }
+}
+
+impl ShaderProgram {
+    pub fn new(mode: BlendMode, pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync>) -> Self {
+        let mut pipeline_os = PipelineObjectSet::new(16);
+        pipeline_os.insert(mode, pipeline);
+        Self {
+            pipelines: pipeline_os,
+            current_mode: mode,
+        }
+    }
+}
+
 
 // This structure is to store multiple pipelines for different blend modes.
-// pub struct PipelineObjectSet {
-//     pipelines: HashMap<BlendMode, PipelineObject>,
-// }
+pub struct PipelineObjectSet {
+    pipelines: HashMap<BlendMode, Arc<dyn GraphicsPipelineAbstract + Send + Sync>>,
+}
 
-// impl PipelineObjectSet {
-//     pub fn new(cap: usize) -> Self {
-//         Self {
-//             pipelines: HashMap::with_capacity(cap),
-//         }
-//     }
+impl PipelineObjectSet {
+    pub fn new(cap: usize) -> Self {
+        Self {
+            pipelines: HashMap::with_capacity(cap),
+        }
+    }
 
-//     pub fn insert(&mut self, blend_mode: BlendMode, pipeline: PipelineObject) {
-//         self.pipelines.insert(blend_mode, pipeline);
-//     }
+    pub fn insert(&mut self, blend_mode: BlendMode, pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync>) {
+        self.pipelines.insert(blend_mode, pipeline);
+    }
 
-//     pub fn get(&self, blend_mode: &BlendMode) -> Option<&PipelineObject> {
-//         self.pipelines.get(blend_mode)
-//     }
-// }
+    pub fn get(&self, blend_mode: &BlendMode) -> Option<&Arc<dyn GraphicsPipelineAbstract + Send + Sync>> {
+        self.pipelines.get(blend_mode)
+    }
+
+    pub fn mode(&self, mode: &BlendMode) -> Result<&Arc<dyn GraphicsPipelineAbstract + Send + Sync>, GraphicsError> {
+        match self.pipelines.get(&mode) {
+            Some(po) => Ok(po),
+            None => Err(GraphicsError::PipelineError(
+                "Couldn't find a pipeline for the specified shader and BlendMode".into(),
+            )),
+        }
+    }
+}
+
+impl From<BlendMode> for Blend {
+    fn from(blend_mode: BlendMode) -> Self {
+        let mut logic_op: Option<LogicOp> = None;
+        let mut attachments: AttachmentBlend = AttachmentBlend::ignore_source();
+        let blend_constants: Option<[f32; 4]> = Some([1.0, 1.0, 1.0, 1.0]); // TODO implement these.
+
+        match blend_mode {
+            BlendMode::Add => {
+                attachments = AttachmentBlend {
+                    enabled: true,
+                    color_op: BlendOp::Add,
+                    color_source: BlendFactor::One,
+                    color_destination: BlendFactor::One,
+                    alpha_op: BlendOp::Add,
+                    alpha_source: BlendFactor::One,
+                    alpha_destination: BlendFactor::One,
+                    mask_red: true,
+                    mask_green: true,
+                    mask_blue: true,
+                    mask_alpha: true,
+                };
+            },
+            BlendMode::Subtract => {
+                attachments = AttachmentBlend {
+                    enabled: true,
+                    color_op: BlendOp::Subtract,
+                    color_source: BlendFactor::One,
+                    color_destination: BlendFactor::One,
+                    alpha_op: BlendOp::Subtract,
+                    alpha_source: BlendFactor::One,
+                    alpha_destination: BlendFactor::One,
+                    mask_red: true,
+                    mask_green: true,
+                    mask_blue: true,
+                    mask_alpha: true,
+                };
+            },
+            BlendMode::Alpha => {
+                attachments = AttachmentBlend::alpha_blending();
+            },
+            BlendMode::Invert => {
+                logic_op = Some(LogicOp::Invert);
+            },
+        };
+
+        return Blend {
+            logic_op,
+            attachments: AttachmentsBlend::Collective(attachments),
+            blend_constants,
+        }
+    }
+}
+
+impl From<BlendMode> for AttachmentBlend {
+    fn from(blend_mode: BlendMode) -> AttachmentBlend {
+        let blend: Blend = blend_mode.into();
+        match blend.attachments {
+            AttachmentsBlend::Collective(attachment) => {
+                attachment
+            },
+            _ => {
+                AttachmentBlend::pass_through() // TODO Fix so it cannot fail.
+            }
+        }
+    }
+}
 
 pub struct PipelineObject {}
 
 impl PipelineObject {
-    pub fn new<Vd, Vs, Vss, Fs, Fss>(context: &mut GraphicsContext, vertex_type: Vd, vertex_shader: Shader<Vs, Vss>, fragment_shader: Shader<Fs, Fss>) 
+    pub fn new<Vd, Vs, Vss, Fs, Fss>(context: &mut GraphicsContext, vertex_type: Vd, vertex_shader: Shader<Vs, Vss>, fragment_shader: Shader<Fs, Fss>, blend: BlendMode) 
     -> Arc<dyn GraphicsPipelineAbstract + Send + Sync> 
     where
         Vd: VertexDefinition<Vs::InputDefinition> + 'static + Sync + Send,
@@ -71,7 +201,7 @@ impl PipelineObject {
                 .point_list()
                 .viewports_dynamic_scissors_irrelevant(1)
                 .fragment_shader(fragment_shader.entry_point, fragment_shader.specialization_constants)
-                .blend_alpha_blending()
+                .blend_collective(blend.into())
                 .render_pass(Subpass::from(context.render_pass.clone(), 0).unwrap())
                 .build(context.device.clone())
                 .unwrap()

@@ -1,3 +1,4 @@
+#[allow(unused)]
 pub struct WindowMode {
     pub(crate) width: f32,
     pub(crate) height: f32,
@@ -28,6 +29,7 @@ impl WindowMode {
     }
 }
 
+#[allow(unused)]
 pub struct WindowSetup {
     pub(crate) title: String,
     // samples:
@@ -47,10 +49,11 @@ impl WindowSetup {
     }
 }
 
+#[allow(unused)]
 enum FullscreenType {
     Windowed,
     TFullScreen,
-    WFullScreen
+    WFullScreen,
 }
 
 pub struct Conf {

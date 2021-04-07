@@ -14,8 +14,10 @@ use ledge_engine::graphics::shader::PipelineObject;
 use ledge_engine::graphics::shader::Shader;
 use ledge_engine::graphics::context::GraphicsContext;
 use ledge_engine::conf::Conf;
+use ledge_engine::graphics::BlendMode;
+use ledge_engine::graphics::shader::ShaderProgram;
+use ledge_engine::graphics::shader::ShaderHandle;
 use vulkano::pipeline::vertex::SingleBufferDefinition;
-use ledge_engine::graphics::DescriptorBuilder;
 
 #[derive(Default, Copy, Clone)]
 struct ParticleVertex {
@@ -61,13 +63,18 @@ fn main() {
     let vertex_shader = Shader::new(vs.main_entry_point(), ());
     let fragment_shader = Shader::new(fs.main_entry_point(), ());
 
-    let pipeline = PipelineObject::new(&mut context, SingleBufferDefinition::<ParticleVertex>::new(), vertex_shader, fragment_shader);
+    let pipeline = PipelineObject::new(&mut context, SingleBufferDefinition::<ParticleVertex>::new(), vertex_shader, fragment_shader, BlendMode::Alpha);
+
+    let shader_program = Arc::new(ShaderProgram::new(BlendMode::Alpha, pipeline.clone()));
 
     let mut camera = PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0);
     camera.rotate_x(Deg(20.0));
     camera.translate_z(100.0);
 
-    let color = BufferAttribute::from_data([1.0 as f32, 1.0 as f32, 1.0 as f32], context.device.clone());
+    let color = BufferAttribute::from_data(
+        [1.0 as f32, 1.0 as f32, 1.0 as f32], 
+        context.device.clone()
+    );
     
     let mvp_data = CameraMvp {
         model: camera.model_array(),
@@ -75,10 +82,10 @@ fn main() {
         proj: camera.proj_array(),
     };
     
-    let mvp = BufferAttribute::from_data(mvp_data, context.device.clone());
-
-    let descriptor_test = DescriptorBuilder::new(&pipeline);
-    descriptor_test.add(color.inner.clone());
+    let mvp = BufferAttribute::from_data(
+        mvp_data, 
+        context.device.clone()
+    );
 
     let descriptor = Arc::new(
         PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).unwrap().clone())
@@ -111,13 +118,9 @@ fn main() {
             
                 context.begin_frame();
 
-                context.command_buffer.as_mut().unwrap().draw(
-                    pipeline.clone(),
-                    &context.dynamic_state,
-                    vec![Arc::new(particles.clone())],
-                    descriptor.clone(),
-                    (), vec![],
-                ).unwrap();
+                context.draw(particles.clone(), shader_program.clone(), descriptor.clone());
+
+                // shader_program.draw(context, particles.clone(), descriptor.clone()).unwrap();
 
                 context.present();
 
@@ -140,7 +143,7 @@ fn update(context: &mut GraphicsContext, count: &mut f32) -> std::sync::Arc<vulk
     
     for ix in 0..AMOUNTX {
         for iy in 0..AMOUNTY {
-            let factor = 5.0;
+            let factor = 10.0;
             let scale = 2.0;
             let sin_ix = Rad((ix as f32 + *count) * 0.5).sin();
             let sin_iy = Rad((iy as f32 + *count) * 0.5).sin();

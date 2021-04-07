@@ -1,6 +1,7 @@
 use cgmath::{Matrix4, Vector4, Vector3, Rad, Deg};
 use cgmath::prelude::*;
 
+#[allow(unused)]
 pub struct PerspectiveCamera {
     fov: f32,
     aspect_ratio: f32,

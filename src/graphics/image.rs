@@ -1,5 +1,3 @@
-use crate::graphics::*;
-use crate::asset::handle::Handle;
 use crate::asset::types::Texture;
 use vulkano::sampler::Sampler;
 
@@ -7,21 +5,28 @@ use std::sync::Arc;
 
 #[derive(Clone, Default)]
 pub struct Image {
-    pub texture: Texture,
+    pub texture: Option<Texture>,
     sampler: Option<Arc<Sampler>>,
-    blend_mode: Option<BlendMode>,
     width: u32,
     height: u32,
 }
 
 impl Image {
-    pub fn new(texture: Texture, sampler: Arc<Sampler>, blend_mode: BlendMode, width: u32, height: u32,) -> Self {
+    pub fn new(texture: Texture, sampler: Arc<Sampler>, width: u32, height: u32,) -> Self {
         Self {
-            texture,
+            texture: Some(texture),
             sampler: Some(sampler),
-            blend_mode: Some(blend_mode),
             width,
             height,
+        }
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            texture: None,
+            sampler: None,
+            width: 0,
+            height: 0,
         }
     }
 }
