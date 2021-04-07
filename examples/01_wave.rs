@@ -30,14 +30,14 @@ vulkano::impl_vertex!(ParticleVertex, position, scale);
 pub mod vs {
     vulkano_shaders::shader! {
         ty: "vertex",
-        path: "src/particle.vert",
+        path: "examples/shaders/particle.vert",
     }
 }
 
 pub mod fs {
     vulkano_shaders::shader! {
         ty: "fragment",
-        path: "src/particle.frag",
+        path: "examples/shaders/particle.frag",
         // dump: true,
     }
 }
