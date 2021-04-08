@@ -10,7 +10,7 @@ layout(binding=0,set=0) uniform color {
 
 float edgeFactor() {
     vec3 d = fwidth(vbc);
-    vec3 f = smoothstep(vec3(0.0), d * 1.0, vbc);
+    vec3 f = smoothstep(vec3(0.0), d * 2.0, vbc);
     return min(min(f.x, f.y), f.z);
 }
 

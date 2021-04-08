@@ -63,16 +63,16 @@ fn main() {
     let vertex_shader = Shader::new(vs.main_entry_point(), ());
     let fragment_shader = Shader::new(fs.main_entry_point(), ());
 
-    let po = PipelineObject::new(
+    let po = Arc::new(PipelineObject::new(
         &mut context, 
         SingleBufferDefinition::<ParticleVertex>::new(), 
         VertexOrder::PointList,
         vertex_shader, 
         fragment_shader, 
         BlendMode::Alpha
-    );
+    ));
 
-    let shader_program = Arc::new(ShaderProgram::new(BlendMode::Alpha, po.pipeline.clone()));
+    let shader_program = Arc::new(ShaderProgram::new(BlendMode::Alpha, po.clone()));
 
     let mut camera = PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0);
     camera.rotate_x(Deg(20.0));

@@ -58,9 +58,9 @@ pub trait ShaderHandle {
 
 impl ShaderHandle for ShaderProgram {
     fn draw(&self, context: &mut GraphicsContext, slice: Arc<dyn BufferAccess + Send + Sync>, descriptor: Arc<dyn DescriptorSet + Send + Sync>) -> Result<(), GraphicsError> {
-        let pipeline = self.pipelines.mode(&self.current_mode)?;
+        let po = self.pipelines.mode(&self.current_mode)?;
         context.command_buffer.as_mut().unwrap().draw(
-            pipeline.clone(),
+            po.pipeline.clone(),
             &context.dynamic_state,
             vec![Arc::new(slice.clone())],
             descriptor.clone(),
@@ -81,7 +81,7 @@ impl ShaderHandle for ShaderProgram {
 }
 
 impl ShaderProgram {
-    pub fn new(mode: BlendMode, pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync>) -> Self {
+    pub fn new(mode: BlendMode, pipeline: Arc<PipelineObject>) -> Self {
         let mut pipeline_os = PipelineObjectSet::new(16);
         pipeline_os.insert(mode, pipeline);
         Self {
@@ -94,7 +94,7 @@ impl ShaderProgram {
 
 // This structure is to store multiple pipelines for different blend modes.
 pub struct PipelineObjectSet {
-    pipelines: HashMap<BlendMode, Arc<dyn GraphicsPipelineAbstract + Send + Sync>>,
+    pipelines: HashMap<BlendMode, Arc<PipelineObject>>,
 }
 
 impl PipelineObjectSet {
@@ -104,15 +104,15 @@ impl PipelineObjectSet {
         }
     }
 
-    pub fn insert(&mut self, blend_mode: BlendMode, pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync>) {
+    pub fn insert(&mut self, blend_mode: BlendMode, pipeline: Arc<PipelineObject>) {
         self.pipelines.insert(blend_mode, pipeline);
     }
 
-    pub fn get(&self, blend_mode: &BlendMode) -> Option<&Arc<dyn GraphicsPipelineAbstract + Send + Sync>> {
+    pub fn get(&self, blend_mode: &BlendMode) -> Option<&Arc<PipelineObject>> {
         self.pipelines.get(blend_mode)
     }
 
-    pub fn mode(&self, mode: &BlendMode) -> Result<&Arc<dyn GraphicsPipelineAbstract + Send + Sync>, GraphicsError> {
+    pub fn mode(&self, mode: &BlendMode) -> Result<&Arc<PipelineObject>, GraphicsError> {
         match self.pipelines.get(&mode) {
             Some(po) => Ok(po),
             None => Err(GraphicsError::PipelineError(
