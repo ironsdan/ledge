@@ -7,56 +7,20 @@ pub struct PerspectiveCamera {
     aspect_ratio: f32,
     near: f32,
     far: f32,
-    model: Matrix4<f32>,
-    view: Matrix4<f32>,
-    proj: Matrix4<f32>,
+    pub model: Matrix4<f32>,
+    pub view: Matrix4<f32>,
+    pub proj: Matrix4<f32>,
 }
 
 impl Default for PerspectiveCamera {
     fn default() -> Self {
         let fov: f32 = 75.0;
         let angle_rad: Rad<f32> = Deg(fov).into();
-        let focal_length = 1.0 / Rad::tan(angle_rad/2.0);
         let aspect_ratio = 4.0/3.0;
         let n = 5.0;
         let f = 1000.0;
 
-
-        let model_x = Vector4::new(1.0, 0.0, 0.0, 0.0);
-        let model_y = Vector4::new(0.0, 1.0, 0.0, 0.0);
-        let model_z = Vector4::new(0.0, 0.0, 1.0, 0.0);
-        let model_w = Vector4::new(0.0, 0.0, 0.0, 1.0);
-        
-        let model = Matrix4::from_cols(model_x, model_y, model_z, model_w);
-
-        let view_x = Vector4::new(1.0, 0.0, 0.0, 0.0);
-        let view_y = Vector4::new(0.0, 1.0, 0.0, 0.0);
-        let view_z = Vector4::new(0.0, 0.0, 1.0, 0.0);
-        let view_w = Vector4::new(0.0, 20.0, 600.0, 1.0);
-        
-        let view = Matrix4::from_cols(view_x, view_y, view_z, view_w);
-
-        let c0r0 = focal_length / aspect_ratio;
-        let c1r1 = -focal_length;
-        let c2r2 = (-f) / (f - n);
-        let c3r2 = (f * n) / (f - n);
-
-        let proj_x = Vector4::new(c0r0, 0.0, 0.0, 0.0);
-        let proj_y = Vector4::new(0.0, c1r1, 0.0, 0.0);
-        let proj_z = Vector4::new(0.0, 0.0, c2r2, -1.0);
-        let proj_w = Vector4::new(0.0, 0.0, c3r2, 0.0);
-
-        let proj = Matrix4::from_cols(proj_x, proj_y, proj_z, proj_w);
-
-        Self {
-            fov,
-            aspect_ratio,
-            near: n,
-            far: f,
-            model: model,
-            view: view,
-            proj: proj,
-        }
+        PerspectiveCamera::new(fov, aspect_ratio, n, f)
     }
 }
 
@@ -67,7 +31,6 @@ impl PerspectiveCamera {
         let n = near;
         let f = far;
 
-
         let model_x = Vector4::new(1.0, 0.0, 0.0, 0.0);
         let model_y = Vector4::new(0.0, 1.0, 0.0, 0.0);
         let model_z = Vector4::new(0.0, 0.0, 1.0, 0.0);
@@ -78,11 +41,11 @@ impl PerspectiveCamera {
         let view_x = Vector4::new(1.0, 0.0, 0.0, 0.0);
         let view_y = Vector4::new(0.0, 1.0, 0.0, 0.0);
         let view_z = Vector4::new(0.0, 0.0, 1.0, 0.0);
-        let view_w = Vector4::new(0.0, 20.0, 600.0, 1.0);
+        let view_w = Vector4::new(0.0, 0.0, 0.0, 1.0);
         
         let view = Matrix4::from_cols(view_x, view_y, view_z, view_w);
 
-        let c0r0 = focal_length / aspect_ratio;
+        let c0r0 = -focal_length / aspect_ratio;
         let c1r1 = -focal_length;
         let c2r2 = (-f) / (f - n);
         let c3r2 = (f * n) / (f - n);

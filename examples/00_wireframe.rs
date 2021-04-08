@@ -7,7 +7,6 @@ use vulkano::{
     descriptor::descriptor_set::PersistentDescriptorSet,
     buffer::{BufferUsage, CpuAccessibleBuffer},
 };
-use cgmath::{Deg, Rad, Angle};
 use std::sync::Arc;
 use ledge_engine::graphics::camera::PerspectiveCamera;
 use ledge_engine::graphics::shader::PipelineObject;
@@ -20,24 +19,24 @@ use vulkano::pipeline::vertex::SingleBufferDefinition;
 use ledge_engine::graphics::shader::VertexOrder;
 
 #[derive(Default, Copy, Clone)]
-struct ParticleVertex {
+struct Vertex {
     position: [f32; 3],
-    scale: f32,
+    barycenter: [f32; 3],
 }
 
-vulkano::impl_vertex!(ParticleVertex, position, scale);
+vulkano::impl_vertex!(Vertex, position, barycenter);
 
 pub mod vs {
     vulkano_shaders::shader! {
         ty: "vertex",
-        path: "examples/shaders/particle.vert",
+        path: "examples/shaders/wireframe.vert",
     }
 }
 
 pub mod fs {
     vulkano_shaders::shader! {
         ty: "fragment",
-        path: "examples/shaders/particle.frag",
+        path: "examples/shaders/wireframe.frag",
         // dump: true,
     }
 }
@@ -50,9 +49,17 @@ struct CameraMvp {
     proj: [[f32; 4]; 4],
 }
 
-const SEPARATION: f32 = 12.0;
-const AMOUNTX: isize = 50;
-const AMOUNTY: isize = 50;
+fn calc_barycenter(length: usize) -> Vec<[f32; 3]> {
+    let n = length / 3;
+    let mut barycenter = Vec::new();
+    for _ in 0..n {
+        barycenter.push([1.0, 0.0, 0.0]);
+        barycenter.push([0.0, 1.0, 0.0]);
+        barycenter.push([0.0, 0.0, 1.0]);
+    }
+
+    barycenter
+}
 
 fn main() {
     let (mut context, event_loop) = GraphicsContext::new(Conf::new("Wave"));
@@ -65,8 +72,8 @@ fn main() {
 
     let po = PipelineObject::new(
         &mut context, 
-        SingleBufferDefinition::<ParticleVertex>::new(), 
-        VertexOrder::PointList,
+        SingleBufferDefinition::<Vertex>::new(), 
+        VertexOrder::TriangleList,
         vertex_shader, 
         fragment_shader, 
         BlendMode::Alpha
@@ -74,15 +81,13 @@ fn main() {
 
     let shader_program = Arc::new(ShaderProgram::new(BlendMode::Alpha, po.pipeline.clone()));
 
-    let mut camera = PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0);
-    camera.rotate_x(Deg(20.0));
-    camera.translate_z(600.0);
+    let camera = PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 2000.0);
 
     let color = BufferAttribute::from_data(
         [1.0 as f32, 1.0 as f32, 1.0 as f32], 
         context.device.clone()
     );
-    
+ 
     let mvp_data = CameraMvp {
         model: camera.model_array(),
         view: camera.view_array(),
@@ -94,15 +99,46 @@ fn main() {
         context.device.clone()
     );
 
+    let barycenter = calc_barycenter(3);
+    let triangle = Arc::new(CpuAccessibleBuffer::from_data(
+        context.device.clone(), 
+        BufferUsage::vertex_buffer(), 
+        false, 
+        [
+            Vertex {
+                position: [0.0, 0.0, 200.0],
+                barycenter: barycenter[2],
+            },
+            Vertex {
+                position: [50.0, 0.0, 200.0],
+                barycenter: barycenter[0],
+            },
+            Vertex {
+                position: [50.0, -100.0, 200.0],
+                barycenter: barycenter[1],
+            },
+            Vertex {
+                position: [0.0, 0.0, 200.0],
+                barycenter: barycenter[2],
+            },
+            Vertex {
+                position: [-50.0, 0.0, 200.0],
+                barycenter: barycenter[0],
+            },
+            Vertex {
+                position: [-50.0, 100.0, 200.0],
+                barycenter: barycenter[1],
+            },
+        ]
+    ).unwrap());
+
     let descriptor = Arc::new(
         PersistentDescriptorSet::start(po.pipeline.descriptor_set_layout(0).unwrap().clone())
-            .add_buffer(color.inner.clone()).unwrap()
+            .add_buffer(color.inner.clone()).unwrap() 
             .add_buffer(mvp.inner.clone()).unwrap()
             .build()
             .unwrap(),
     );
-
-    let mut count = 0.0;
 
     event_loop.run(move |event, _, control_flow| {
         let context = &mut context;
@@ -121,13 +157,10 @@ fn main() {
             Event::MainEventsCleared => { 
                 context.create_command_buffer();
 
-                let particles = update(context, &mut count);
             
                 context.begin_frame();
 
-                context.draw(particles.clone(), shader_program.clone(), descriptor.clone());
-
-                // shader_program.draw(context, particles.clone(), descriptor.clone()).unwrap();
+                context.draw(triangle.clone(), shader_program.clone(), descriptor.clone());
 
                 context.present();
 
@@ -142,34 +175,4 @@ fn main() {
             _ => {}
         }
     });
-}
-
-fn update(context: &mut GraphicsContext, count: &mut f32) -> std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<[ParticleVertex; (AMOUNTX * AMOUNTY) as usize]>> {
-    let mut i = 0;
-    let mut particle_data = [ParticleVertex::default(); (AMOUNTX * AMOUNTY) as usize];
-    
-    for ix in 0..AMOUNTX {
-        for iy in 0..AMOUNTY {
-            let factor = 10.0;
-            let scale = 2.0;
-            let sin_ix = Rad((ix as f32 + *count) * 0.5).sin();
-            let sin_iy = Rad((iy as f32 + *count) * 0.5).sin();
-
-            particle_data[i].position[0] = (ix as f32 * SEPARATION) - (((AMOUNTX as f32 * SEPARATION) / 2.0));
-            particle_data[i].position[1] = ( sin_ix * factor) + ( sin_iy * factor);
-            particle_data[i].position[2] = (iy as f32 * SEPARATION) - (((AMOUNTY as f32 * SEPARATION) / 2.0));
-
-            particle_data[i].scale = ( sin_ix + 1.5 ) * scale +
-                            ( sin_iy + 1.5 ) * scale;
-
-            i += 1;
-        }
-    }
-    *count += 0.03;
-    return CpuAccessibleBuffer::from_data(
-        context.device.clone(), 
-        BufferUsage::vertex_buffer(), 
-        false, 
-        particle_data
-    ).unwrap()
 }
