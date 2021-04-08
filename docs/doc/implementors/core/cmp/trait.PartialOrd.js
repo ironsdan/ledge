@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["ledge_engine"] = [{"text":"impl&lt;A:&nbsp;PartialOrd&gt; PartialOrd&lt;Handle&lt;A&gt;&gt; for Handle&lt;A&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;A: Asset,&nbsp;</span>","synthetic":false,"types":[]},{"text":"impl PartialOrd&lt;HandleId&gt; for HandleId","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["PerspectiveCamera","A model of an ideal pinhole camera that follows perspective projection."]]});

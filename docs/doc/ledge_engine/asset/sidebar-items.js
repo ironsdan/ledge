@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["handle",""],["storage",""],["types",""]],"trait":[["Asset",""]]});

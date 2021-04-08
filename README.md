@@ -1,4 +1,4 @@
-# Ledge-Engine
+# ledge_engine
 ## Table of contents
 * [General info](#general-info)
 * [Technologies](#technologies)

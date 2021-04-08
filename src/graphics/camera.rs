@@ -2,20 +2,41 @@ use cgmath::{Matrix4, Vector4, Vector3, Rad, Deg};
 use cgmath::prelude::*;
 
 #[allow(unused)]
+/// A model of an ideal pinhole camera that follows perspective projection.
+///  
+/// Useful for 3D images where perspective is necessary. The struct contains methods for doing any
+/// common transformation on the camera by transforming the model, view, or projection component.
+/// 
+/// Note: Follows Vulkan tradition of x: (-1, 1), y: (-1, 1), z: (0, 1) starting at the top left-front (-1,-1, 0), 
+/// continuing with the consitency of Vulkan the camera looks down the POSITIVE z-direction rather than the negative
+/// that is the standard in OpenGL.
+/// 
+/// Note: Default values are fov: 75, aspect_ratio: 4.0/3.0, near: 5, far: 1000.
+/// 
+/// # Examples
+/// ```
+/// use ledge_engine::graphics::camera;
+/// use cgmath::Deg;
+///
+/// pub fn main() {
+///     let camera = camera::PerspectiveCamera::new(75, 800.0/600.0, 5, 1000);
+///     camera.rotate_x(Deg(20.0));
+///     camera.translate_z(100.0);
+/// }
+/// ```
 pub struct PerspectiveCamera {
     fov: f32,
     aspect_ratio: f32,
     near: f32,
     far: f32,
-    pub model: Matrix4<f32>,
-    pub view: Matrix4<f32>,
-    pub proj: Matrix4<f32>,
+    model: Matrix4<f32>,
+    view: Matrix4<f32>,
+    proj: Matrix4<f32>,
 }
 
 impl Default for PerspectiveCamera {
     fn default() -> Self {
         let fov: f32 = 75.0;
-        let angle_rad: Rad<f32> = Deg(fov).into();
         let aspect_ratio = 4.0/3.0;
         let n = 5.0;
         let f = 1000.0;

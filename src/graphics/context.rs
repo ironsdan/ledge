@@ -34,6 +34,62 @@ use crate::{
     graphics::image::Image,
 };
 
+
+/// This is the context from which the graphics components gets all of its information 
+/// about the physical device and the presentation area. It serves as the Vulkano abstraction,
+/// which intern interfaces with the Vulkan API.
+/// 
+/// # Examples
+/// 
+/// ```
+/// use winit::{
+///     event_loop::{ControlFlow},
+///     event::{Event, WindowEvent}
+/// };
+/// use ledge_engine::graphics::context::GraphicsContext;
+/// use ledge_engine::conf::Conf;
+/// 
+/// fn main() {
+///     let (mut context, event_loop) = GraphicsContext::new(Conf::default());
+///
+///     event_loop.run(move |event, _, control_flow| {
+///         let now = std::time::Instant::now();
+///
+///         match event {
+///             Event::WindowEvent { event, .. } => match event {
+///                 WindowEvent::CloseRequested => {
+///                     *control_flow = ControlFlow::Exit;
+///                 },
+///                 WindowEvent::Resized(_) => {
+///                     context.recreate_swapchain = true;
+///                 },
+///                 _ => {},
+///             },
+///             Event::MainEventsCleared => { 
+///                 context.create_command_buffer();
+/// 
+///                 // buffer updates
+/// 
+///                 context.begin_frame();
+/// 
+///                 // draw commands
+/// 
+///                 context.present();
+/// 
+///                 // without using timer you have to manually control the frame time.
+///                 let mut sleep_time: f64 = 0.016 - now.elapsed().as_secs_f64();
+///                 if sleep_time < 0.0 {
+///                     sleep_time = 0.0
+///                 }
+
+///                 std::thread::sleep(std::time::Duration::from_secs_f64(sleep_time));
+///                 print!("{:.2}\r", now.elapsed().as_secs_f32() * 1000.0);
+///             },
+///             _ => {}
+///         }
+///     });
+/// }
+/// ```
 pub struct GraphicsContext {
     pub queue: std::sync::Arc<vulkano::device::Queue>,
     pub surface: std::sync::Arc<vulkano::swapchain::Surface<winit::window::Window>>,
@@ -200,6 +256,8 @@ impl GraphicsContext {
         (graphics, event_loop)
     }
 
+    /// Due to the nature of the command buffer and the safety requirements Vulkano tries to meet
+    /// the command buffer is recreated every frame.
     pub fn create_command_buffer(&mut self,) {
         let builder =
         AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queue.family())
@@ -207,10 +265,11 @@ impl GraphicsContext {
         self.command_buffer = Some(builder);
     }
 
-    // Handles setup of a new frame, called when the graphics pipeline is first created and 
-    // at the end of every frame to start the next one. This is necessary because the swapchain
-    // could be out of date and the command_buffer needs to be recreated each frame, as well as
-    // Updating the image_num, optimality, and the swapcahin future.
+    /// Handles setup of a new frame, called when the graphics pipeline is first created and 
+    /// at the end of every frame to start the next one. 
+    /// 
+    /// This is necessary because the swapchain could be out of date, 
+    /// as well as updating the image_num, optimality, and the swapcahin future.
     pub fn begin_frame(&mut self) {
         self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 
@@ -252,10 +311,17 @@ impl GraphicsContext {
         self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[self.image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
     }
 
+    /// Interacts with the given shader handle (which by default is a ``` ledge_engine::graphics::shader::ShaderProgram```)
+    /// to use that specific shader to draw the vertex buffer to the screen.
     pub fn draw(&mut self, vertices: Arc<dyn BufferAccess + Send + Sync>, shader_handle: Arc<dyn ShaderHandle>, descriptor: Arc<dyn DescriptorSet + Send + Sync>) {
         shader_handle.draw(self, vertices, descriptor).unwrap();
     }
 
+    /// This function submits the command buffer to the queue and fences the operation, 
+    /// storing a future refering to the operation.
+    /// 
+    /// This function must be run once at the end of all updates and draw calls in order for the frame to be sumbitted.
+    /// The context will panic if this is not called once per frame.
     pub fn present(&mut self) {
         self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
         let command_buffer = self.command_buffer.take().unwrap().build().unwrap();

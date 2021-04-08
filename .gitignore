@@ -2,3 +2,5 @@
 target/*
 /images/*
 images/*
+/docs/debug/*
+docs/debug/*
