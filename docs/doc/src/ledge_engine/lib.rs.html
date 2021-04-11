@@ -175,6 +175,11 @@
 <span id="172">172</span>
 <span id="173">173</span>
 <span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! # About</span>
 <span class="doccomment">//! </span>
@@ -235,7 +240,6 @@
 <span class="doccomment">//! }</span>
 <span class="doccomment">//! </span>
 <span class="doccomment">//! #[derive(Clone, Copy)]</span>
-<span class="doccomment">//! #[allow(unused)]</span>
 <span class="doccomment">//! struct CameraMvp {</span>
 <span class="doccomment">//!     model: [[f32; 4]; 4],</span>
 <span class="doccomment">//!     view: [[f32; 4]; 4],</span>
@@ -349,5 +353,11 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">conf</span>;
 <span class="doccomment">/// TODO: This module will one day be the interface to the filesystem and </span>
 <span class="doccomment">/// be a storage and loader device for images, and other file types.</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">asset</span>;</pre></div>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">asset</span>;
+<span class="doccomment">/// The ```input```module handles inputs from various different peripherals and passes has structs to  sto the current state.</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">input</span>;
+<span class="doccomment">/// TODO: Add some audio module.</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">audio</span>;
+<span class="doccomment">/// A module that stores timing data.</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">timer</span>;</pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "ledge_engine";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

@@ -313,7 +313,7 @@ impl GraphicsContext {
 
     /// Interacts with the given shader handle (which by default is a ``` ledge_engine::graphics::shader::ShaderProgram```)
     /// to use that specific shader to draw the vertex buffer to the screen.
-    pub fn draw(&mut self, vertices: Arc<dyn BufferAccess + Send + Sync>, shader_handle: Arc<dyn ShaderHandle>, descriptor: Arc<dyn DescriptorSet + Send + Sync>) {
+    pub fn draw<'a>(&mut self, vertices: Arc<dyn BufferAccess + Send + Sync>, shader_handle: Arc<dyn ShaderHandle>, descriptor: Arc<dyn DescriptorSet + Send + Sync>) {
         shader_handle.draw(self, vertices, descriptor).unwrap();
     }
 

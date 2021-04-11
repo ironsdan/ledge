@@ -69,7 +69,7 @@ fn main() {
 
     let vertex_shader = Shader::new(vs.main_entry_point(), ());
     let fragment_shader = Shader::new(fs.main_entry_point(), ());
-
+    
     let po = Arc::new(PipelineObject::new(
         &mut context, 
         SingleBufferDefinition::<Vertex>::new(), 

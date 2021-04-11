@@ -30,7 +30,17 @@ pub enum VertexOrder {
     TriangleStrip,
 }
 
+pub enum ShaderType {
+    Vertex,
+    Fragment,
+    TessellationControl,
+    TessellationEval,
+    Geometry,
+    Default,
+}
+
 pub struct Shader<S, C> {
+    pub shader_type: ShaderType,
     pub entry_point: S,
     pub specialization_constants: C,
 }
@@ -38,6 +48,7 @@ pub struct Shader<S, C> {
 impl<S, C> Shader<S, C> {
     pub fn new(entry_point: S, specialization_constants: C) -> Self {
         Self {
+            shader_type: ShaderType::Default,
             entry_point,
             specialization_constants,
         }
@@ -213,7 +224,7 @@ impl PipelineObject {
                 .fragment_shader(fragment_shader.entry_point, fragment_shader.specialization_constants)
                 .blend_collective(blend.into())
                 .render_pass(Subpass::from(context.render_pass.clone(), 0).unwrap());
-                
+        
         pipeline = match vertex_order {
             VertexOrder::LineList => pipeline.line_list(),
             VertexOrder::LineStrip => pipeline.line_strip(),
