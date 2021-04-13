@@ -5,12 +5,10 @@ use winit::{
 };
 use vulkano::{
     descriptor::descriptor_set::PersistentDescriptorSet,
-    buffer::{BufferUsage, CpuAccessibleBuffer},
 };
 use std::sync::Arc;
 use ledge_engine::graphics::camera::PerspectiveCamera;
 use ledge_engine::graphics::shader::PipelineObject;
-use ledge_engine::graphics::shader::Shader;
 use ledge_engine::graphics::context::GraphicsContext;
 use ledge_engine::conf::Conf;
 use ledge_engine::graphics::BlendMode;
@@ -37,7 +35,6 @@ pub mod fs {
     vulkano_shaders::shader! {
         ty: "fragment",
         path: "examples/shaders/wireframe.frag",
-        // dump: true,
     }
 }
 
@@ -49,26 +46,14 @@ struct CameraMvp {
     proj: [[f32; 4]; 4],
 }
 
-fn calc_barycenter(length: usize) -> Vec<[f32; 3]> {
-    let n = length / 3;
-    let mut barycenter = Vec::new();
-    for _ in 0..n {
-        barycenter.push([1.0, 0.0, 0.0]);
-        barycenter.push([0.0, 1.0, 0.0]);
-        barycenter.push([0.0, 0.0, 1.0]);
-    }
-
-    barycenter
-}
-
 fn main() {
     let (mut context, event_loop) = GraphicsContext::new(Conf::new("Wave"));
 
     let vs = vs::Shader::load(context.device.clone()).unwrap();
     let fs = fs::Shader::load(context.device.clone()).unwrap();
 
-    let vertex_shader = Shader::new(vs.main_entry_point(), ());
-    let fragment_shader = Shader::new(fs.main_entry_point(), ());
+    let vertex_shader = ledge_engine::graphics::shader::Shader::new(vs.main_entry_point(), ());
+    let fragment_shader = ledge_engine::graphics::shader::Shader::new(fs.main_entry_point(), ());
     
     let po = Arc::new(PipelineObject::new(
         &mut context, 
@@ -79,7 +64,7 @@ fn main() {
         BlendMode::Alpha
     ));
 
-    let shader_program = Arc::new(ShaderProgram::new(BlendMode::Alpha, po.clone()));
+    let shader_program = Arc::new(ShaderProgram::from_pipeline(BlendMode::Alpha, po.clone()));
 
     let camera = PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 2000.0);
 
@@ -99,11 +84,11 @@ fn main() {
         context.device.clone()
     );
 
-    let barycenter = calc_barycenter(3);
-    let triangle = Arc::new(CpuAccessibleBuffer::from_data(
-        context.device.clone(), 
-        BufferUsage::vertex_buffer(), 
-        false, 
+    let barycenter = [[1.0, 0.0, 0.0],
+                     [0.0, 1.0, 0.0],
+                     [0.0, 0.0, 1.0]];
+
+    let triangle = BufferAttribute::from_data(
         [
             Vertex {
                 position: [0.0, 0.0, 200.0],
@@ -129,8 +114,9 @@ fn main() {
                 position: [-50.0, 100.0, 200.0],
                 barycenter: barycenter[1],
             },
-        ]
-    ).unwrap());
+        ],
+        context.device.clone()
+    );
 
     let descriptor = Arc::new(
         PersistentDescriptorSet::start(po.pipeline.descriptor_set_layout(0).unwrap().clone())
@@ -160,7 +146,7 @@ fn main() {
             
                 context.begin_frame();
 
-                context.draw(triangle.clone(), shader_program.clone(), descriptor.clone());
+                context.draw(triangle.inner.clone(), shader_program.clone(), descriptor.clone());
 
                 context.present();
 

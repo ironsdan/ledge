@@ -1,20 +1,18 @@
 pub mod level;
 pub mod menu;
 pub mod stack;
+pub mod error;
 
 use crate::scene::stack::*;
 use crate::graphics::context::GraphicsContext;
-use crate::interface::Interface;
-use crate::ecs::World;
-use crate::ecs;
-use crate::error::*;
+use crate::scene::error::*;
 
-pub type Stack = SpaceStack<ecs::World>;
+// pub type Stack = SceneStack<ecs::World>;
 
-pub trait Space<C> {
-    fn current_scene(&self) -> bool;
-    fn update(&mut self, interface: &mut Interface, world: &mut World) -> SpaceSwitch<C>;
-    fn draw(&mut self, world: &mut World, context: &mut GraphicsContext) -> GameResult<()>;
-    fn input(&mut self, gameworld: &mut C, started: bool);
+pub trait Scene<C> {
+    // fn current_scene(&self) -> bool;
+    // fn update(&mut self, interface: &mut Interface, world: &mut World) -> SceneSwitch<C>;
+    // fn draw(&mut self, world: &mut World, context: &mut GraphicsContext) -> Result<(), SceneError>;
+    // fn input(&mut self, gameworld: &mut C, started: bool);
 }
 

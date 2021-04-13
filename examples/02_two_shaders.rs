@@ -38,7 +38,20 @@ pub mod fs {
     vulkano_shaders::shader! {
         ty: "fragment",
         path: "examples/shaders/particle.frag",
-        // dump: true,
+    }
+}
+
+pub mod vs2 {
+    vulkano_shaders::shader! {
+        ty: "vertex",
+        path: "examples/shaders/particle-alt.vert",
+    }
+}
+
+pub mod fs2 {
+    vulkano_shaders::shader! {
+        ty: "fragment",
+        path: "examples/shaders/particle-alt.frag",
     }
 }
 
@@ -55,24 +68,31 @@ const AMOUNTX: isize = 50;
 const AMOUNTY: isize = 50;
 
 fn main() {
-    let (mut context, event_loop) = GraphicsContext::new(Conf::new("Wave"));
+    let (mut context, event_loop) = GraphicsContext::new(Conf::new("Level"));
 
     let vs = vs::Shader::load(context.device.clone()).unwrap();
     let fs = fs::Shader::load(context.device.clone()).unwrap();
 
-    let vertex_shader = Shader::new(vs.main_entry_point(), ());
-    let fragment_shader = Shader::new(fs.main_entry_point(), ());
+    let vs2 = vs2::Shader::load(context.device.clone()).unwrap();
+    let fs2 = fs2::Shader::load(context.device.clone()).unwrap();
 
-    let po = Arc::new(PipelineObject::new(
+    let shader_program = Arc::new(ShaderProgram::new(
         &mut context, 
         SingleBufferDefinition::<ParticleVertex>::new(), 
         VertexOrder::PointList,
-        vertex_shader, 
-        fragment_shader, 
+        Shader::new(vs.main_entry_point(), ()), 
+        Shader::new(fs.main_entry_point(), ()),  
         BlendMode::Alpha
     ));
 
-    let shader_program = Arc::new(ShaderProgram::from_pipeline(BlendMode::Alpha, po.clone()));
+    let shader_program2 = Arc::new(ShaderProgram::new(
+        &mut context, 
+        SingleBufferDefinition::<ParticleVertex>::new(), 
+        VertexOrder::PointList,
+        Shader::new(vs2.main_entry_point(), ()), 
+        Shader::new(fs2.main_entry_point(), ()), 
+        BlendMode::Alpha
+    ));
 
     let mut camera = PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0);
     camera.rotate_x(Deg(20.0));
@@ -95,7 +115,7 @@ fn main() {
     );
 
     let descriptor = Arc::new(
-        PersistentDescriptorSet::start(po.pipeline.descriptor_set_layout(0).unwrap().clone())
+        PersistentDescriptorSet::start(shader_program.layout().clone())
             .add_buffer(color.inner.clone()).unwrap()
             .add_buffer(mvp.inner.clone()).unwrap()
             .build()
@@ -103,6 +123,7 @@ fn main() {
     );
 
     let mut count = 0.0;
+    let mut i = 0;
 
     event_loop.run(move |event, _, control_flow| {
         let context = &mut context;
@@ -125,9 +146,13 @@ fn main() {
             
                 context.begin_frame();
 
-                context.draw(particles.clone(), shader_program.clone(), descriptor.clone());
+                if i > 120 {
+                    context.draw(particles.clone(), shader_program2.clone(), descriptor.clone());
+                } else {
+                    context.draw(particles.clone(), shader_program.clone(), descriptor.clone());
+                }
 
-                // shader_program.draw(context, particles.clone(), descriptor.clone()).unwrap();
+                i += 1;
 
                 context.present();
 

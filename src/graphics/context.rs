@@ -29,7 +29,7 @@ use winit::{
 use std::sync::Arc;
 use crate::{
     conf::*,
-    graphics::{PipelineData},
+    graphics::PipelineData,
     graphics::shader::ShaderHandle,
     graphics::image::Image,
 };

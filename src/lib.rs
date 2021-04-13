@@ -177,3 +177,5 @@ pub mod input;
 pub mod audio;
 /// A module that stores timing data.
 pub mod timer;
+
+pub mod scene;

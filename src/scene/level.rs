@@ -1,28 +1,18 @@
 use crate::graphics::*;
 use crate::graphics::context::GraphicsContext;
-use crate::ecs::component::Component;
-use crate::ecs::storage::NullStorage;
-use crate::ecs::entity::Entity;
-use crate::ecs::storage::WriteStorage;
-use crate::ecs::storage::ReadStorage;
-use crate::ecs::system::System;
-use crate::ecs::join::Joinable;
 use crate::scene::*;
 use crate::scene::stack::*;
-use crate::graphics::sprite::{SpriteBatch, SpriteId};
-use crate::physics::*;
-use crate::event::KeyboardInputSystem;
 use crate::timer::*;
 
-pub struct LevelSpaceBuilder {
-    pub(crate) level_scene: LevelSpace,
+pub struct LevelBuilder {
+    pub(crate) inner: Level,
     pub(crate) is_built: bool,
 }
 
-impl LevelSpaceBuilder {
+impl LevelBuilder {
     pub fn new() -> Self {
         Self {
-            level_scene: LevelSpace::default(),
+            inner: Level::default(),
             is_built: false,
         }
     }
@@ -31,78 +21,38 @@ impl LevelSpaceBuilder {
 
     pub fn with(&mut self) {}
 
-    pub fn with_entity(mut self, entity: Entity) -> Self {
-        self.level_scene.entities.push(entity);
-        self
-    }
+    // pub fn with_entity(mut self, entity: Entity) -> Self {
+    //     self.inner.entities.push(entity);
+    //     self
+    // }
 
     pub fn from_conf_file(&mut self) {}
 
-    pub fn build(self) -> LevelSpace {
-        self.level_scene
+    pub fn build(self) -> Level {
+        self.inner
     }
 }
 
 #[derive(Default, Clone)]
-pub struct LevelSpace {
-    pub entities: Vec<Entity>,
+pub struct Level {
 }
 
-impl Space<World> for LevelSpace {
+// impl Scene for LevelScene {
     
-    fn update(&mut self, interface: &mut Interface, world: &mut World) -> SpaceSwitch<World> {
-        // let mut sprite_system = SpriteMove {};
-        let mut movement_system = MovementSystem {};
-        let mut position_system = PositionSystem {};
-        let mut input_system = KeyboardInputSystem {};
-        let mut gravity_system = GravitySystem {};
+    // fn update(&mut self, interface: &mut Interface, world: &mut World) -> SceneSwitch<World> {
+    //     SceneSwitch::None
+    // }
 
-        movement_system.run((world.write_comp_storage::<RigidBody>(), fps_as_duration(60), interface.timer_state.alpha()));
-        gravity_system.run((world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<Position>()));
-        position_system.run((world.write_comp_storage::<Position>(), world.read_comp_storage::<RigidBody>(), fps_as_duration(60), interface.timer_state.alpha()));
-        input_system.run((world.write_comp_storage::<RigidBody>(), world.read_comp_storage::<DynamicObject>(), &interface.keyboard_context));
-        // sprite_system.run((world.write_comp_storage::<DrawInfo>(), world.read_comp_storage::<Position>()));
-        
-        SpaceSwitch::None
-    }
+    // fn draw(&mut self, world: &mut World, context: &mut GraphicsContext) -> Result<(), > {
+    //     Ok(())
+    // }
 
-    fn draw(&mut self, world: &mut World, context: &mut GraphicsContext) -> GameResult<()> {
-        let mut sprite_system = SpriteDraw {
-            context
-        };
+    // fn input(&mut self, _gameworld: &mut World, _started: bool) {
 
-        // sprite_system.run((world.write_comp_storage::<DrawInfo>(), world.read_comp_storage::<Visible>()));
+    // }
 
-        Ok(())
-    }
-
-    fn input(&mut self, _gameworld: &mut World, _started: bool) {
-
-    }
-
-    fn current_scene(&self) -> bool {
-        true
-    }
-}
-
-#[derive(Default, Clone)]
-pub struct Visible {}
-
-impl Component for Visible {
-    type Storage = NullStorage<Self>;
-}
-
-struct SpriteDraw<'a> {
-    context: &'a mut GraphicsContext,
-}
-
-// impl<'a> System<'a> for SpriteDraw<'a> {
-//     type SystemData = (WriteStorage<'a, DrawInfo>, ReadStorage<'a, Visible>);
-
-//     fn run(&mut self, (mut sprite, scene): Self::SystemData) {
-//         for (sprite, _) in (&mut sprite, &scene).join() {
-//             // println!("sprite draw");
-//             // sprite.batch(&mut self.context);
-//         }
-//     }
+    // fn current_scene(&self) -> bool {
+    //     true
+    // }
 // }
+
