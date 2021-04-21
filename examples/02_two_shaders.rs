@@ -33,7 +33,6 @@ pub mod vs {
         path: "examples/shaders/particle.vert",
     }
 }
-
 pub mod fs {
     vulkano_shaders::shader! {
         ty: "fragment",

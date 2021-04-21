@@ -104,14 +104,14 @@ impl ShaderProgram {
         <Fs as EntryPointAbstract>::PipelineLayout: Clone + 'static + Send + Sync,
         Fss: SpecializationConstants, 
     {
-        let po = Arc::new(PipelineObject::new(
+        let po = PipelineObject::new(
             context, 
             vertex_type, 
             vertex_order,
             vertex_shader, 
             fragment_shader, 
             blend,
-        ));
+        );
 
         let mut pos = PipelineObjectSet::new(16);
         pos.insert(blend, po);
@@ -122,7 +122,7 @@ impl ShaderProgram {
         }
     }
 
-    pub fn from_pipeline(mode: BlendMode, pipeline: Arc<PipelineObject>) -> Self {
+    pub fn from_pipeline(mode: BlendMode, pipeline: PipelineObject) -> Self {
         let mut pipeline_os = PipelineObjectSet::new(16);
         pipeline_os.insert(mode, pipeline);
         Self {
@@ -139,7 +139,7 @@ impl ShaderProgram {
 
 // This structure is to store multiple pipelines for different blend modes.
 pub struct PipelineObjectSet {
-    pipelines: HashMap<BlendMode, Arc<PipelineObject>>,
+    pipelines: HashMap<BlendMode, PipelineObject>,
 }
 
 impl PipelineObjectSet {
@@ -149,15 +149,15 @@ impl PipelineObjectSet {
         }
     }
 
-    pub fn insert(&mut self, blend_mode: BlendMode, pipeline: Arc<PipelineObject>) {
+    pub fn insert(&mut self, blend_mode: BlendMode, pipeline: PipelineObject) {
         self.pipelines.insert(blend_mode, pipeline);
     }
 
-    pub fn get(&self, blend_mode: &BlendMode) -> Option<&Arc<PipelineObject>> {
+    pub fn get(&self, blend_mode: &BlendMode) -> Option<&PipelineObject> {
         self.pipelines.get(blend_mode)
     }
 
-    pub fn mode(&self, mode: &BlendMode) -> Result<&Arc<PipelineObject>, GraphicsError> {
+    pub fn mode(&self, mode: &BlendMode) -> Result<&PipelineObject, GraphicsError> {
         match self.pipelines.get(&mode) {
             Some(po) => Ok(po),
             None => Err(GraphicsError::PipelineError(

@@ -227,12 +227,7 @@ impl GraphicsContext {
                 &[0]
             ).unwrap()),
             texture: Image::empty(),
-            instance_data: Arc::new(CpuAccessibleBuffer::from_data(
-                device.clone(),
-                BufferUsage::vertex_buffer(),
-                false,
-                &[0]
-            ).unwrap()),
+            instance_data: None,
             descriptor: None,
         });
         
@@ -314,7 +309,7 @@ impl GraphicsContext {
     /// Interacts with the given shader handle (which by default is a ``` ledge_engine::graphics::shader::ShaderProgram```)
     /// to use that specific shader to draw the vertex buffer to the screen.
     pub fn draw<'a>(&mut self, vertices: Arc<dyn BufferAccess + Send + Sync>, shader_handle: Arc<dyn ShaderHandle>, descriptor: Arc<dyn DescriptorSet + Send + Sync>) {
-        shader_handle.draw(self, vertices, descriptor).unwrap();
+        shader_handle.draw(self, vertices, descriptor.clone()).unwrap();
     }
 
     /// This function submits the command buffer to the queue and fences the operation, 

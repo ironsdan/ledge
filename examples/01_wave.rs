@@ -10,7 +10,6 @@ use vulkano::{
 use cgmath::{Deg, Rad, Angle};
 use std::sync::Arc;
 use ledge_engine::graphics::camera::PerspectiveCamera;
-use ledge_engine::graphics::shader::PipelineObject;
 use ledge_engine::graphics::shader::Shader;
 use ledge_engine::graphics::context::GraphicsContext;
 use ledge_engine::conf::Conf;
@@ -18,6 +17,7 @@ use ledge_engine::graphics::BlendMode;
 use ledge_engine::graphics::shader::ShaderProgram;
 use vulkano::pipeline::vertex::SingleBufferDefinition;
 use ledge_engine::graphics::shader::VertexOrder;
+use ledge_engine::graphics::material::ShaderMaterial;
 
 #[derive(Default, Copy, Clone)]
 struct ParticleVertex {
@@ -60,19 +60,16 @@ fn main() {
     let vs = vs::Shader::load(context.device.clone()).unwrap();
     let fs = fs::Shader::load(context.device.clone()).unwrap();
 
-    let vertex_shader = Shader::new(vs.main_entry_point(), ());
-    let fragment_shader = Shader::new(fs.main_entry_point(), ());
-
-    let po = Arc::new(PipelineObject::new(
+    let shader_program = Arc::new(ShaderProgram::new(
         &mut context, 
         SingleBufferDefinition::<ParticleVertex>::new(), 
         VertexOrder::PointList,
-        vertex_shader, 
-        fragment_shader, 
+        Shader::new(vs.main_entry_point(), ()), 
+        Shader::new(fs.main_entry_point(), ()), 
         BlendMode::Alpha
     ));
 
-    let shader_program = Arc::new(ShaderProgram::from_pipeline(BlendMode::Alpha, po.clone()));
+    let shader_material = ShaderMaterial::new(shader_program.clone());
 
     let mut camera = PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0);
     camera.rotate_x(Deg(20.0));
@@ -95,7 +92,7 @@ fn main() {
     );
 
     let descriptor = Arc::new(
-        PersistentDescriptorSet::start(po.pipeline.descriptor_set_layout(0).unwrap().clone())
+        PersistentDescriptorSet::start(shader_program.layout().clone())
             .add_buffer(color.inner.clone()).unwrap()
             .add_buffer(mvp.inner.clone()).unwrap()
             .build()
@@ -125,9 +122,7 @@ fn main() {
             
                 context.begin_frame();
 
-                context.draw(particles.clone(), shader_program.clone(), descriptor.clone());
-
-                // shader_program.draw(context, particles.clone(), descriptor.clone()).unwrap();
+                context.draw(particles.clone(), shader_material.shader_program.clone(), descriptor.clone());
 
                 context.present();
 

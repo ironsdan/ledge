@@ -22,3 +22,15 @@ impl<T : 'static + Copy> BufferAttribute<T> {
         }
     }
 }
+
+pub trait Buffer {
+    type Data;
+    fn data(&self) -> std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<Self::Data>>;
+}
+
+impl<T> Buffer for BufferAttribute<T> {
+    type Data = T;
+    fn data(&self) -> std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<Self::Data>> {
+        return self.inner.clone();
+    }
+}

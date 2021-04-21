@@ -6,6 +6,7 @@ use std::sync::Arc;
 use crate::graphics::shader::ShaderHandle;
 use crate::graphics::Drawable;
 use crate::graphics::context::GraphicsContext;
+use crate::graphics::buffer::*;
 use vulkano::descriptor::descriptor_set::DescriptorSet;
 
 pub trait Material {
@@ -23,7 +24,7 @@ pub struct ShaderMaterial {
     uniforms: Vec<usize>,
     descriptor: Option<Arc<dyn DescriptorSet>>,
     blend_mode: Blend,
-    shader_program: Arc<dyn ShaderHandle>
+    pub shader_program: Arc<dyn ShaderHandle>
 }
 
 impl ShaderMaterial {
@@ -34,5 +35,13 @@ impl ShaderMaterial {
             blend_mode: Blend::alpha_blending(),
             shader_program,
         }
+    }
+
+    // pub fn add_uniform(&mut self, buffer: ) {
+
+    // }
+
+    pub fn set_descriptor(&mut self, descriptor: Arc<dyn DescriptorSet>) {
+        self.descriptor = Some(descriptor);
     }
 }

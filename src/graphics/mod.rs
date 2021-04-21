@@ -307,6 +307,6 @@ impl<R> DescriptorBuilder<R> {
 pub struct PipelineData {
     vert_buf: Arc<dyn BufferAccess>,
     texture: Image,
-    instance_data: Arc<dyn BufferAccess>,
-    descriptor: Option<Arc<dyn DescriptorSet>>,
+    instance_data: Option<Arc<dyn BufferAccess>>,
+    descriptor: Option<Arc<dyn DescriptorSet + Send + Sync>>,
 }

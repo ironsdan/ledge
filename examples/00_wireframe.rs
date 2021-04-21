@@ -8,7 +8,7 @@ use vulkano::{
 };
 use std::sync::Arc;
 use ledge_engine::graphics::camera::PerspectiveCamera;
-use ledge_engine::graphics::shader::PipelineObject;
+use ledge_engine::graphics::shader::Shader;
 use ledge_engine::graphics::context::GraphicsContext;
 use ledge_engine::conf::Conf;
 use ledge_engine::graphics::BlendMode;
@@ -51,20 +51,15 @@ fn main() {
 
     let vs = vs::Shader::load(context.device.clone()).unwrap();
     let fs = fs::Shader::load(context.device.clone()).unwrap();
-
-    let vertex_shader = ledge_engine::graphics::shader::Shader::new(vs.main_entry_point(), ());
-    let fragment_shader = ledge_engine::graphics::shader::Shader::new(fs.main_entry_point(), ());
     
-    let po = Arc::new(PipelineObject::new(
+    let shader_program = Arc::new(ShaderProgram::new(
         &mut context, 
         SingleBufferDefinition::<Vertex>::new(), 
-        VertexOrder::TriangleList,
-        vertex_shader, 
-        fragment_shader, 
+        VertexOrder::PointList,
+        Shader::new(vs.main_entry_point(), ()), 
+        Shader::new(fs.main_entry_point(), ()), 
         BlendMode::Alpha
     ));
-
-    let shader_program = Arc::new(ShaderProgram::from_pipeline(BlendMode::Alpha, po.clone()));
 
     let camera = PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 2000.0);
 
@@ -119,7 +114,7 @@ fn main() {
     );
 
     let descriptor = Arc::new(
-        PersistentDescriptorSet::start(po.pipeline.descriptor_set_layout(0).unwrap().clone())
+        PersistentDescriptorSet::start(shader_program.layout().clone())
             .add_buffer(color.inner.clone()).unwrap() 
             .add_buffer(mvp.inner.clone()).unwrap()
             .build()
