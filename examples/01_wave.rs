@@ -1,23 +1,26 @@
-use ledge_engine::graphics::buffer::*;
 use winit::{
     event_loop::{ControlFlow},
     event::{Event, WindowEvent}
 };
+
 use vulkano::{
     descriptor::descriptor_set::PersistentDescriptorSet,
     buffer::{BufferUsage, CpuAccessibleBuffer},
+    pipeline::vertex::SingleBufferDefinition
 };
+
 use cgmath::{Deg, Rad, Angle};
 use std::sync::Arc;
-use ledge_engine::graphics::camera::PerspectiveCamera;
-use ledge_engine::graphics::shader::Shader;
-use ledge_engine::graphics::context::GraphicsContext;
+
 use ledge_engine::conf::Conf;
 use ledge_engine::graphics::BlendMode;
+use ledge_engine::graphics::camera::PerspectiveCamera;
+use ledge_engine::graphics::context::GraphicsContext;
+use ledge_engine::graphics::shader::Shader;
 use ledge_engine::graphics::shader::ShaderProgram;
-use vulkano::pipeline::vertex::SingleBufferDefinition;
 use ledge_engine::graphics::shader::VertexOrder;
 use ledge_engine::graphics::material::ShaderMaterial;
+use ledge_engine::graphics::buffer::*;
 
 #[derive(Default, Copy, Clone)]
 struct ParticleVertex {
@@ -38,7 +41,6 @@ pub mod fs {
     vulkano_shaders::shader! {
         ty: "fragment",
         path: "examples/shaders/particle.frag",
-        // dump: true,
     }
 }
 
@@ -63,7 +65,7 @@ fn main() {
     let shader_program = Arc::new(ShaderProgram::new(
         &mut context, 
         SingleBufferDefinition::<ParticleVertex>::new(), 
-        VertexOrder::PointList,
+        VertexOrder::TriangleFan,
         Shader::new(vs.main_entry_point(), ()), 
         Shader::new(fs.main_entry_point(), ()), 
         BlendMode::Alpha

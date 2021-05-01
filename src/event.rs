@@ -61,7 +61,6 @@ where
             Event::RedrawRequested(_) => {},
             Event::RedrawEventsCleared => {},
         }
-        
     });
 }
 

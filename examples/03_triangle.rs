@@ -19,22 +19,22 @@ use ledge_engine::graphics::shader::VertexOrder;
 #[derive(Default, Copy, Clone)]
 struct Vertex {
     position: [f32; 3],
-    barycenter: [f32; 3],
+    color: [f32; 3],
 }
 
-vulkano::impl_vertex!(Vertex, position, barycenter);
+vulkano::impl_vertex!(Vertex, position, color);
 
 pub mod vs {
     vulkano_shaders::shader! {
         ty: "vertex",
-        path: "examples/shaders/wireframe.vert",
+        path: "examples/shaders/default.vert",
     }
 }
 
 pub mod fs {
     vulkano_shaders::shader! {
         ty: "fragment",
-        path: "examples/shaders/wireframe.frag",
+        path: "examples/shaders/default.frag",
     }
 }
 
@@ -55,7 +55,7 @@ fn main() {
     let shader_program = Arc::new(ShaderProgram::new(
         &mut context, 
         SingleBufferDefinition::<Vertex>::new(), 
-        VertexOrder::TriangleFan,
+        VertexOrder::PointList,
         Shader::new(vs.main_entry_point(), ()), 
         Shader::new(fs.main_entry_point(), ()), 
         BlendMode::Alpha
@@ -86,28 +86,16 @@ fn main() {
     let triangle = BufferAttribute::from_data(
         [
             Vertex {
-                position: [0.0, 0.0, 200.0],
-                barycenter: barycenter[2],
+                position: [0.0, 100.0, 200.0],
+                color: barycenter[2],
             },
             Vertex {
                 position: [50.0, 0.0, 200.0],
-                barycenter: barycenter[0],
+                color: barycenter[0],
             },
             Vertex {
                 position: [50.0, -100.0, 200.0],
-                barycenter: barycenter[1],
-            },
-            Vertex {
-                position: [0.0, 0.0, 200.0],
-                barycenter: barycenter[2],
-            },
-            Vertex {
-                position: [-50.0, 0.0, 200.0],
-                barycenter: barycenter[0],
-            },
-            Vertex {
-                position: [-50.0, 100.0, 200.0],
-                barycenter: barycenter[1],
+                color: barycenter[1],
             },
         ],
         context.device.clone()
