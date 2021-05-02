@@ -35,6 +35,8 @@ use vulkano::{
     descriptor::descriptor_set::PersistentDescriptorSetBuf,
     pipeline::GraphicsPipelineAbstract,
     descriptor::descriptor_set::DescriptorSet,
+    descriptor::descriptor_set::collection::DescriptorSetsCollection,
+    buffer::CpuAccessibleBuffer,
 };
 
 use std::sync::Arc;
@@ -308,7 +310,35 @@ pub struct PipelineData {
     vert_buf: Arc<dyn BufferAccess>,
     texture: Image,
     instance_data: Option<Arc<dyn BufferAccess>>,
-    descriptor: Option<Arc<dyn DescriptorSet + Send + Sync>>,
+    pub descriptor: Vec<Arc<dyn BufferAccess + Send + Sync>>,
 }
 
 pub struct Color(u16);
+
+pub struct Descriptor<R> {
+    inner: PersistentDescriptorSetBuilder<R>,
+}
+
+impl<R> Descriptor<R>
+{
+
+}
+
+pub trait PersistentDescriptorSetType {
+    fn buffer_at(&self, set: usize, binding: usize) -> Option<Arc<dyn BufferAccess>>;
+}
+
+// impl PersistentDescriptorSetType for () {
+//     fn buffer_at(&self, set: usize, binding: usize) -> Option<Arc<dyn BufferAccess>> {
+//         None
+//     }
+// }
+
+// impl<T> PersistentDescriptorSetType for T
+// where
+//     T: BufferAccess + Send + Sync + 'static 
+// {
+//     fn buffer_at(&self, set: usize, binding: usize) -> Option<Arc<dyn BufferAccess>> {
+//         self
+//     }
+// }

@@ -15,9 +15,10 @@ use std::sync::Arc;
 struct ParticleVertex {
     position: [f32; 3],
     scale: f32,
+    color: [f32; 3],
 }
 
-vulkano::impl_vertex!(ParticleVertex, position, scale);
+vulkano::impl_vertex!(ParticleVertex, position, scale, color);
 
 const SEPARATION: f32 = 12.0; // Point drawing values.
 const AMOUNTX: isize = 51;
@@ -26,10 +27,10 @@ const AMOUNTY: isize = 51;
 fn main() {
     let (mut context, event_loop) = GraphicsContext::new(Conf::new("Wave")); // Creating a new context.
 
-    pub mod vs { vulkano_shaders::shader! { ty: "vertex", path: "examples/shaders/particle.vert", } }
+    pub mod vs { vulkano_shaders::shader! { ty: "vertex", path: "examples/shaders/particle-color.vert", } }
     let vs = vs::Shader::load(context.device.clone()).unwrap(); // Load shaders at compile time.
 
-    pub mod fs { vulkano_shaders::shader! { ty: "fragment", path: "examples/shaders/particle.frag", } }
+    pub mod fs { vulkano_shaders::shader! { ty: "fragment", path: "examples/shaders/particle-color.frag", } }
     let fs = fs::Shader::load(context.device.clone()).unwrap();
 
     let shader_program = Arc::new(ShaderProgram::new( // Create a new shader program.
@@ -41,8 +42,7 @@ fn main() {
         BlendMode::Alpha
     ));
 
-    let mut shader_material = ShaderMaterial::new(shader_program.clone()); // Load shader program into material.
-    shader_material.add_uniform([1.0 as f32, 1.0 as f32, 1.0 as f32], context.device.clone());
+    let shader_material = ShaderMaterial::new(shader_program.clone()); // Load shader program into material.
 
     let mut camera = PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0); // Create and move camera.
     camera.rotate_x(Deg(20.0));
@@ -55,15 +55,11 @@ fn main() {
         camera.as_mvp(),
     ).unwrap();
 
-    context.pipe_data.descriptor.push(shader_material.uniforms[0].clone());
-    context.pipe_data.descriptor.push(mvp.clone());
-
-    // let descriptor = Arc::new(
-    //     PersistentDescriptorSet::start(shader_program.layout().clone())
-    //         .add_buffer(shader_material.uniforms[0].clone()).unwrap()
-    //         .add_buffer(mvp.clone()).unwrap()
-    //         .build().unwrap(),
-    // );
+    let descriptor = Arc::new(
+        PersistentDescriptorSet::start(shader_program.layout().clone())
+            .add_buffer(mvp.clone()).unwrap()
+            .build().unwrap(),
+    );
 
     let mut count = 0.0;
 
@@ -81,7 +77,7 @@ fn main() {
             
                 context.create_command_buffer();
                 context.begin_frame();
-                context.draw(particles.clone(), shader_material.shader_program.clone());
+                context.draw(particles.clone(), shader_material.shader_program.clone(), descriptor.clone());
                 context.present();
 
                 let sleep_time = std::time::Duration::from_secs_f64(0.016).checked_sub(now.elapsed());
@@ -101,14 +97,20 @@ fn update(context: &mut GraphicsContext, count: &mut f32) ->
     
     for ix in 0..AMOUNTX {
         for iy in 0..AMOUNTY {
-            let sin_ix = Rad((ix as f32 + *count) * 0.5).sin();
-            let sin_iy = Rad((iy as f32 + *count) * 0.5).sin();
+            let sin_factor = Rad(*count/4.0).sin();
+            let sin_ix = Rad(sin_factor * (ix as f32 + *count) * 0.5).sin();
+            let sin_iy = Rad(sin_factor * (iy as f32 + *count) * 0.5).sin();
 
             data[i].position[0] = (ix as f32 * SEPARATION) - (((AMOUNTX as f32 * SEPARATION) / 2.0));
             data[i].position[1] = ( sin_ix * 10.0) + ( sin_iy * 10.0);
             data[i].position[2] = (iy as f32 * SEPARATION) - (((AMOUNTY as f32 * SEPARATION) / 2.0));
-            data[i].scale = ( sin_ix + 1.5 ) * 2.0 + ( sin_iy + 1.5 ) * 2.0;
+            data[i].scale = 6.0;
 
+            let r = Rad(ix as f32).sin();
+            let g = 0.5;
+            let b = Rad(iy as f32).sin();
+            
+            data[i].color = [r, g, b];
             i += 1;
         }
     }

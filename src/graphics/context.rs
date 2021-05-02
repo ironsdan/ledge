@@ -20,6 +20,7 @@ use vulkano::{
     image::view::ImageView,
     buffer::{BufferAccess, BufferUsage, CpuAccessibleBuffer},
     descriptor::descriptor_set::DescriptorSet,
+    descriptor::descriptor_set::PersistentDescriptorSet,
 };
 use vulkano_win::VkSurfaceBuild;
 use winit::{
@@ -105,7 +106,7 @@ pub struct GraphicsContext {
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
     pub command_buffer: Option<AutoCommandBufferBuilder<StandardCommandPoolBuilder>>,
 
-    pub pipe_data: std::sync::Arc<PipelineData>,
+    pub pipe_data: PipelineData,
 }
 
 impl GraphicsContext {
@@ -219,7 +220,7 @@ impl GraphicsContext {
         let framebuffers =
             window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
 
-        let pipe_data = Arc::new(PipelineData {
+        let pipe_data = PipelineData {
             vert_buf: Arc::new(CpuAccessibleBuffer::from_data(
                 device.clone(),
                 BufferUsage::vertex_buffer(),
@@ -228,8 +229,8 @@ impl GraphicsContext {
             ).unwrap()),
             texture: Image::empty(),
             instance_data: None,
-            descriptor: None,
-        });
+            descriptor: Vec::new(),
+        };
         
         let graphics = Self {
             queue,
@@ -308,8 +309,22 @@ impl GraphicsContext {
 
     /// Interacts with the given shader handle (which by default is a ``` ledge_engine::graphics::shader::ShaderProgram```)
     /// to use that specific shader to draw the vertex buffer to the screen.
-    pub fn draw<'a>(&mut self, vertices: Arc<dyn BufferAccess + Send + Sync>, shader_handle: Arc<dyn ShaderHandle>, descriptor: Arc<dyn DescriptorSet + Send + Sync>) {
-        shader_handle.draw(self, vertices, descriptor.clone()).unwrap();
+    pub fn draw<'a>(&mut self, vertices: Arc<dyn BufferAccess + Send + Sync>, shader_handle: Arc<dyn ShaderHandle>) {
+        let layout = shader_handle.layout().clone();
+        // let num_uniforms = layout.descriptors_count().uniform_buffer as usize;
+        
+        let descriptor = PersistentDescriptorSet::start(layout);
+
+        // for i in 0..num_uniforms {
+        //     let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
+        // }
+
+        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[0].clone()).unwrap();
+        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[1].clone()).unwrap();
+
+        let descriptor = Arc::new(descriptor.build().unwrap());
+        
+        shader_handle.draw(self, vertices, descriptor).unwrap();
     }
 
     /// This function submits the command buffer to the queue and fences the operation, 

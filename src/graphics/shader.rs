@@ -66,6 +66,7 @@ pub trait ShaderHandle {
     fn draw(&self, context: &mut GraphicsContext, slice: Arc<dyn BufferAccess + Send + Sync>, descriptor: Arc<dyn DescriptorSet + Send + Sync>) -> Result<(), GraphicsError>;
     fn set_blend_mode(&mut self, mode: BlendMode) -> Result<(), GraphicsError>;
     fn blend_mode(&self) -> BlendMode;
+    fn layout(&self) -> Arc<UnsafeDescriptorSetLayout>;
 }
 
 impl ShaderHandle for ShaderProgram {
@@ -89,6 +90,10 @@ impl ShaderHandle for ShaderProgram {
 
     fn blend_mode(&self) -> BlendMode {
         self.current_mode
+    }
+
+    fn layout(&self) -> Arc<UnsafeDescriptorSetLayout> {
+        self.pipelines.get(&self.current_mode).unwrap().descriptor_set_layout()
     }
 }
 
@@ -129,10 +134,6 @@ impl ShaderProgram {
             pipelines: pipeline_os,
             current_mode: mode,
         }
-    }
-
-    pub fn layout(&self) -> Arc<UnsafeDescriptorSetLayout> {
-        self.pipelines.get(&self.current_mode).unwrap().descriptor_set_layout()
     }
 }
 
