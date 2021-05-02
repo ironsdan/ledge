@@ -145,4 +145,20 @@ impl PerspectiveCamera {
     pub fn zoom(&mut self, amount: f32) {
 
     }
+
+    pub fn as_mvp(&self) -> CameraMvp {
+        CameraMvp {
+            model: self.model_array(),
+            view: self.view_array(),
+            proj: self.proj_array(),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+#[allow(unused)]
+pub struct CameraMvp { // Camera struct for conversion to uniform.
+    model: [[f32; 4]; 4],
+    view: [[f32; 4]; 4],
+    proj: [[f32; 4]; 4],
 }

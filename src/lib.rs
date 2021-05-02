@@ -179,3 +179,13 @@ pub mod audio;
 pub mod timer;
 
 pub mod scene;
+
+pub mod prelude {
+    pub use crate::graphics::*;
+    pub use crate::graphics::camera::*;
+    pub use crate::graphics::context::*;
+    pub use crate::graphics::shader::*;
+    pub use crate::graphics::material::*;
+
+    pub use crate::conf::*;
+}

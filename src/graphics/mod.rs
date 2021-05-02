@@ -310,3 +310,5 @@ pub struct PipelineData {
     instance_data: Option<Arc<dyn BufferAccess>>,
     descriptor: Option<Arc<dyn DescriptorSet + Send + Sync>>,
 }
+
+pub struct Color(u16);

@@ -8,6 +8,9 @@ use crate::graphics::Drawable;
 use crate::graphics::context::GraphicsContext;
 use crate::graphics::buffer::*;
 use vulkano::descriptor::descriptor_set::DescriptorSet;
+use vulkano::buffer::BufferAccess;
+use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer};
+use vulkano::device::Device;
 
 pub trait Material {
     fn alpha_test(test_value: f32);
@@ -21,7 +24,7 @@ pub trait Material {
 }
 
 pub struct ShaderMaterial {
-    uniforms: Vec<usize>,
+    pub uniforms: Vec<Arc<dyn BufferAccess + Send + Sync>>,
     descriptor: Option<Arc<dyn DescriptorSet>>,
     blend_mode: Blend,
     pub shader_program: Arc<dyn ShaderHandle>
@@ -37,9 +40,17 @@ impl ShaderMaterial {
         }
     }
 
-    // pub fn add_uniform(&mut self, buffer: ) {
-
-    // }
+    pub fn add_uniform<T>(&mut self, data: T, device: Arc<Device>) where
+    T: 'static + Copy + Send + Sync,
+    {
+        let buffer = CpuAccessibleBuffer::from_data(
+            device.clone(), 
+            BufferUsage::all(), 
+            false,
+            data,
+        ).unwrap();
+        self.uniforms.push(buffer.clone());
+    }
 
     pub fn set_descriptor(&mut self, descriptor: Arc<dyn DescriptorSet>) {
         self.descriptor = Some(descriptor);
