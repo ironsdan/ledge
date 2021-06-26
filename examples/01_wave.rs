@@ -3,7 +3,6 @@ use winit::{
     event::{Event, WindowEvent}
 };
 use vulkano::{
-    descriptor::descriptor_set::PersistentDescriptorSet,
     buffer::{BufferUsage, CpuAccessibleBuffer},
     pipeline::vertex::SingleBufferDefinition
 };
@@ -57,13 +56,6 @@ fn main() {
 
     context.pipe_data.descriptor.push(shader_material.uniforms[0].clone());
     context.pipe_data.descriptor.push(mvp.clone());
-
-    // let descriptor = Arc::new(
-    //     PersistentDescriptorSet::start(shader_program.layout().clone())
-    //         .add_buffer(shader_material.uniforms[0].clone()).unwrap()
-    //         .add_buffer(mvp.clone()).unwrap()
-    //         .build().unwrap(),
-    // );
 
     let mut count = 0.0;
 
