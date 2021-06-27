@@ -22,6 +22,9 @@ use vulkano::{
     descriptor::descriptor_set::DescriptorSet,
     descriptor::descriptor_set::PersistentDescriptorSet,
 };
+
+use vulkano::descriptor::descriptor_set::DescriptorSetDesc;
+
 use vulkano_win::VkSurfaceBuild;
 use winit::{
     window::{Window, WindowBuilder},
@@ -307,24 +310,85 @@ impl GraphicsContext {
         self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[self.image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
     }
 
+
     /// Interacts with the given shader handle (which by default is a ``` ledge_engine::graphics::shader::ShaderProgram```)
     /// to use that specific shader to draw the vertex buffer to the screen.
+    /// Very scary to look at, at the moment. Due to Rust not being able to deal with the safety of looping/changing
+    /// the descriptor type each loop, I had to manually right out the loop which limits the number of possible descriptors
+    /// and only supports uniforms, as others will break it. Incredibly fragile and hoping to fix it later.
     pub fn draw<'a>(&mut self, vertices: Arc<dyn BufferAccess + Send + Sync>, shader_handle: Arc<dyn ShaderHandle>) {
-        let layout = shader_handle.layout().clone();
-        // let num_uniforms = layout.descriptors_count().uniform_buffer as usize;
+        let layout = shader_handle.layout();
+        let num_bindings = layout.num_bindings();
         
-        let descriptor = PersistentDescriptorSet::start(layout);
-
-        // for i in 0..num_uniforms {
-        //     let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
+        let descriptor: vulkano::descriptor::descriptor_set::PersistentDescriptorSetBuilder<()> = PersistentDescriptorSet::start(layout.clone());
+        // let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[0].clone()).unwrap();
+        // for i in 0..num_bindings {
+        //     descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
         // }
 
-        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[0].clone()).unwrap();
-        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[1].clone()).unwrap();
+        let mut i = 0;
 
-        let descriptor = Arc::new(descriptor.build().unwrap());
+        if i >= num_bindings {
+            let descriptor = Arc::new(descriptor.build().unwrap());
+            shader_handle.draw(self, vertices, descriptor).unwrap();
+            return;
+        }
+        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
+        i+=1;
+
+        if i >= num_bindings {
+            let descriptor = Arc::new(descriptor.build().unwrap());
+            shader_handle.draw(self, vertices, descriptor).unwrap();
+            return;
+        }
+        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
+        i+=1;
+
+        if i >= num_bindings {
+            let descriptor = Arc::new(descriptor.build().unwrap());
+            shader_handle.draw(self, vertices, descriptor).unwrap();
+            return;
+        }
+        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
+        i+=1;
+
+        if i >= num_bindings {
+            let descriptor = Arc::new(descriptor.build().unwrap());
+            shader_handle.draw(self, vertices, descriptor).unwrap();
+            return;
+        }
+        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
+        i+=1;
+
+        if i >= num_bindings {
+            let descriptor = Arc::new(descriptor.build().unwrap());
+            shader_handle.draw(self, vertices, descriptor).unwrap();
+            return;
+        }
+        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
+        i+=1;
         
-        shader_handle.draw(self, vertices, descriptor).unwrap();
+        if i >= num_bindings {
+            let descriptor = Arc::new(descriptor.build().unwrap());
+            shader_handle.draw(self, vertices, descriptor).unwrap();
+            return;
+        }
+        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
+        i+=1;
+        
+        if i >= num_bindings {
+            let descriptor = Arc::new(descriptor.build().unwrap());
+            shader_handle.draw(self, vertices, descriptor).unwrap();
+            return;
+        }
+        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
+        i+=1;
+
+        if i >= num_bindings {
+            let descriptor = Arc::new(descriptor.build().unwrap());
+            shader_handle.draw(self, vertices, descriptor).unwrap();
+            return;
+        }
     }
 
     /// This function submits the command buffer to the queue and fences the operation, 
