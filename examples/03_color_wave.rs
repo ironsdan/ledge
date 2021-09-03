@@ -3,9 +3,8 @@ use winit::{
     event::{Event, WindowEvent}
 };
 use vulkano::{
-    descriptor::descriptor_set::PersistentDescriptorSet,
+    descriptor_set::PersistentDescriptorSet,
     buffer::{BufferUsage, CpuAccessibleBuffer},
-    pipeline::vertex::SingleBufferDefinition
 };
 use ledge_engine::prelude::*;
 use cgmath::{Deg, Rad, Angle};
@@ -35,10 +34,10 @@ fn main() {
 
     let shader_program = Arc::new(ShaderProgram::new( // Create a new shader program.
         &mut context, 
-        SingleBufferDefinition::<ParticleVertex>::new(), 
+        buffer::BufferDefinition::new().vertex::<ParticleVertex>(), 
         VertexOrder::PointList,
-        Shader::new(vs.main_entry_point(), ()), 
-        Shader::new(fs.main_entry_point(), ()), 
+        vs.main_entry_point(),
+        fs.main_entry_point(), 
         BlendMode::Alpha
     ));
 

@@ -2,10 +2,6 @@ use winit::{
     event_loop::{ControlFlow},
     event::{Event, WindowEvent}
 };
-use vulkano::{
-    buffer::{BufferUsage, CpuAccessibleBuffer},
-    pipeline::vertex::SingleBufferDefinition
-};
 use ledge_engine::prelude::*;
 use cgmath::{Deg, Rad, Angle};
 use std::sync::Arc;
@@ -32,11 +28,11 @@ fn main() {
     let fs = fs::Shader::load(context.device.clone()).unwrap();
 
     let shader_program = Arc::new(ShaderProgram::new( // Create a new shader program.
-        &mut context, 
-        SingleBufferDefinition::<ParticleVertex>::new(), 
+        &mut context,
+        buffer::BufferDefinition::new().vertex::<ParticleVertex>(),
         VertexOrder::PointList,
-        Shader::new(vs.main_entry_point(), ()), 
-        Shader::new(fs.main_entry_point(), ()), 
+        vs.main_entry_point(), 
+        fs.main_entry_point(), 
         BlendMode::Alpha
     ));
 
@@ -47,15 +43,12 @@ fn main() {
     camera.rotate_x(Deg(20.0));
     camera.translate_z(600.0);
     
-    let mvp = CpuAccessibleBuffer::from_data(
-        context.device.clone(), 
-        BufferUsage::all(), 
-        false,
-        camera.as_mvp(),
-    ).unwrap();
+    let mvp = context.buffer_from(camera.as_mvp()).unwrap();
 
-    context.pipe_data.descriptor.push(shader_material.uniforms[0].clone());
-    context.pipe_data.descriptor.push(mvp.clone());
+    let descriptor = vulkano::descriptor_set::PersistentDescriptorSet::start(shader_program.layout());
+    let descriptor = descriptor.add_buffer(shader_material.uniforms[0].clone()).unwrap();
+    let descriptor = descriptor.add_buffer(mvp.clone()).unwrap();
+    let descriptor = Arc::new(descriptor.build().unwrap());
 
     let mut count = 0.0;
 
@@ -73,7 +66,7 @@ fn main() {
             
                 context.create_command_buffer();
                 context.begin_frame();
-                context.draw(particles.clone(), shader_material.shader_program.clone());
+                context.draw(particles.clone(), shader_material.shader_program.clone(), descriptor.clone());
                 context.present();
 
                 let sleep_time = std::time::Duration::from_secs_f64(0.016).checked_sub(now.elapsed());
@@ -86,7 +79,7 @@ fn main() {
 }
 
 fn update(context: &mut GraphicsContext, count: &mut f32) -> 
-    std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<[ParticleVertex; (AMOUNTX * AMOUNTY) as usize]>> 
+    std::sync::Arc<buffer::CpuBuffer<[ParticleVertex; (AMOUNTX * AMOUNTY) as usize]>> 
 {
     let mut i = 0;
     let mut data = [ParticleVertex::default(); (AMOUNTX * AMOUNTY) as usize];
@@ -105,5 +98,5 @@ fn update(context: &mut GraphicsContext, count: &mut f32) ->
         }
     }
     *count += 0.03;
-    CpuAccessibleBuffer::from_data(context.device.clone(), BufferUsage::vertex_buffer(), false, data).unwrap()
+    buffer::CpuBuffer::from_data(context.device.clone(), buffer::BufferUsage::vertex_buffer(), false, data).unwrap()
 }

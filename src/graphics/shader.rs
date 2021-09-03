@@ -1,26 +1,35 @@
 use std::sync::Arc;
-use vulkano::{
-    framebuffer::{Subpass},
-    pipeline::{GraphicsPipeline, GraphicsPipelineAbstract},
-};
-use vulkano::pipeline::shader::GraphicsEntryPointAbstract;
-use vulkano::pipeline::shader::SpecializationConstants;
-
-use crate::graphics::context::GraphicsContext;
-use vulkano::pipeline::vertex::VertexDefinition;
-use vulkano::pipeline::shader::EntryPointAbstract;
 use std::collections::HashMap;
-use crate::graphics::BlendMode;
-use vulkano::buffer::BufferAccess;
-use crate::graphics::error::*;
-use vulkano::pipeline::blend::AttachmentBlend;
-use vulkano::pipeline::blend::AttachmentsBlend;
-use vulkano::pipeline::blend::Blend;
-use vulkano::pipeline::blend::LogicOp;
-use vulkano::pipeline::blend::BlendOp;
-use vulkano::pipeline::blend::BlendFactor;
-use vulkano::descriptor::descriptor_set::DescriptorSet;
-use vulkano::descriptor::descriptor_set::UnsafeDescriptorSetLayout;
+
+use vulkano::{
+    descriptor_set::{
+        DescriptorSet, 
+        layout::DescriptorSetLayout,
+    },
+    render_pass::{Subpass},
+    pipeline::{
+        shader::GraphicsEntryPoint,
+        GraphicsPipeline, 
+        GraphicsPipelineAbstract,
+        vertex::VertexDefinition,
+        blend::{
+            AttachmentBlend,
+            AttachmentsBlend,
+            Blend,
+            LogicOp,
+            BlendOp,
+            BlendFactor,
+        }
+    },
+    buffer::BufferAccess,
+};
+
+use crate::graphics::{
+    context::GraphicsContext,
+    BlendMode,
+    error::*,
+};
+
 
 pub enum VertexOrder {
     LineList,
@@ -40,24 +49,23 @@ pub enum ShaderType {
     Default,
 }
 
-pub struct Shader<S, C> {
-    pub shader_type: ShaderType,
-    pub entry_point: S,
-    pub specialization_constants: C,
-}
+// pub struct Shader {
+//     pub shader_type: ShaderType,
+//     pub entry_point: GraphicsEntryPoint,
+//     pub specialization_constants: ,
+// }
 
-impl<S, C> Shader<S, C> {
-    pub fn new(entry_point: S, specialization_constants: C) -> Self {
-        Self {
-            shader_type: ShaderType::Default,
-            entry_point,
-            specialization_constants,
-        }
-    }
-}
+// impl<S, C> Shader<S, C> {
+//     pub fn new(entry_point: S, specialization_constants: C) -> Self {
+//         Self {
+//             shader_type: ShaderType::Default,
+//             entry_point,
+//             specialization_constants,
+//         }
+//     }
+// }
 
 pub struct ShaderProgram {
-    // buffer: Arc<dyn BufferAccess>,
     pipelines: PipelineObjectSet,
     current_mode: BlendMode,
 }
@@ -66,7 +74,7 @@ pub trait ShaderHandle {
     fn draw(&self, context: &mut GraphicsContext, slice: Arc<dyn BufferAccess + Send + Sync>, descriptor: Arc<dyn DescriptorSet + Send + Sync>) -> Result<(), GraphicsError>;
     fn set_blend_mode(&mut self, mode: BlendMode) -> Result<(), GraphicsError>;
     fn blend_mode(&self) -> BlendMode;
-    fn layout(&self) -> Arc<UnsafeDescriptorSetLayout>;
+    fn layout(&self) -> Arc<DescriptorSetLayout>;
 }
 
 impl ShaderHandle for ShaderProgram {
@@ -77,7 +85,7 @@ impl ShaderHandle for ShaderProgram {
             &context.dynamic_state,
             vec![Arc::new(slice.clone())],
             descriptor.clone(),
-            (), vec![], // TODO implement push constants.
+            (), // TODO implement constants.
         ).unwrap(); // TODO fix to return useful error.
         Ok(())
     }
@@ -92,22 +100,22 @@ impl ShaderHandle for ShaderProgram {
         self.current_mode
     }
 
-    fn layout(&self) -> Arc<UnsafeDescriptorSetLayout> {
+    fn layout(&self) -> Arc<DescriptorSetLayout> {
         self.pipelines.get(&self.current_mode).unwrap().descriptor_set_layout()
     }
 }
 
 impl ShaderProgram {
-    pub fn new<Vd, Vs, Vss, Fs, Fss>(context: &mut GraphicsContext, vertex_type: Vd, vertex_order: VertexOrder, vertex_shader: Shader<Vs, Vss>, fragment_shader: Shader<Fs, Fss>, blend: BlendMode) 
-    -> Self 
+    pub fn new<Vd>(
+        context: &mut GraphicsContext, 
+        vertex_type: Vd, 
+        vertex_order: VertexOrder, 
+        vertex_shader: GraphicsEntryPoint, 
+        fragment_shader: GraphicsEntryPoint, 
+        blend: BlendMode
+    ) -> Self 
     where
-        Vd: VertexDefinition<Vs::InputDefinition> + 'static + Sync + Send,
-        Vs: GraphicsEntryPointAbstract<SpecializationConstants = Vss>,
-        <Vs as EntryPointAbstract>::PipelineLayout: Clone + 'static + Send + Sync,
-        Vss: SpecializationConstants, 
-        Fs: GraphicsEntryPointAbstract<SpecializationConstants = Fss>,
-        <Fs as EntryPointAbstract>::PipelineLayout: Clone + 'static + Send + Sync,
-        Fss: SpecializationConstants, 
+        Vd: VertexDefinition + 'static + Sync + Send,
     {
         let po = PipelineObject::new(
             context, 
@@ -173,23 +181,22 @@ pub struct PipelineObject {
 }
 
 impl PipelineObject {
-    pub fn new<Vd, Vs, Vss, Fs, Fss>(context: &mut GraphicsContext, vertex_type: Vd, vertex_order: VertexOrder, vertex_shader: Shader<Vs, Vss>, fragment_shader: Shader<Fs, Fss>, blend: BlendMode) 
-    -> Self 
+    pub fn new<Vd>(
+        context: &mut GraphicsContext, 
+        vertex_type: Vd, 
+        vertex_order: VertexOrder,
+        vertex_shader: GraphicsEntryPoint, 
+        fragment_shader: GraphicsEntryPoint, 
+        blend: BlendMode) -> Self 
     where
-        Vd: VertexDefinition<Vs::InputDefinition> + 'static + Sync + Send,
-        Vs: GraphicsEntryPointAbstract<SpecializationConstants = Vss>,
-        <Vs as EntryPointAbstract>::PipelineLayout: Clone + 'static + Send + Sync,
-        Vss: SpecializationConstants, 
-        Fs: GraphicsEntryPointAbstract<SpecializationConstants = Fss>,
-        <Fs as EntryPointAbstract>::PipelineLayout: Clone + 'static + Send + Sync,
-        Fss: SpecializationConstants, 
+        Vd: VertexDefinition + 'static + Sync + Send,
     {
         let mut pipeline =
             GraphicsPipeline::start()
                 .vertex_input::<Vd>(vertex_type)
-                .vertex_shader(vertex_shader.entry_point, vertex_shader.specialization_constants)
+                .vertex_shader(vertex_shader, ())
                 .viewports_dynamic_scissors_irrelevant(1)
-                .fragment_shader(fragment_shader.entry_point, fragment_shader.specialization_constants)
+                .fragment_shader(fragment_shader, ())
                 .blend_collective(blend.into())
                 .render_pass(Subpass::from(context.render_pass.clone(), 0).unwrap());
         
@@ -212,8 +219,8 @@ impl PipelineObject {
         }
     }
 
-    pub fn descriptor_set_layout(&self) -> Arc<UnsafeDescriptorSetLayout> {
-        self.pipeline.descriptor_set_layout(0).unwrap().clone()
+    pub fn descriptor_set_layout(&self) -> Arc<DescriptorSetLayout> {
+        self.pipeline.layout().descriptor_set_layouts()[0].clone()
     }
 }
 

@@ -1,0 +1,18 @@
+CONTEXT
+* Create a backend struct to store all the non-context-related information for vulkano.
+CAMERA
+* Orhtographic camera.
+ENCODER
+* Write the encoder to abstract the command_buffer.
+BUFFER
+
+IMAGE
+
+SHADER
+
+DESCRIPTOR SET
+* Create a new descriptor set building process that is an [DescriptorAttribute] where DescriptorAttribute 
+is a trait that can tell the descriptor_set builder how to add this object.
+* Figure out how to abstract away the types of the descriptor_set_builder during building, so you can loop over it.
+* If the above is impossible, either write a macro to do it, or wrap the descriptor set and call it a day.
+

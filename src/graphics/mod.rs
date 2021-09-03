@@ -5,7 +5,7 @@ pub mod context;
 /// This module has a lot of intense types from Vulkano wrapped in less scary interfaces that are not as troublesome to deal with 
 pub mod shader;
 /// TODO: A module dedicated to images, used for textures and other image related things.
-pub mod image;
+// pub mod image;
 /// The camera module holds the different camera options and helper functions for creating and 
 /// manipulating views.
 pub mod camera;
@@ -18,7 +18,6 @@ pub mod error;
 
 use crate::graphics::context::GraphicsContext;
 use vulkano::buffer::BufferAccess;
-use std::collections::HashMap;
 
 use cgmath::{
     Matrix,
@@ -29,19 +28,7 @@ use cgmath::{
     prelude::Angle,
 };
 
-use vulkano::{
-    descriptor::descriptor_set::PersistentDescriptorSet,
-    descriptor::descriptor_set::PersistentDescriptorSetBuilder,
-    descriptor::descriptor_set::PersistentDescriptorSetBuf,
-    pipeline::GraphicsPipelineAbstract,
-    descriptor::descriptor_set::DescriptorSet,
-    descriptor::descriptor_set::collection::DescriptorSetsCollection,
-    buffer::CpuAccessibleBuffer,
-};
-
 use std::sync::Arc;
-use crate::graphics::image::Image;
-
 
 #[derive(Clone, Copy, PartialEq, Hash, Eq)]
 pub enum BlendMode {
@@ -278,67 +265,12 @@ impl Rect {
     }
 }
 
-pub struct DescriptorBuilder<R> {
-    builder: PersistentDescriptorSetBuilder<R>,
-    attributes: HashMap<String, Box<dyn BufferAccess>>,
-}
-
-impl DescriptorBuilder<()> {
-    pub fn new(pipeline: &Arc<dyn GraphicsPipelineAbstract + Send + Sync>) -> Self {
-        Self {
-            builder: PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).unwrap().clone()),
-            attributes: HashMap::new(),
-        }
-    }
-}
-
-impl<R> DescriptorBuilder<R> {
-    pub fn add<T>(self, buffer: T) -> DescriptorBuilder<(R, PersistentDescriptorSetBuf<T>)>
-    where
-        T: BufferAccess
-    {
-        let builder = self.builder.add_buffer(buffer).unwrap();
-        DescriptorBuilder {
-            builder,
-            attributes: self.attributes
-        }
-    }
-}
-
 #[allow(unused)]
 pub struct PipelineData {
     vert_buf: Arc<dyn BufferAccess>,
-    texture: Image,
+    // texture: Image,
     instance_data: Option<Arc<dyn BufferAccess>>,
     pub descriptor: Vec<Arc<dyn BufferAccess + Send + Sync>>,
 }
 
 pub struct Color(u16);
-
-pub struct Descriptor<R> {
-    inner: PersistentDescriptorSetBuilder<R>,
-}
-
-impl<R> Descriptor<R>
-{
-
-}
-
-pub trait PersistentDescriptorSetType {
-    fn buffer_at(&self, set: usize, binding: usize) -> Option<Arc<dyn BufferAccess>>;
-}
-
-// impl PersistentDescriptorSetType for () {
-//     fn buffer_at(&self, set: usize, binding: usize) -> Option<Arc<dyn BufferAccess>> {
-//         None
-//     }
-// }
-
-// impl<T> PersistentDescriptorSetType for T
-// where
-//     T: BufferAccess + Send + Sync + 'static 
-// {
-//     fn buffer_at(&self, set: usize, binding: usize) -> Option<Arc<dyn BufferAccess>> {
-//         self
-//     }
-// }

@@ -142,9 +142,9 @@ impl PerspectiveCamera {
         self.view = translation * self.view;
     }
 
-    pub fn zoom(&mut self, amount: f32) {
+    // pub fn zoom(&mut self, amount: f32) {
 
-    }
+    // }
 
     pub fn as_mvp(&self) -> CameraMvp {
         CameraMvp {

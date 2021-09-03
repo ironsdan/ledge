@@ -1,20 +1,12 @@
-use ledge_engine::graphics::buffer::*;
 use winit::{
     event_loop::{ControlFlow},
     event::{Event, WindowEvent}
 };
 use vulkano::{
-    descriptor::descriptor_set::PersistentDescriptorSet,
+    descriptor_set::PersistentDescriptorSet,
 };
 use std::sync::Arc;
-use ledge_engine::graphics::camera::PerspectiveCamera;
-use ledge_engine::graphics::shader::Shader;
-use ledge_engine::graphics::context::GraphicsContext;
-use ledge_engine::conf::Conf;
-use ledge_engine::graphics::BlendMode;
-use ledge_engine::graphics::shader::ShaderProgram;
-use vulkano::pipeline::vertex::SingleBufferDefinition;
-use ledge_engine::graphics::shader::VertexOrder;
+use ledge_engine::prelude::*;
 
 #[derive(Default, Copy, Clone)]
 struct Vertex {
@@ -52,38 +44,33 @@ fn main() {
     let vs = vs::Shader::load(context.device.clone()).unwrap();
     let fs = fs::Shader::load(context.device.clone()).unwrap();
     
-    let shader_program = Arc::new(ShaderProgram::new(
+    let shader_program = Arc::new(ShaderProgram::new( // Create a new shader program.
         &mut context, 
-        SingleBufferDefinition::<Vertex>::new(), 
-        VertexOrder::TriangleFan,
-        Shader::new(vs.main_entry_point(), ()), 
-        Shader::new(fs.main_entry_point(), ()), 
+        buffer::BufferDefinition::new().vertex::<Vertex>(), 
+        VertexOrder::PointList,
+        vs.main_entry_point(),
+        fs.main_entry_point(), 
         BlendMode::Alpha
     ));
 
     let camera = PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 2000.0);
 
-    let color = BufferAttribute::from_data(
-        [1.0 as f32, 1.0 as f32, 1.0 as f32], 
-        context.device.clone()
-    );
  
     let mvp_data = CameraMvp {
         model: camera.model_array(),
         view: camera.view_array(),
         proj: camera.proj_array(),
     };
-    
-    let mvp = BufferAttribute::from_data(
-        mvp_data, 
-        context.device.clone()
-    );
+
+    let mvp = Arc::new(context.buffer_from(mvp_data).unwrap());
+    let color = Arc::new(context.buffer_from([1.0 as f32, 1.0 as f32, 1.0 as f32]).unwrap());
+
 
     let barycenter = [[1.0, 0.0, 0.0],
                      [0.0, 1.0, 0.0],
                      [0.0, 0.0, 1.0]];
 
-    let triangle = BufferAttribute::from_data(
+    let triangle = Arc::new(context.buffer_from(
         [
             Vertex {
                 position: [0.0, 0.0, 200.0],
@@ -109,14 +96,13 @@ fn main() {
                 position: [-50.0, 100.0, 200.0],
                 barycenter: barycenter[1],
             },
-        ],
-        context.device.clone()
-    );
+        ]
+    ).unwrap());
 
     let descriptor = Arc::new(
         PersistentDescriptorSet::start(shader_program.layout().clone())
-            .add_buffer(color.inner.clone()).unwrap() 
-            .add_buffer(mvp.inner.clone()).unwrap()
+            .add_buffer(color.clone()).unwrap() 
+            .add_buffer(mvp.clone()).unwrap()
             .build()
             .unwrap(),
     );
@@ -141,7 +127,7 @@ fn main() {
             
                 context.begin_frame();
 
-                context.draw(triangle.inner.clone(), shader_program.clone(), descriptor.clone());
+                context.draw(triangle.clone(), shader_program.clone(), descriptor.clone());
 
                 context.present();
 

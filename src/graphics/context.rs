@@ -1,29 +1,22 @@
 use vulkano::{
-    command_buffer::{AutoCommandBufferBuilder, DynamicState},
+    command_buffer::{AutoCommandBufferBuilder, DynamicState, CommandBufferUsage, PrimaryAutoCommandBuffer},
     device::{Device, DeviceExtensions},
-    framebuffer::{RenderPassAbstract},
     image::ImageUsage,
-    instance::{Instance, PhysicalDevice},
+    instance::{Instance},
     sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode},
-    swapchain::{
-        self, AcquireError, ColorSpace, FullscreenExclusive, PresentMode, SurfaceTransform, Swapchain,
-        SwapchainCreationError,
-    },
+    swapchain::{self, AcquireError, Swapchain, SwapchainCreationError},
     sync::{self, FlushError, GpuFuture},
-    command_buffer::pool::standard::StandardCommandPoolBuilder,
     swapchain::SwapchainAcquireFuture,
-    command_buffer::SubpassContents,
+    command_buffer::{SubpassContents, pool::standard::StandardCommandPoolBuilder},
     instance::InstanceExtensions,
-    framebuffer::{Framebuffer, FramebufferAbstract},
+    render_pass::{Framebuffer, FramebufferAbstract, RenderPass},
     image::SwapchainImage,
     pipeline::viewport::Viewport,
     image::view::ImageView,
     buffer::{BufferAccess, BufferUsage, CpuAccessibleBuffer},
-    descriptor::descriptor_set::DescriptorSet,
-    descriptor::descriptor_set::PersistentDescriptorSet,
+    descriptor_set::{DescriptorSet},
+    device::physical::PhysicalDevice,
 };
-
-use vulkano::descriptor::descriptor_set::DescriptorSetDesc;
 
 use vulkano_win::VkSurfaceBuild;
 use winit::{
@@ -35,7 +28,6 @@ use crate::{
     conf::*,
     graphics::PipelineData,
     graphics::shader::ShaderHandle,
-    graphics::image::Image,
 };
 
 
@@ -100,14 +92,14 @@ pub struct GraphicsContext {
     pub device: std::sync::Arc<vulkano::device::Device>,
     pub swapchain: std::sync::Arc<vulkano::swapchain::Swapchain<winit::window::Window>>,
     pub sampler: std::sync::Arc<vulkano::sampler::Sampler>,
-    pub framebuffers: std::vec::Vec<std::sync::Arc<dyn vulkano::framebuffer::FramebufferAbstract + std::marker::Send + std::marker::Sync>>,
-    pub render_pass: std::sync::Arc<dyn RenderPassAbstract + std::marker::Send + std::marker::Sync>,
+    pub framebuffers: std::vec::Vec<std::sync::Arc<dyn vulkano::render_pass::FramebufferAbstract + std::marker::Send + std::marker::Sync>>,
+    pub render_pass: std::sync::Arc<RenderPass>,
     pub dynamic_state: vulkano::command_buffer::DynamicState,
     pub image_num: usize,
     pub acquire_future: Option<SwapchainAcquireFuture<Window>>,
     pub recreate_swapchain: bool,
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
-    pub command_buffer: Option<AutoCommandBufferBuilder<StandardCommandPoolBuilder>>,
+    pub command_buffer: Option<AutoCommandBufferBuilder<PrimaryAutoCommandBuffer, StandardCommandPoolBuilder>,>,
 
     pub pipe_data: PipelineData,
 }
@@ -122,13 +114,13 @@ impl GraphicsContext {
         };
     
         let instance =
-            Instance::new(None, &extensions, vec![]).expect("failed to create Vulkan instance");
+            Instance::new(None, vulkano::Version::major_minor(1,1), &extensions, vec![]).expect("failed to create Vulkan instance");
 
         let physical = PhysicalDevice::enumerate(&instance).next().unwrap();
         println!(
             "Using device: {} (type: {:?})\n",
-            physical.name(),
-            physical.ty(),
+            physical.properties().device_name,
+            physical.properties().device_type,
         );
 
         let event_loop = winit::event_loop::EventLoop::new();
@@ -164,28 +156,45 @@ impl GraphicsContext {
 
         let (swapchain, images) = {
             let caps = surface.capabilities(physical).unwrap();
-            let alpha = caps.supported_composite_alpha.iter().next().unwrap();
+            let composite_alpha = caps.supported_composite_alpha.iter().next().unwrap();
             let format = caps.supported_formats[0].0;
             let dimensions: [u32; 2] = surface.window().inner_size().into();
-
-            Swapchain::new(
-                device.clone(),
-                surface.clone(),
-                caps.min_image_count,
-                format,
-                dimensions,
-                1,
-                ImageUsage::color_attachment(),
-                &queue,
-                SurfaceTransform::Identity,
-                alpha,
-                PresentMode::Immediate, // This is definitely not great. But keeps from frame spikes
-                FullscreenExclusive::Default,
-                true,
-                ColorSpace::SrgbNonLinear,
-            )
-            .unwrap()
+    
+            Swapchain::start(device.clone(), surface.clone())
+                .num_images(caps.min_image_count)
+                .format(format)
+                .dimensions(dimensions)
+                .usage(ImageUsage::color_attachment())
+                .sharing_mode(&queue)
+                .composite_alpha(composite_alpha)
+                .build()
+                .unwrap()
         };
+
+        // let (swapchain, images) = {
+        //     let caps = surface.capabilities(physical).unwrap();
+        //     let alpha = caps.supported_composite_alpha.iter().next().unwrap();
+        //     let format = caps.supported_formats[0].0;
+        //     let dimensions: [u32; 2] = surface.window().inner_size().into();
+
+        //     Swapchain::new(
+        //         device.clone(),
+        //         surface.clone(),
+        //         caps.min_image_count,
+        //         format,
+        //         dimensions,
+        //         1,
+        //         ImageUsage::color_attachment(),
+        //         &queue,
+        //         SurfaceTransform::Identity,
+        //         alpha,
+        //         PresentMode::Fifo,
+        //         FullscreenExclusive::Default,
+        //         true,
+        //         ColorSpace::SrgbNonLinear,
+        //     )
+        //     .unwrap()
+        // };
 
         let render_pass = Arc::new(
             vulkano::single_pass_renderpass!(device.clone(),
@@ -230,7 +239,7 @@ impl GraphicsContext {
                 false,
                 &[0]
             ).unwrap()),
-            texture: Image::empty(),
+            // texture: Image::empty(),
             instance_data: None,
             descriptor: Vec::new(),
         };
@@ -259,7 +268,7 @@ impl GraphicsContext {
     /// the command buffer is recreated every frame.
     pub fn create_command_buffer(&mut self,) {
         let builder =
-        AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queue.family())
+        AutoCommandBufferBuilder::primary(self.device.clone(), self.queue.family(), CommandBufferUsage::OneTimeSubmit,)
             .unwrap();
         self.command_buffer = Some(builder);
     }
@@ -275,7 +284,7 @@ impl GraphicsContext {
         if self.recreate_swapchain {
             let dimensions: [u32; 2] = self.surface.window().inner_size().into();
             let (new_swapchain, new_images) =
-                match self.swapchain.recreate_with_dimensions(dimensions) {
+                match self.swapchain.recreate().dimensions(dimensions).build() {
                     Ok(r) => r,
                     Err(SwapchainCreationError::UnsupportedDimensions) => return,
                     Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
@@ -286,6 +295,7 @@ impl GraphicsContext {
                 &new_images,
                 self.render_pass.clone(),
                 &mut self.dynamic_state,
+                // &mut viewport,
             );
             self.recreate_swapchain = false;
         }
@@ -307,7 +317,11 @@ impl GraphicsContext {
         self.image_num = image_num;
         self.acquire_future = Some(acquire_future);
         let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
-        self.command_buffer.as_mut().unwrap().begin_render_pass(self.framebuffers[self.image_num].clone(), SubpassContents::Inline, clear_values).unwrap();
+        self.command_buffer.as_mut().unwrap().begin_render_pass(
+            self.framebuffers[self.image_num].clone(), 
+            SubpassContents::Inline, 
+            clear_values,
+        ).unwrap();
     }
 
 
@@ -316,79 +330,21 @@ impl GraphicsContext {
     /// Very scary to look at, at the moment. Due to Rust not being able to deal with the safety of looping/changing
     /// the descriptor type each loop, I had to manually right out the loop which limits the number of possible descriptors
     /// and only supports uniforms, as others will break it. Incredibly fragile and hoping to fix it later.
-    pub fn draw<'a>(&mut self, vertices: Arc<dyn BufferAccess + Send + Sync>, shader_handle: Arc<dyn ShaderHandle>) {
-        let layout = shader_handle.layout();
-        let num_bindings = layout.num_bindings();
+    pub fn draw<'a>(
+        &mut self, 
+        vertices: Arc<dyn BufferAccess + Send + Sync>, 
+        shader_handle: Arc<dyn ShaderHandle>, 
+        descriptor_set: Arc<dyn DescriptorSet + Send + Sync>,
+    ) {
+        // let layout = shader_handle.layout();
+        // let num_bindings = layout.num_bindings();
         
-        let descriptor: vulkano::descriptor::descriptor_set::PersistentDescriptorSetBuilder<()> = PersistentDescriptorSet::start(layout.clone());
-        // let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[0].clone()).unwrap();
+        // let descriptor: PersistentDescriptorSetBuilder<dyn PersistentDescriptorSetResources> = PersistentDescriptorSet::start(layout.clone());
         // for i in 0..num_bindings {
         //     descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
         // }
-
-        let mut i = 0;
-
-        if i >= num_bindings {
-            let descriptor = Arc::new(descriptor.build().unwrap());
-            shader_handle.draw(self, vertices, descriptor).unwrap();
-            return;
-        }
-        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
-        i+=1;
-
-        if i >= num_bindings {
-            let descriptor = Arc::new(descriptor.build().unwrap());
-            shader_handle.draw(self, vertices, descriptor).unwrap();
-            return;
-        }
-        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
-        i+=1;
-
-        if i >= num_bindings {
-            let descriptor = Arc::new(descriptor.build().unwrap());
-            shader_handle.draw(self, vertices, descriptor).unwrap();
-            return;
-        }
-        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
-        i+=1;
-
-        if i >= num_bindings {
-            let descriptor = Arc::new(descriptor.build().unwrap());
-            shader_handle.draw(self, vertices, descriptor).unwrap();
-            return;
-        }
-        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
-        i+=1;
-
-        if i >= num_bindings {
-            let descriptor = Arc::new(descriptor.build().unwrap());
-            shader_handle.draw(self, vertices, descriptor).unwrap();
-            return;
-        }
-        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
-        i+=1;
+        shader_handle.draw(self, vertices, descriptor_set).unwrap();
         
-        if i >= num_bindings {
-            let descriptor = Arc::new(descriptor.build().unwrap());
-            shader_handle.draw(self, vertices, descriptor).unwrap();
-            return;
-        }
-        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
-        i+=1;
-        
-        if i >= num_bindings {
-            let descriptor = Arc::new(descriptor.build().unwrap());
-            shader_handle.draw(self, vertices, descriptor).unwrap();
-            return;
-        }
-        let descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
-        i+=1;
-
-        if i >= num_bindings {
-            let descriptor = Arc::new(descriptor.build().unwrap());
-            shader_handle.draw(self, vertices, descriptor).unwrap();
-            return;
-        }
     }
 
     /// This function submits the command buffer to the queue and fences the operation, 
@@ -421,15 +377,25 @@ impl GraphicsContext {
                 self.previous_frame_end = Some(sync::now(self.device.clone()).boxed());
             }
         };
+    }
 
-        // Limit the frame rate since PresentMode::Immediate has to be used.
+    pub fn buffer_from<T>(&self, data: T) -> Result<Arc<CpuAccessibleBuffer<T>>, vulkano::memory::DeviceMemoryAllocError> 
+    where
+        T: Copy + 'static 
+    {
+        CpuAccessibleBuffer::from_data(
+            self.device.clone(), 
+            BufferUsage::all(), 
+            false,
+            data,
+        )
     }
 }
 
 // This method is called once during initialization, then again whenever the window is resized
 pub fn window_size_dependent_setup(
     images: &[Arc<SwapchainImage<Window>>],
-    render_pass: Arc<dyn RenderPassAbstract + Send + Sync>,
+    render_pass: Arc<RenderPass>,
     dynamic_state: &mut DynamicState,
 ) -> Vec<Arc<dyn FramebufferAbstract + Send + Sync>> {
     let dimensions = images[0].dimensions();

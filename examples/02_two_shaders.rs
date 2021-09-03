@@ -1,23 +1,14 @@
-use ledge_engine::graphics::buffer::*;
 use winit::{
     event_loop::{ControlFlow},
     event::{Event, WindowEvent}
 };
 use vulkano::{
-    descriptor::descriptor_set::PersistentDescriptorSet,
+    descriptor_set::PersistentDescriptorSet,
     buffer::{BufferUsage, CpuAccessibleBuffer},
 };
 use cgmath::{Deg, Rad, Angle};
 use std::sync::Arc;
-use ledge_engine::graphics::camera::PerspectiveCamera;
-use ledge_engine::graphics::shader::PipelineObject;
-use ledge_engine::graphics::shader::Shader;
-use ledge_engine::graphics::context::GraphicsContext;
-use ledge_engine::conf::Conf;
-use ledge_engine::graphics::BlendMode;
-use ledge_engine::graphics::shader::ShaderProgram;
-use vulkano::pipeline::vertex::SingleBufferDefinition;
-use ledge_engine::graphics::shader::VertexOrder;
+use ledge_engine::prelude::*;
 
 #[derive(Default, Copy, Clone)]
 struct ParticleVertex {
@@ -75,21 +66,21 @@ fn main() {
     let vs2 = vs2::Shader::load(context.device.clone()).unwrap();
     let fs2 = fs2::Shader::load(context.device.clone()).unwrap();
 
-    let shader_program = Arc::new(ShaderProgram::new(
+    let shader_program = Arc::new(ShaderProgram::new( // Create a new shader program.
         &mut context, 
-        SingleBufferDefinition::<ParticleVertex>::new(), 
+        buffer::BufferDefinition::new().vertex::<ParticleVertex>(), 
         VertexOrder::PointList,
-        Shader::new(vs.main_entry_point(), ()), 
-        Shader::new(fs.main_entry_point(), ()),  
+        vs.main_entry_point(),
+        fs.main_entry_point(), 
         BlendMode::Alpha
     ));
 
-    let shader_program2 = Arc::new(ShaderProgram::new(
+    let shader_program2 = Arc::new(ShaderProgram::new( // Create a new shader program.
         &mut context, 
-        SingleBufferDefinition::<ParticleVertex>::new(), 
+        buffer::BufferDefinition::new().vertex::<ParticleVertex>(), 
         VertexOrder::PointList,
-        Shader::new(vs2.main_entry_point(), ()), 
-        Shader::new(fs2.main_entry_point(), ()), 
+        vs2.main_entry_point(),
+        fs2.main_entry_point(), 
         BlendMode::Alpha
     ));
 
@@ -97,10 +88,7 @@ fn main() {
     camera.rotate_x(Deg(20.0));
     camera.translate_z(600.0);
 
-    let color = BufferAttribute::from_data(
-        [1.0 as f32, 1.0 as f32, 1.0 as f32], 
-        context.device.clone()
-    );
+    let color = Arc::new(context.buffer_from([1.0 as f32, 1.0 as f32, 1.0 as f32]).unwrap());
     
     let mvp_data = CameraMvp {
         model: camera.model_array(),
@@ -108,15 +96,12 @@ fn main() {
         proj: camera.proj_array(),
     };
     
-    let mvp = BufferAttribute::from_data(
-        mvp_data, 
-        context.device.clone()
-    );
+    let mvp = Arc::new(context.buffer_from(mvp_data).unwrap());
 
     let descriptor = Arc::new(
         PersistentDescriptorSet::start(shader_program.layout().clone())
-            .add_buffer(color.inner.clone()).unwrap()
-            .add_buffer(mvp.inner.clone()).unwrap()
+            .add_buffer(color.clone()).unwrap()
+            .add_buffer(mvp.clone()).unwrap()
             .build()
             .unwrap(),
     );

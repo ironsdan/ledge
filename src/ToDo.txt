@@ -1,3 +1,0 @@
-Create a backend struct to store all the non-context-related information for vulkano.
-
-Add remove functions for entities for ecs.
