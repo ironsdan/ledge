@@ -10,7 +10,7 @@ use vulkano::{
     pipeline::{
         shader::GraphicsEntryPoint,
         GraphicsPipeline, 
-        GraphicsPipelineAbstract,
+        // GraphicsPipelineAbstract,
         vertex::VertexDefinition,
         blend::{
             AttachmentBlend,
@@ -75,18 +75,18 @@ pub trait ShaderHandle {
     fn set_blend_mode(&mut self, mode: BlendMode) -> Result<(), GraphicsError>;
     fn blend_mode(&self) -> BlendMode;
     fn layout(&self) -> Arc<DescriptorSetLayout>;
+    fn pipeline(&self) -> Arc<GraphicsPipeline>;
 }
 
 impl ShaderHandle for ShaderProgram {
     fn draw(&self, context: &mut GraphicsContext, slice: Arc<dyn BufferAccess + Send + Sync>, descriptor: Arc<dyn DescriptorSet + Send + Sync>) -> Result<(), GraphicsError> {
-        let po = self.pipelines.mode(&self.current_mode)?;
-        context.command_buffer.as_mut().unwrap().draw(
-            po.pipeline.clone(),
-            &context.dynamic_state,
-            vec![Arc::new(slice.clone())],
-            descriptor.clone(),
-            (), // TODO implement constants.
-        ).unwrap(); // TODO fix to return useful error.
+        // let po = self.pipelines.mode(&self.current_mode)?;
+        // context.command_buffer.as_mut().unwrap().draw(
+        //     po.pipeline.clone(),
+        //     &context.dynamic_state,
+        //     vec![Arc::new(slice.clone())],
+        //     descriptor.clone(),
+        // ).unwrap(); // TODO fix to return useful error.
         Ok(())
     }
 
@@ -102,6 +102,10 @@ impl ShaderHandle for ShaderProgram {
 
     fn layout(&self) -> Arc<DescriptorSetLayout> {
         self.pipelines.get(&self.current_mode).unwrap().descriptor_set_layout()
+    }
+
+    fn pipeline(&self) -> Arc<GraphicsPipeline> {
+        self.pipelines.get(&self.current_mode).unwrap().inner()
     }
 }
 
@@ -177,7 +181,8 @@ impl PipelineObjectSet {
 }
 
 pub struct PipelineObject {
-    pub pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync>,
+    // pub pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync>,
+    pub pipeline: Arc<GraphicsPipeline>,
 }
 
 impl PipelineObject {
@@ -212,7 +217,8 @@ impl PipelineObject {
         let pipeline = Arc::new(
             pipeline.build(context.device.clone())
                     .unwrap()
-        ) as Arc<dyn GraphicsPipelineAbstract + Send + Sync>;
+        );
+        // as Arc<dyn GraphicsPipelineAbstract + Send + Sync>;
 
         Self {
             pipeline,
@@ -221,6 +227,10 @@ impl PipelineObject {
 
     pub fn descriptor_set_layout(&self) -> Arc<DescriptorSetLayout> {
         self.pipeline.layout().descriptor_set_layouts()[0].clone()
+    }
+
+    pub fn inner(&self) -> Arc<GraphicsPipeline> {
+        self.pipeline.clone()
     }
 }
 

@@ -652,6 +652,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "itoa"
+version = "0.4.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b71991ff56294aa922b450139ee08b3bfc70982c6b2c7562771375cf73542dd4"
+
+[[package]]
 name = "jni-sys"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1527,6 +1533,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ryu"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
+
+[[package]]
 name = "same-file"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1558,6 +1570,31 @@ name = "serde"
 version = "1.0.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b88fa983de7720629c9387e9f517353ed404164b1e482c970a90c1a4aaf7dc1a"
+dependencies = [
+ "serde_derive",
+]
+
+[[package]]
+name = "serde_derive"
+version = "1.0.117"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cbd1ae72adb44aab48f325a02444a5fc079349a8d804c1fc922aed3f7454c74e"
+dependencies = [
+ "proc-macro2 1.0.24",
+ "quote 1.0.7",
+ "syn",
+]
+
+[[package]]
+name = "serde_json"
+version = "1.0.68"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f690853975602e1bfe1ccbf50504d67174e3bcf340f23b5ea9992e0587a52d8"
+dependencies = [
+ "itoa",
+ "ryu",
+ "serde",
+]
 
 [[package]]
 name = "shaderc"
@@ -1634,16 +1671,6 @@ dependencies = [
  "wayland-client 0.28.4",
  "wayland-cursor",
  "wayland-protocols 0.28.4",
-]
-
-[[package]]
-name = "spirv_headers"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f5b132530b1ac069df335577e3581765995cba5a13995cdbbdbc8fb057c532c"
-dependencies = [
- "bitflags",
- "num-traits",
 ]
 
 [[package]]
@@ -1770,8 +1797,7 @@ checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 [[package]]
 name = "vulkano"
 version = "0.25.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e631daf0d54bf36908ccff9f38ced7ff253a327e396ac13503a11401bee8c38"
+source = "git+https://github.com/Rua/vulkano.git?branch=descriptor-set-bounds#b7d4936c2af3c9abb0fa7631f5c00605601da3ee"
 dependencies = [
  "ash",
  "crossbeam-queue",
@@ -1781,7 +1807,11 @@ dependencies = [
  "indexmap",
  "lazy_static",
  "parking_lot 0.11.1",
+ "proc-macro2 1.0.24",
+ "quote 1.0.7",
  "regex",
+ "serde",
+ "serde_json",
  "shared_library",
  "smallvec",
  "vk-parse",
@@ -1790,22 +1820,19 @@ dependencies = [
 [[package]]
 name = "vulkano-shaders"
 version = "0.25.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f45834e124ae0fdc95a358d83f163d9b14e9ec7780d99cd5aecbf4e76b1a67e"
+source = "git+https://github.com/Rua/vulkano.git?branch=descriptor-set-bounds#b7d4936c2af3c9abb0fa7631f5c00605601da3ee"
 dependencies = [
- "num-traits",
  "proc-macro2 1.0.24",
  "quote 1.0.7",
  "shaderc",
- "spirv_headers",
  "syn",
+ "vulkano",
 ]
 
 [[package]]
 name = "vulkano-win"
 version = "0.25.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef5a84fe7d636a1aefdaecabb89b8c47d0b3a785653a38ffbc69a34fb46f6784"
+source = "git+https://github.com/Rua/vulkano.git?branch=descriptor-set-bounds#b7d4936c2af3c9abb0fa7631f5c00605601da3ee"
 dependencies = [
  "cocoa 0.20.2",
  "metal",

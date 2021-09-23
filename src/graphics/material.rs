@@ -23,6 +23,7 @@ pub trait Material {
     fn blend_alpha_src(blend_src: BlendFactor);
 }
 
+#[allow(dead_code)]
 pub struct ShaderMaterial {
     pub uniforms: Vec<Arc<dyn BufferAccess + Send + Sync>>,
     descriptor: Option<Arc<dyn DescriptorSet>>,

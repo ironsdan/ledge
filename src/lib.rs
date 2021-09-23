@@ -170,15 +170,15 @@ pub mod graphics;
 pub mod conf;
 /// TODO: This module will one day be the interface to the filesystem and 
 /// be a storage and loader device for images, and other file types.
-pub mod asset;
+// pub mod asset;
 /// The ```input```module handles inputs from various different peripherals and passes has structs to  sto the current state.
-pub mod input;
+// pub mod input;
 /// TODO: Add some audio module.
-pub mod audio;
+// pub mod audio;
 /// A module that stores timing data.
 pub mod timer;
 
-pub mod scene;
+// pub mod scene;
 
 pub mod prelude {
     pub use crate::graphics::*;

@@ -3,9 +3,11 @@ use winit::{
     event::{Event, WindowEvent}
 };
 use vulkano::{
-    descriptor_set::PersistentDescriptorSet,
+    descriptor_set::SingleLayoutDescSetPool,
     buffer::{BufferUsage, CpuAccessibleBuffer},
 };
+use vulkano::descriptor_set::DescriptorSet;
+
 use ledge_engine::prelude::*;
 use cgmath::{Deg, Rad, Angle};
 use std::sync::Arc;
@@ -54,11 +56,24 @@ fn main() {
         camera.as_mvp(),
     ).unwrap();
 
-    let descriptor = Arc::new(
-        PersistentDescriptorSet::start(shader_program.layout().clone())
-            .add_buffer(mvp.clone()).unwrap()
-            .build().unwrap(),
-    );
+    let mut camera_set_pool = SingleLayoutDescSetPool::new(shader_program.layout().clone());
+
+    let descriptor_set = {
+        let mut builder = camera_set_pool.next();
+        builder.add_buffer(mvp).unwrap();
+        builder.build().unwrap()
+    };
+
+    let mut descriptors: std::collections::HashMap<u32, Arc<dyn DescriptorSet + Send + Sync>> = std::collections::HashMap::new();
+
+    descriptors.insert(0, Arc::new(descriptor_set));
+
+    // context.pipe_data.descriptor_sets.unwrap()[&0] = Arc::new(descriptor_set);
+    // let descriptor = Arc::new(
+        // PersistentDescriptorSet::start(shader_program.layout().clone())
+            // .add_buffer(mvp.clone()).unwrap()
+            // .build().unwrap(),
+    // );
 
     let mut count = 0.0;
 
@@ -76,7 +91,7 @@ fn main() {
             
                 context.create_command_buffer();
                 context.begin_frame();
-                context.draw(particles.clone(), shader_material.shader_program.clone(), descriptor.clone());
+                context.draw(2601, particles.clone(), shader_material.shader_program.clone(), descriptors.clone());
                 context.present();
 
                 let sleep_time = std::time::Duration::from_secs_f64(0.016).checked_sub(now.elapsed());

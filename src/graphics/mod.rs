@@ -17,7 +17,9 @@ pub mod material;
 pub mod error;
 
 use crate::graphics::context::GraphicsContext;
+use std::collections::HashMap;
 use vulkano::buffer::BufferAccess;
+use vulkano::descriptor_set::DescriptorSet;
 
 use cgmath::{
     Matrix,
@@ -270,7 +272,7 @@ pub struct PipelineData {
     vert_buf: Arc<dyn BufferAccess>,
     // texture: Image,
     instance_data: Option<Arc<dyn BufferAccess>>,
-    pub descriptor: Vec<Arc<dyn BufferAccess + Send + Sync>>,
+    pub descriptor_sets: Option<HashMap<u32, Arc<dyn DescriptorSet + Send + Sync>>>,
 }
 
 pub struct Color(u16);

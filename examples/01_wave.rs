@@ -36,8 +36,7 @@ fn main() {
         BlendMode::Alpha
     ));
 
-    let mut shader_material = ShaderMaterial::new(shader_program.clone()); // Load shader program into material.
-    shader_material.add_uniform([1.0 as f32, 1.0 as f32, 1.0 as f32], context.device.clone());
+    let shader_material = ShaderMaterial::new(shader_program.clone()); // Load shader program into material.
 
     let mut camera = PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0); // Create and move camera.
     camera.rotate_x(Deg(20.0));
@@ -45,10 +44,10 @@ fn main() {
     
     let mvp = context.buffer_from(camera.as_mvp()).unwrap();
 
-    let descriptor = vulkano::descriptor_set::PersistentDescriptorSet::start(shader_program.layout());
-    let descriptor = descriptor.add_buffer(shader_material.uniforms[0].clone()).unwrap();
-    let descriptor = descriptor.add_buffer(mvp.clone()).unwrap();
-    let descriptor = Arc::new(descriptor.build().unwrap());
+    let descriptor = Arc::new(vulkano::descriptor_set::PersistentDescriptorSet::start(shader_program.layout())
+        .add_buffer(shader_material.uniforms[0].clone()).unwrap()
+        .add_buffer(mvp.clone()).unwrap()
+        .build().unwrap());
 
     let mut count = 0.0;
 
