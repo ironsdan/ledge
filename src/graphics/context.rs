@@ -3,18 +3,19 @@ use vulkano::{
     device::{Device, DeviceExtensions},
     image::ImageUsage,
     instance::{Instance},
-    sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode},
-    swapchain::{self, AcquireError, Swapchain},
+    // descriptor_set::{SingleLayoutDescSetPool},
+    // sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode},
+    swapchain::{self, AcquireError, Swapchain, SwapchainCreationError},
     sync::{self, FlushError, GpuFuture},
     instance::InstanceExtensions,
     render_pass::{Framebuffer, FramebufferAbstract, RenderPass},
     image::SwapchainImage,
-    pipeline::{viewport::Viewport, PipelineBindPoint},
+    pipeline::{viewport::Viewport},
     image::view::ImageView,
     buffer::{BufferAccess, BufferUsage, CpuAccessibleBuffer},
-    descriptor_set::{DescriptorSet},
     device::physical::PhysicalDevice,
 };
+use vulkano::command_buffer::PrimaryCommandBuffer;
 
 use vulkano_win::VkSurfaceBuild;
 use winit::{
@@ -23,12 +24,17 @@ use winit::{
 };
 use std::sync::Arc;
 use std::collections::HashMap;
+use std::cell::RefCell;
+use std::rc::Rc;
 use crate::{
     conf::*,
-    graphics::PipelineData,
-    graphics::shader::ShaderHandle,
+    graphics::*,
+    graphics::shader::{ShaderId, ShaderHandle},
 };
-
+use vulkano::descriptor_set::persistent::PersistentDescriptorSet;
+use vulkano::descriptor_set::layout::DescriptorDescTy;
+use vulkano::pipeline::{PipelineBindPoint};
+use vulkano::pipeline::vertex::BuffersDefinition;
 
 /// This is the context from which the graphics components gets all of its information 
 /// about the physical device and the presentation area. It serves as the Vulkano abstraction,
@@ -90,20 +96,25 @@ pub struct GraphicsContext {
     pub surface: std::sync::Arc<vulkano::swapchain::Surface<winit::window::Window>>,
     pub device: std::sync::Arc<vulkano::device::Device>,
     pub swapchain: std::sync::Arc<vulkano::swapchain::Swapchain<winit::window::Window>>,
-    pub sampler: std::sync::Arc<vulkano::sampler::Sampler>,
     pub framebuffers: std::vec::Vec<std::sync::Arc<dyn vulkano::render_pass::FramebufferAbstract + std::marker::Send + std::marker::Sync>>,
     pub render_pass: std::sync::Arc<RenderPass>,
-    // pub dynamic_state: vulkano::command_buffer::DynamicState,
-    pub image_num: usize,
-    pub acquire_future: Option<vulkano::swapchain::SwapchainAcquireFuture<Window>>,
+    image_num: usize,
     pub recreate_swapchain: bool,
-    pub previous_frame_end: Option<Box<dyn vulkano::sync::GpuFuture>>,
+    previous_frame_end: Option<Box<dyn vulkano::sync::GpuFuture>>,
+    present_future: Option<Box<dyn vulkano::sync::GpuFuture>>,
     pub command_buffer: Option<AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>>,
-    // pub command_buffer: Option<SyncCommandBufferBuilder>,
-    // pub command_pool: std::sync::Arc<vulkano::command_buffer::pool::StandardCommandPool>,
-    // pub command_buffer: Option<UnsafeCommandBufferBuilder>,
+    in_render_pass: bool,
+    camera: Option<Box<dyn crate::graphics::camera::Camera>>,
+    camera_binding: u32,
+    default_shader: ShaderId,
+    current_shader: Rc<RefCell<Option<ShaderId>>>,
+    pub shaders: Vec<Box<dyn crate::graphics::shader::ShaderHandle>>,
+    pub set: Option<Arc<dyn DescriptorSet>>,
+    pub last_frame_time: std::time::Instant,
 
     pub pipe_data: PipelineData,
+    pub quad_vertex_buffer: [Vertex;4],
+    pub vertex_buffer: std::sync::Arc<vulkano::buffer::DeviceLocalBuffer<[Vertex;2601]>>,
 }
 
 impl GraphicsContext {
@@ -154,8 +165,6 @@ impl GraphicsContext {
         )
         .unwrap();
 
-        let pool = Device::standard_command_pool(&device, queue_family);
-
         let queue = queues.next().unwrap(); 
 
         let (swapchain, images) = {
@@ -193,24 +202,10 @@ impl GraphicsContext {
             .unwrap(),
         );
 
-        // let mut dynamic_state = DynamicState::none();
-
-        let sampler = Sampler::new( 
-            device.clone(),
-            Filter::Linear,
-            Filter::Linear,
-            MipmapMode::Nearest,
-            SamplerAddressMode::ClampToBorder(vulkano::sampler::BorderColor::IntTransparentBlack),
-            SamplerAddressMode::ClampToBorder(vulkano::sampler::BorderColor::IntTransparentBlack),
-            SamplerAddressMode::ClampToBorder(vulkano::sampler::BorderColor::IntTransparentBlack),
-            0.0, 1.0, 0.0, 0.0,
-        ).unwrap();
-
         let default_future = sync::now(device.clone()).boxed();
 
         let framebuffers =
-            window_size_dependent_setup(&images, render_pass.clone(), );
-            // &mut dynamic_state);
+            window_size_dependent_setup(&images, render_pass.clone());
 
         let pipe_data = PipelineData {
             vert_buf: Arc::new(CpuAccessibleBuffer::from_data(
@@ -219,56 +214,71 @@ impl GraphicsContext {
                 false,
                 &[0]
             ).unwrap()),
-            // texture: Image::empty(),
+            vert_count: 0,
             instance_data: None,
-            descriptor_sets: Some(HashMap::new()),
+            descriptor_sets: HashMap::new(),
         };
+
+        let vertex_buffer: std::sync::Arc<vulkano::buffer::DeviceLocalBuffer<[Vertex;2601]>> = 
+        vulkano::buffer::device_local::DeviceLocalBuffer::new(
+            device.clone(),
+            BufferUsage::vertex_buffer(),
+            physical.queue_families(),
+        ).unwrap();
         
-        let graphics = Self {
-            queue,
-            surface,
-            device,
-            swapchain,
-            sampler,
-            framebuffers,
-            render_pass,
-            // dynamic_state,
+        let mut context = Self {
+            queue: queue,
+            surface: surface,
+            device: device,
+            swapchain: swapchain,
+            framebuffers: framebuffers,
+            render_pass: render_pass,
             image_num: 0,
-            acquire_future: None,
+            present_future: None,
             previous_frame_end: Some(default_future),
             recreate_swapchain: false,
             command_buffer: None,
-            // command_pool: pool,
-            pipe_data,
+            in_render_pass: false,
+            camera: None,
+            camera_binding: 0,
+            default_shader: 0,
+            current_shader: Rc::new(RefCell::new(None)),
+            shaders: Vec::new(),
+            last_frame_time: std::time::Instant::now(),
+            pipe_data: pipe_data,
+            quad_vertex_buffer: QUAD_VERTS,
+            set: None,
+            vertex_buffer,
         };
+
+        let v_shader = vs::Shader::load(context.device.clone()).unwrap();
+        let f_shader = fs::Shader::load(context.device.clone()).unwrap();
+
+        let default_program = shader::ShaderProgram::new(
+            &mut context,
+            BuffersDefinition::new()
+            .vertex::<Vertex>()
+            .instance::<InstanceData>(),
+            shader::VertexOrder::TriangleFan,
+            v_shader.main_entry_point(),
+            f_shader.main_entry_point(),
+            BlendMode::Alpha,
+        );
+
+        context.shaders.push(Box::new(default_program));
     
-        (graphics, event_loop)
+        (context, event_loop)
     }
 
     /// Due to the nature of the command buffer and the safety requirements Vulkano tries to meet
     /// the command buffer is recreated every frame.
-    pub fn create_command_buffer(&mut self,) {
-        // let level = CommandBufferLevel::primary();
-        // let usage = CommandBufferUsage::OneTimeSubmit;
-        // unsafe {
-        //     let pool_builder_alloc = self.command_pool
-        //         .alloc(!matches!(level, CommandBufferLevel::Primary), 1).unwrap()
-        //         .next()
-        //         .expect("Requested one command buffer from the command pool, but got zero.");
-        //     let inner = SyncCommandBufferBuilder::new(pool_builder_alloc.inner(), level, usage).unwrap();
-
-        //     let builder = SyncCommandBufferBuilder::new(
-        //         &pool_builder_alloc.inner(),
-        //         level,
-        //         usage,
-        //     ).unwrap();
-
-        //     self.command_buffer = Some(builder);
-        // }
-        
-        let builder = AutoCommandBufferBuilder::primary(self.device.clone(), self.queue.family(), CommandBufferUsage::OneTimeSubmit,)
-            .unwrap();
-        self.command_buffer = Some(builder);
+    fn create_command_buffer(&mut self)
+    {
+        self.command_buffer = Some(AutoCommandBufferBuilder::primary(
+            self.device.clone(), 
+            self.queue.family(), 
+            CommandBufferUsage::OneTimeSubmit,
+        ).unwrap());
     }
 
     /// Handles setup of a new frame, called when the graphics pipeline is first created and 
@@ -276,27 +286,27 @@ impl GraphicsContext {
     /// 
     /// This is necessary because the swapchain could be out of date, 
     /// as well as updating the image_num, optimality, and the swapcahin future.
-    pub fn begin_frame(&mut self) {
+    pub fn begin_frame(&mut self, color: Color) {
+        self.create_command_buffer();
+
         self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 
-        // if self.recreate_swapchain {
-        //     let dimensions: [u32; 2] = self.surface.window().inner_size().into();
-        //     let (new_swapchain, new_images) =
-        //         match self.swapchain.recreate().dimensions(dimensions).build() {
-        //             Ok(r) => r,
-        //             Err(SwapchainCreationError::UnsupportedDimensions) => return,
-        //             Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
-        //         };
+        if self.recreate_swapchain {
+            let dimensions: [u32; 2] = self.surface.window().inner_size().into();
+            let (new_swapchain, new_images) =
+                match self.swapchain.recreate().dimensions(dimensions).build() {
+                    Ok(r) => r,
+                    Err(SwapchainCreationError::UnsupportedDimensions) => return,
+                    Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
+                };
 
-        //     self.swapchain = new_swapchain;
-        //     self.framebuffers = window_size_dependent_setup(
-        //         &new_images,
-        //         self.render_pass.clone(),
-        //         &mut self.dynamic_state,
-        //         // &mut viewport,
-        //     );
-        //     self.recreate_swapchain = false;
-        // }
+            self.swapchain = new_swapchain;
+            self.framebuffers = window_size_dependent_setup(
+                &new_images,
+                self.render_pass.clone(),
+            );
+            self.recreate_swapchain = false;
+        }
 
         let (image_num, suboptimal, acquire_future) =
             match swapchain::acquire_next_image(self.swapchain.clone(), None) {
@@ -313,35 +323,13 @@ impl GraphicsContext {
         }
 
         self.image_num = image_num;
-        self.acquire_future = Some(acquire_future);
-        let clear_values = vec![[0.2, 0.2, 0.2, 1.0].into()];
+        let clear_values = vec![color.as_vec().into()];
         self.command_buffer.as_mut().unwrap().begin_render_pass(
             self.framebuffers[self.image_num].clone(), 
             SubpassContents::Inline, 
             clear_values,
         ).unwrap();
-    }
 
-
-    /// Interacts with the given shader handle (which by default is a ``` ledge_engine::graphics::shader::ShaderProgram```)
-    /// to use that specific shader to draw the vertex buffer to the screen.
-    /// Very scary to look at, at the moment. Due to Rust not being able to deal with the safety of looping/changing
-    /// the descriptor type each loop, I had to manually right out the loop which limits the number of possible descriptors
-    /// and only supports uniforms, as others will break it. Incredibly fragile and hoping to fix it later.
-    pub fn draw<'a>(
-        &mut self, 
-        vertice_count: u32,
-        vertices: Arc<dyn BufferAccess + Send + Sync>, 
-        shader_handle: Arc<dyn ShaderHandle>, 
-        descriptor_set: std::collections::HashMap<u32, Arc<dyn DescriptorSet + Send + Sync>>,
-    ) {
-        // let layout = shader_handle.layout();
-        // let num_bindings = layout.num_bindings();
-        
-        // let descriptor: PersistentDescriptorSetBuilder<dyn PersistentDescriptorSetResources> = PersistentDescriptorSet::start(layout.clone());
-        // for i in 0..num_bindings {
-        //     descriptor = descriptor.add_buffer(self.pipe_data.descriptor[i].clone()).unwrap();
-        // }
         let mut dimensions: [f32; 2] = [0.,0.];
         dimensions[0] = self.framebuffers[0].dimensions()[0] as f32;
         dimensions[1] = self.framebuffers[0].dimensions()[1] as f32;
@@ -354,38 +342,42 @@ impl GraphicsContext {
             }],
         );
 
+        self.present_future = Some(self.previous_frame_end.take().unwrap().join(acquire_future).boxed());
+    }
+
+
+    /// Interacts with the given shader handle (which by default is a ```ledge_engine::graphics::shader::ShaderProgram```)
+    /// to use that specific shader to draw the vertex buffer to the screen.
+    pub fn draw<'a>(
+        &mut self, 
+        // vertices: Arc<dyn BufferAccess + Send + Sync>, 
+        vertices: Arc<dyn BufferAccess + Send + Sync>,
+        shader_handle: Arc<dyn ShaderHandle>, 
+    ) {
         self.command_buffer.as_mut().unwrap().bind_pipeline_graphics(shader_handle.pipeline().clone());
-        for (bind,descriptor_set) in descriptor_set {
-            self.command_buffer.as_mut().unwrap().bind_descriptor_sets(
-                PipelineBindPoint::Graphics,
-                shader_handle.pipeline().layout().clone(),
-                bind,
-                descriptor_set,
-            );
-        }
-        // let vertice_count = vertices.len() as u32;
-        self.command_buffer.as_mut().unwrap().bind_vertex_buffers(0, vertices);
-        self.command_buffer.as_mut().unwrap().draw(vertice_count, 1, 0, 0).unwrap();
-        // shader_handle.draw(self, vertices, descriptor_set).unwrap();
+
+        self.command_buffer.as_mut().unwrap().bind_descriptor_sets(
+            PipelineBindPoint::Graphics,
+            shader_handle.pipeline().layout().clone(),
+            0,
+            self.set.clone().unwrap(),
+        );
+
+        self.command_buffer.as_mut().unwrap().bind_vertex_buffers(0, self.vertex_buffer.clone());
+        // self.command_buffer.as_mut().unwrap().draw(self.pipe_data.vert_count, 1, 0, 0).unwrap();
+        shader_handle.draw(&mut self.command_buffer.as_mut().unwrap(), vertices, self.set.as_ref().unwrap().clone(), &self.pipe_data).unwrap();
     }
 
     /// This function submits the command buffer to the queue and fences the operation, 
     /// storing a future refering to the operation.
     /// 
     /// This function must be run once at the end of all updates and draw calls in order for the frame to be sumbitted.
-    /// The context will panic if this is not called once per frame.
     pub fn present(&mut self) {
-        self.command_buffer.as_mut().unwrap().end_render_pass();
+        self.command_buffer.as_mut().unwrap().end_render_pass().unwrap();
         let command_buffer = self.command_buffer.take().unwrap().build().unwrap();
 
-        let future = self.previous_frame_end
-            .take().unwrap()
-            .join(self.acquire_future.take().unwrap())
-            .then_execute(self.queue.clone(), command_buffer).unwrap()
-            .then_swapchain_present(self.queue.clone(), self.swapchain.clone(), self.image_num);
-
-        // let future = self.previous_frame_end.take().unwrap().join(self.acquire_future.take().unwrap());
-
+        let future = command_buffer.execute_after(self.present_future.take().unwrap(), self.queue.clone()).unwrap();
+        let future = swapchain::present(self.swapchain.clone(), future, self.queue.clone(), self.image_num);
         let future = future.then_signal_fence_and_flush();
 
         match future {
@@ -414,23 +406,63 @@ impl GraphicsContext {
             data,
         )
     }
+
+    pub fn bind_descriptor_sets(&mut self, shader_handle: Arc<dyn ShaderHandle>) {
+        self.command_buffer.as_mut().unwrap().bind_descriptor_sets(
+            PipelineBindPoint::Graphics,
+            shader_handle.pipeline().layout().clone(),
+            0,
+            self.set.as_ref().unwrap().clone(),
+        );
+    }
+
+    pub fn build_descriptor_set(&mut self, shader_handle: Arc<dyn ShaderHandle>) {
+        if !self.camera.is_none() {
+            let mvp = self.buffer_from(self.camera.as_ref().unwrap().as_mvp()).unwrap();
+            self.create_descriptor(mvp, 0);
+        }
+
+        let mut builder = PersistentDescriptorSet::start(shader_handle.layout()[0].clone());
+        for i in 0..shader_handle.layout()[0].num_bindings() {
+            match shader_handle.layout()[0].descriptor(i).unwrap().ty {
+                DescriptorDescTy::UniformBuffer => {builder.add_buffer(self.pipe_data.descriptor_sets.get(&i).unwrap().clone()).unwrap();},
+                _ => {panic!("Unsupported descriptor type in shader.")},
+            }
+        }
+
+        self.set = Some(Arc::new(builder.build().unwrap()));
+    }
+
+    pub fn create_descriptor(&mut self, buffer: Arc<dyn BufferAccess + Send + Sync>, bind: usize) {
+        self.pipe_data.descriptor_sets.insert(bind as u32, buffer);
+    }
+
+    pub fn add_perspective_camera(&mut self) {
+        self.camera = Some(Box::new(camera::PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0)));
+    }
+
+    pub fn add_perspective_camera_with_binding(&mut self, binding: u32) {
+
+        self.camera = Some(Box::new(camera::PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0)));
+    }
+
+    pub fn camera(&mut self) -> &mut Box<dyn camera::Camera> {
+        self.camera.as_mut().unwrap()
+    }
+
+    // pub fn update_camera(&mut self, x: f32) {
+    //     self.camera().translate_x(x);
+    //     let mvp = self.buffer_from(self.camera.as_ref().unwrap().as_mvp()).unwrap();
+    //     let buf = self.pipe_data.descriptor_sets.get(&0).unwrap().clone();
+    //     self.command_buffer.as_mut().unwrap().update_buffer(buf, Arc::new(self.camera.as_ref().unwrap().as_mvp())).unwrap();
+    // }
 }
 
 // This method is called once during initialization, then again whenever the window is resized
 pub fn window_size_dependent_setup(
     images: &[Arc<SwapchainImage<Window>>],
     render_pass: Arc<RenderPass>,
-    // dynamic_state: &mut DynamicState,
 ) -> Vec<Arc<dyn FramebufferAbstract + Send + Sync>> {
-    let dimensions = images[0].dimensions();
-
-    let viewport = Viewport {
-        origin: [0.0, 0.0],
-        dimensions: [dimensions[0] as f32, dimensions[1] as f32],
-        depth_range: 0.0..1.0,
-    };
-    // dynamic_state.viewports = Some(vec![viewport]);
-
     images
         .iter()
         .map(|image| {

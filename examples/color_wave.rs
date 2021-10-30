@@ -1,29 +1,14 @@
+use ledge_engine::prelude::*;
+use cgmath::{Deg, Rad, Angle};
 use winit::{
     event_loop::{ControlFlow},
     event::{Event, WindowEvent}
 };
-use vulkano::{
-    descriptor_set::SingleLayoutDescSetPool,
-    buffer::{BufferUsage, CpuAccessibleBuffer},
-};
-use vulkano::descriptor_set::DescriptorSet;
+use ledge_engine::graphics::Vertex;
 
-use ledge_engine::prelude::*;
-use cgmath::{Deg, Rad, Angle};
-use std::sync::Arc;
-
-#[derive(Default, Copy, Clone)]
-struct ParticleVertex {
-    position: [f32; 3],
-    scale: f32,
-    color: [f32; 3],
-}
-
-vulkano::impl_vertex!(ParticleVertex, position, scale, color);
-
-const SEPARATION: f32 = 12.0; // Point drawing values.
-const AMOUNTX: isize = 51;
-const AMOUNTY: isize = 51;
+const SEPARATION: f32 = 10.0; // Point drawing values.
+const AMOUNTX: isize = 71;
+const AMOUNTY: isize = 71;
 
 fn main() {
     let (mut context, event_loop) = GraphicsContext::new(Conf::new("Wave")); // Creating a new context.
@@ -34,49 +19,26 @@ fn main() {
     pub mod fs { vulkano_shaders::shader! { ty: "fragment", path: "examples/shaders/particle-color.frag", } }
     let fs = fs::Shader::load(context.device.clone()).unwrap();
 
-    let shader_program = Arc::new(ShaderProgram::new( // Create a new shader program.
+    let shader_program = std::sync::Arc::new(ShaderProgram::new( // Create a new shader program.
         &mut context, 
-        buffer::BufferDefinition::new().vertex::<ParticleVertex>(), 
+        buffer::BufferDefinition::new().vertex::<Vertex>(), 
         VertexOrder::PointList,
         vs.main_entry_point(),
         fs.main_entry_point(), 
         BlendMode::Alpha
     ));
 
-    let shader_material = ShaderMaterial::new(shader_program.clone()); // Load shader program into material.
-
-    let mut camera = PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0); // Create and move camera.
+    context.add_perspective_camera();
+    let camera = context.camera();
     camera.rotate_x(Deg(20.0));
     camera.translate_z(600.0);
-    
-    let mvp = CpuAccessibleBuffer::from_data(
-        context.device.clone(), 
-        BufferUsage::all(), 
-        false,
-        camera.as_mvp(),
-    ).unwrap();
 
-    let mut camera_set_pool = SingleLayoutDescSetPool::new(shader_program.layout().clone());
-
-    let descriptor_set = {
-        let mut builder = camera_set_pool.next();
-        builder.add_buffer(mvp).unwrap();
-        builder.build().unwrap()
-    };
-
-    let mut descriptors: std::collections::HashMap<u32, Arc<dyn DescriptorSet + Send + Sync>> = std::collections::HashMap::new();
-
-    descriptors.insert(0, Arc::new(descriptor_set));
-
-    // context.pipe_data.descriptor_sets.unwrap()[&0] = Arc::new(descriptor_set);
-    // let descriptor = Arc::new(
-        // PersistentDescriptorSet::start(shader_program.layout().clone())
-            // .add_buffer(mvp.clone()).unwrap()
-            // .build().unwrap(),
-    // );
+    let color = std::sync::Arc::new(context.buffer_from([1.0 as f32, 1.0 as f32, 1.0 as f32]).unwrap());
+    context.create_descriptor(color, 1);
+    context.build_descriptor_set(shader_program.clone());
+    context.pipe_data.vert_count = (AMOUNTX * AMOUNTY) as u32;
 
     let mut count = 0.0;
-
     event_loop.run(move |event, _, control_flow| {
         let now = std::time::Instant::now();
         
@@ -88,10 +50,11 @@ fn main() {
             },
             Event::MainEventsCleared => { 
                 let particles = update(&mut context, &mut count);
-            
-                context.create_command_buffer();
                 context.begin_frame();
-                context.draw(2601, particles.clone(), shader_material.shader_program.clone(), descriptors.clone());
+                // context.camera().translate_x(1.0);
+                context.bind_descriptor_sets(shader_program.clone());
+            
+                context.draw(particles.clone(), shader_program.clone());
                 context.present();
 
                 let sleep_time = std::time::Duration::from_secs_f64(0.016).checked_sub(now.elapsed());
@@ -104,10 +67,11 @@ fn main() {
 }
 
 fn update(context: &mut GraphicsContext, count: &mut f32) -> 
-    std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<[ParticleVertex; (AMOUNTX * AMOUNTY) as usize]>> 
+    std::sync::Arc<vulkano::buffer::CpuAccessibleBuffer<[Vertex; (AMOUNTX * AMOUNTY) as usize]>> 
+    // std::sync::Arc<[Vertex; (AMOUNTX * AMOUNTY) as usize]>
 {
     let mut i = 0;
-    let mut data = [ParticleVertex::default(); (AMOUNTX * AMOUNTY) as usize];
+    let mut data = [Vertex::default(); (AMOUNTX * AMOUNTY) as usize];
     
     for ix in 0..AMOUNTX {
         for iy in 0..AMOUNTY {
@@ -119,15 +83,12 @@ fn update(context: &mut GraphicsContext, count: &mut f32) ->
             data[i].position[1] = ( sin_ix * 10.0) + ( sin_iy * 10.0);
             data[i].position[2] = (iy as f32 * SEPARATION) - (((AMOUNTY as f32 * SEPARATION) / 2.0));
             data[i].scale = 6.0;
-
-            let r = Rad(ix as f32).sin();
-            let g = 0.5;
-            let b = Rad(iy as f32).sin();
-            
-            data[i].color = [r, g, b];
             i += 1;
         }
     }
     *count += 0.03;
-    CpuAccessibleBuffer::from_data(context.device.clone(), BufferUsage::vertex_buffer(), false, data).unwrap()
+    if *count > (4.0*3.14) {
+        *count = 0.0;
+    }
+    context.buffer_from(data).unwrap()
 }

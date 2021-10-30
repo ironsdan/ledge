@@ -4,9 +4,6 @@ use vulkano::pipeline::blend::BlendOp;
 use crate::graphics::BlendMode;
 use std::sync::Arc;
 use crate::graphics::shader::ShaderHandle;
-// use crate::graphics::Drawable;
-// use crate::graphics::context::GraphicsContext;
-// use crate::graphics::buffer::*;
 use vulkano::descriptor_set::DescriptorSet;
 use vulkano::buffer::BufferAccess;
 use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer};
@@ -28,7 +25,7 @@ pub struct ShaderMaterial {
     pub uniforms: Vec<Arc<dyn BufferAccess + Send + Sync>>,
     descriptor: Option<Arc<dyn DescriptorSet>>,
     blend_mode: Blend,
-    pub shader_program: Arc<dyn ShaderHandle>
+    pub program: Arc<dyn ShaderHandle>
 }
 
 impl ShaderMaterial {
@@ -37,7 +34,7 @@ impl ShaderMaterial {
             uniforms: Vec::new(),
             descriptor: None,
             blend_mode: Blend::alpha_blending(),
-            shader_program,
+            program: shader_program,
         }
     }
 

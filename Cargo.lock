@@ -700,8 +700,8 @@ name = "ledge_engine"
 version = "0.1.0"
 dependencies = [
  "cgmath",
+ "fnv",
  "image",
- "mopa",
  "png",
  "rand 0.8.3",
  "vector-map",
@@ -933,12 +933,6 @@ checksum = "b9f1c5b025cda876f66ef43a113f91ebc9f4ccef34843000e0adf6ebbab84e21"
 dependencies = [
  "winapi 0.3.9",
 ]
-
-[[package]]
-name = "mopa"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a785740271256c230f57462d3b83e52f998433a7062fc18f96d5999474a9f915"
 
 [[package]]
 name = "ndk"
@@ -1796,8 +1790,9 @@ checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 
 [[package]]
 name = "vulkano"
-version = "0.25.0"
-source = "git+https://github.com/Rua/vulkano.git?branch=descriptor-set-bounds#b7d4936c2af3c9abb0fa7631f5c00605601da3ee"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e0c9cc7471d065c6066b2a0daaae4232a100fdb6f0aad2a4b12652a2bd8ede0"
 dependencies = [
  "ash",
  "crossbeam-queue",
@@ -1819,8 +1814,9 @@ dependencies = [
 
 [[package]]
 name = "vulkano-shaders"
-version = "0.25.0"
-source = "git+https://github.com/Rua/vulkano.git?branch=descriptor-set-bounds#b7d4936c2af3c9abb0fa7631f5c00605601da3ee"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e097b198fe4fe15adeeae709a7d2d209259cfb9035c05e0c3726e34c1177a646"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.7",
@@ -1831,8 +1827,9 @@ dependencies = [
 
 [[package]]
 name = "vulkano-win"
-version = "0.25.0"
-source = "git+https://github.com/Rua/vulkano.git?branch=descriptor-set-bounds#b7d4936c2af3c9abb0fa7631f5c00605601da3ee"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "822089905da2e341067d5ba1c5b5b18c30632151fa5ec41e528a9b5271be9730"
 dependencies = [
  "cocoa 0.20.2",
  "metal",

@@ -3,14 +3,13 @@ use std::collections::HashMap;
 
 use vulkano::{
     descriptor_set::{
-        DescriptorSet, 
         layout::DescriptorSetLayout,
+        DescriptorSet,
     },
     render_pass::{Subpass},
     pipeline::{
         shader::GraphicsEntryPoint,
         GraphicsPipeline, 
-        // GraphicsPipelineAbstract,
         vertex::VertexDefinition,
         blend::{
             AttachmentBlend,
@@ -22,10 +21,16 @@ use vulkano::{
         }
     },
     buffer::BufferAccess,
+    command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer},
 };
+use vulkano::pipeline::{PipelineBindPoint};
+use vulkano::descriptor_set::persistent::PersistentDescriptorSet;
+use vulkano::descriptor_set::layout::DescriptorDescTy;
+// use vulkano::descriptor_set::layout::DescriptorSetLayout;
 
 use crate::graphics::{
     context::GraphicsContext,
+    PipelineData,
     BlendMode,
     error::*,
 };
@@ -49,21 +54,7 @@ pub enum ShaderType {
     Default,
 }
 
-// pub struct Shader {
-//     pub shader_type: ShaderType,
-//     pub entry_point: GraphicsEntryPoint,
-//     pub specialization_constants: ,
-// }
-
-// impl<S, C> Shader<S, C> {
-//     pub fn new(entry_point: S, specialization_constants: C) -> Self {
-//         Self {
-//             shader_type: ShaderType::Default,
-//             entry_point,
-//             specialization_constants,
-//         }
-//     }
-// }
+pub type ShaderId = usize;
 
 pub struct ShaderProgram {
     pipelines: PipelineObjectSet,
@@ -71,22 +62,29 @@ pub struct ShaderProgram {
 }
 
 pub trait ShaderHandle {
-    fn draw(&self, context: &mut GraphicsContext, slice: Arc<dyn BufferAccess + Send + Sync>, descriptor: Arc<dyn DescriptorSet + Send + Sync>) -> Result<(), GraphicsError>;
+    fn draw(&self, command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, slice: Arc<dyn BufferAccess + Send + Sync>, set: Arc<dyn DescriptorSet>, pipe_data: &PipelineData) -> Result<(), GraphicsError>;
     fn set_blend_mode(&mut self, mode: BlendMode) -> Result<(), GraphicsError>;
     fn blend_mode(&self) -> BlendMode;
-    fn layout(&self) -> Arc<DescriptorSetLayout>;
+    fn layout(&self) -> &[Arc<DescriptorSetLayout>];
     fn pipeline(&self) -> Arc<GraphicsPipeline>;
 }
 
 impl ShaderHandle for ShaderProgram {
-    fn draw(&self, context: &mut GraphicsContext, slice: Arc<dyn BufferAccess + Send + Sync>, descriptor: Arc<dyn DescriptorSet + Send + Sync>) -> Result<(), GraphicsError> {
-        // let po = self.pipelines.mode(&self.current_mode)?;
-        // context.command_buffer.as_mut().unwrap().draw(
-        //     po.pipeline.clone(),
-        //     &context.dynamic_state,
-        //     vec![Arc::new(slice.clone())],
-        //     descriptor.clone(),
-        // ).unwrap(); // TODO fix to return useful error.
+    fn draw(&self, command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, slice: Arc<dyn BufferAccess + Send + Sync>, set: Arc<dyn DescriptorSet>, pipe_data: &PipelineData) -> Result<(), GraphicsError> {
+        command_buffer.bind_pipeline_graphics(self.pipeline().clone());
+
+        // let mut builder = PersistentDescriptorSet::start(self.layout().clone());
+        // for i in 0..self.layout().num_bindings() {
+        //     match self.layout().descriptor(i).unwrap().ty {
+        //         DescriptorDescTy::UniformBuffer => {builder.add_buffer(pipe_data.descriptor_sets.get(&i).unwrap().clone()).unwrap();},
+        //         _ => {panic!("Unsupported descriptor type in shader.")},
+        //     }
+        // }
+
+        // let set = builder.build().unwrap();
+
+        command_buffer.bind_vertex_buffers(0, slice);
+        command_buffer.draw(pipe_data.vert_count, 1, 0, 0).unwrap();
         Ok(())
     }
 
@@ -100,12 +98,12 @@ impl ShaderHandle for ShaderProgram {
         self.current_mode
     }
 
-    fn layout(&self) -> Arc<DescriptorSetLayout> {
-        self.pipelines.get(&self.current_mode).unwrap().descriptor_set_layout()
+    fn layout(&self) -> &[Arc<DescriptorSetLayout>] {
+        self.pipelines.get(&self.current_mode).unwrap().layout().descriptor_set_layouts()
     }
 
     fn pipeline(&self) -> Arc<GraphicsPipeline> {
-        self.pipelines.get(&self.current_mode).unwrap().inner()
+        self.pipelines.get(&self.current_mode).unwrap().clone()
     }
 }
 
@@ -121,7 +119,7 @@ impl ShaderProgram {
     where
         Vd: VertexDefinition + 'static + Sync + Send,
     {
-        let po = PipelineObject::new(
+        let po = new_pipeline(
             context, 
             vertex_type, 
             vertex_order,
@@ -139,7 +137,7 @@ impl ShaderProgram {
         }
     }
 
-    pub fn from_pipeline(mode: BlendMode, pipeline: PipelineObject) -> Self {
+    pub fn from_pipeline(mode: BlendMode, pipeline: Arc<GraphicsPipeline>) -> Self {
         let mut pipeline_os = PipelineObjectSet::new(16);
         pipeline_os.insert(mode, pipeline);
         Self {
@@ -152,7 +150,7 @@ impl ShaderProgram {
 
 // This structure is to store multiple pipelines for different blend modes.
 pub struct PipelineObjectSet {
-    pipelines: HashMap<BlendMode, PipelineObject>,
+    pipelines: HashMap<BlendMode, Arc<GraphicsPipeline>>,
 }
 
 impl PipelineObjectSet {
@@ -162,15 +160,15 @@ impl PipelineObjectSet {
         }
     }
 
-    pub fn insert(&mut self, blend_mode: BlendMode, pipeline: PipelineObject) {
+    pub fn insert(&mut self, blend_mode: BlendMode, pipeline: Arc<GraphicsPipeline>) {
         self.pipelines.insert(blend_mode, pipeline);
     }
 
-    pub fn get(&self, blend_mode: &BlendMode) -> Option<&PipelineObject> {
+    pub fn get(&self, blend_mode: &BlendMode) -> Option<&Arc<GraphicsPipeline>> {
         self.pipelines.get(blend_mode)
     }
 
-    pub fn mode(&self, mode: &BlendMode) -> Result<&PipelineObject, GraphicsError> {
+    pub fn mode(&self, mode: &BlendMode) -> Result<&GraphicsPipeline, GraphicsError> {
         match self.pipelines.get(&mode) {
             Some(po) => Ok(po),
             None => Err(GraphicsError::PipelineError(
@@ -180,58 +178,38 @@ impl PipelineObjectSet {
     }
 }
 
-pub struct PipelineObject {
-    // pub pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync>,
-    pub pipeline: Arc<GraphicsPipeline>,
-}
-
-impl PipelineObject {
-    pub fn new<Vd>(
-        context: &mut GraphicsContext, 
-        vertex_type: Vd, 
-        vertex_order: VertexOrder,
-        vertex_shader: GraphicsEntryPoint, 
-        fragment_shader: GraphicsEntryPoint, 
-        blend: BlendMode) -> Self 
-    where
-        Vd: VertexDefinition + 'static + Sync + Send,
-    {
-        let mut pipeline =
-            GraphicsPipeline::start()
-                .vertex_input::<Vd>(vertex_type)
-                .vertex_shader(vertex_shader, ())
-                .viewports_dynamic_scissors_irrelevant(1)
-                .fragment_shader(fragment_shader, ())
-                .blend_collective(blend.into())
-                .render_pass(Subpass::from(context.render_pass.clone(), 0).unwrap());
+pub fn new_pipeline<Vd>(
+    context: &mut GraphicsContext, 
+    vertex_type: Vd, 
+    vertex_order: VertexOrder,
+    vertex_shader: GraphicsEntryPoint, 
+    fragment_shader: GraphicsEntryPoint, 
+    blend: BlendMode) -> Arc<GraphicsPipeline>
+where
+    Vd: VertexDefinition + 'static + Sync + Send,
+{
+    let mut pipeline =
+        GraphicsPipeline::start()
+            .vertex_input::<Vd>(vertex_type)
+            .vertex_shader(vertex_shader, ())
+            .viewports_dynamic_scissors_irrelevant(1)
+            .fragment_shader(fragment_shader, ())
+            .blend_collective(blend.into())
+            .render_pass(Subpass::from(context.render_pass.clone(), 0).unwrap());
+    
+    pipeline = match vertex_order {
+        VertexOrder::LineList => pipeline.line_list(),
+        VertexOrder::LineStrip => pipeline.line_strip(),
+        VertexOrder::PointList => pipeline.point_list(),
+        VertexOrder::TriangleFan => pipeline.triangle_fan(),
+        VertexOrder::TriangleList => pipeline.triangle_list(),
+        VertexOrder::TriangleStrip => pipeline.triangle_strip(),
+    };
         
-        pipeline = match vertex_order {
-            VertexOrder::LineList => pipeline.line_list(),
-            VertexOrder::LineStrip => pipeline.line_strip(),
-            VertexOrder::PointList => pipeline.point_list(),
-            VertexOrder::TriangleFan => pipeline.triangle_fan(),
-            VertexOrder::TriangleList => pipeline.triangle_list(),
-            VertexOrder::TriangleStrip => pipeline.triangle_strip(),
-        };
-            
-        let pipeline = Arc::new(
-            pipeline.build(context.device.clone())
-                    .unwrap()
-        );
-        // as Arc<dyn GraphicsPipelineAbstract + Send + Sync>;
-
-        Self {
-            pipeline,
-        }
-    }
-
-    pub fn descriptor_set_layout(&self) -> Arc<DescriptorSetLayout> {
-        self.pipeline.layout().descriptor_set_layouts()[0].clone()
-    }
-
-    pub fn inner(&self) -> Arc<GraphicsPipeline> {
-        self.pipeline.clone()
-    }
+    Arc::new(
+        pipeline.build(context.device.clone())
+                .unwrap()
+    )
 }
 
 impl From<BlendMode> for Blend {

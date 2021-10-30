@@ -1,11 +1,12 @@
 /// The main Vulkan interface, holds backend components and 
 /// contextual information such as device, queue, and swapchain information.
 pub mod context;
+// pub mod encoder;
 /// The shader module defines types, traits, and structs to abstract complex operations that involve shaders.
 /// This module has a lot of intense types from Vulkano wrapped in less scary interfaces that are not as troublesome to deal with 
 pub mod shader;
 /// TODO: A module dedicated to images, used for textures and other image related things.
-// pub mod image;
+pub mod image;
 /// The camera module holds the different camera options and helper functions for creating and 
 /// manipulating views.
 pub mod camera;
@@ -15,6 +16,8 @@ pub mod buffer;
 pub mod material;
 /// Holds all graphics error enums.
 pub mod error;
+
+// pub mod encoder;
 
 use crate::graphics::context::GraphicsContext;
 use std::collections::HashMap;
@@ -45,21 +48,161 @@ pub enum BlendMode {
 }
 
 pub trait Drawable {
-    fn draw(&self, context: &mut GraphicsContext);
+    fn draw(&self, context: &mut GraphicsContext, info: DrawInfo);
 }
 
-#[derive(Default, Debug, Clone, PartialEq)]
-pub struct Vertex {
-    pub a_pos: [f32; 2],
-    pub a_uv: [f32; 2],
-    pub a_vert_color: [f32; 4],
+#[allow(unused)]
+pub struct PipelineData {
+    pub vert_buf: Arc<dyn BufferAccess>,
+    pub vert_count: u32,
+    pub instance_data: Option<Arc<dyn BufferAccess>>,
+    // pub texture: Arc<ImageView<Arc<ImmutableImage>>>,
+    pub descriptor_sets: HashMap<u32, Arc<dyn BufferAccess + Send + Sync>>,
 }
+
+pub fn clear(ctx: &mut GraphicsContext, color: Color) {
+    ctx.begin_frame(color);
+}
+
+pub fn draw<D, T>(ctx: &mut GraphicsContext, drawable: &D, info: T)
+where
+    D: Drawable,
+    T: Into<DrawInfo>,
+{
+    let info = info.into();
+    drawable.draw(ctx, info);
+}
+
+// TODO add result.
+pub fn present(ctx: &mut GraphicsContext) {
+    let sleep_time = std::time::Duration::from_secs_f64(0.0166).checked_sub(ctx.last_frame_time.elapsed());
+    if let Some(value) = sleep_time { std::thread::sleep(value); }
+    ctx.present();
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
+pub struct Vertex {
+    pub pos: [f32; 3],
+    pub uv: [f32; 2],
+    pub vert_color: [f32; 4],
+}
+
+vulkano::impl_vertex!(Vertex, pos, uv, vert_color);
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct InstanceData {
-    a_src: [f32; 4],
-    a_color: [f32; 4],
-    a_transform: [[f32; 4]; 4],
+    src: [f32; 4],
+    color: [f32; 4],
+    transform: [[f32; 4]; 4],
+}
+
+vulkano::impl_vertex!(InstanceData, src, color, transform);
+
+#[allow(unused)]
+const QUAD_VERTS: [Vertex; 4] = [
+    Vertex {
+        pos: [0.0, 0.0, 0.0],
+        uv: [0.0, 0.0],
+        vert_color: [1.0, 1.0, 1.0, 1.0],
+    },
+    Vertex {
+        pos: [1.0, 0.0, 0.0],
+        uv: [1.0, 0.0],
+        vert_color: [1.0, 1.0, 1.0, 1.0],
+    },
+    Vertex {
+        pos: [1.0, 1.0, 0.0],
+        uv: [1.0, 1.0],
+        vert_color: [1.0, 1.0, 1.0, 1.0],
+    },
+    Vertex {
+        pos: [0.0, 1.0, 0.0],
+        uv: [0.0, 1.0],
+        vert_color: [1.0, 1.0, 1.0, 1.0],
+    },
+];
+
+pub mod vs { vulkano_shaders::shader! { ty: "vertex", path: "src/graphics/shaders/texture.vert", } }
+
+pub mod fs { vulkano_shaders::shader! { ty: "fragment", path: "src/graphics/shaders/texture.frag", } }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DrawInfo {
+    pub tex_rect: Rect,
+    pub color: Color,
+    pub transform: Transform,
+}
+
+impl Default for DrawInfo {
+    fn default() -> Self {
+        Self {
+            tex_rect: Rect::default(),
+            color: Color::black(),
+            transform: Transform::identity(),
+        }
+    }
+}
+
+impl DrawInfo {
+    pub fn new() -> Self {
+        Self {
+            tex_rect: Rect::default(),
+            color: Color::black(),
+            transform: Transform::identity(),
+        }
+    }
+    
+    pub fn with_rect(rect: Rect) -> Self {
+        Self {
+            tex_rect: rect,
+            color: Color::black(),
+            transform: Transform::identity(),
+        }
+    }
+
+    pub fn with_transform(transform: Transform) -> Self {
+        Self {
+            tex_rect: Rect::default(),
+            color: Color::black(),
+            transform: transform,
+        }
+    }
+
+    pub fn with_color(color: Color) -> Self {
+        Self {
+            tex_rect: Rect::default(),
+            color: color,
+            transform: Transform::identity(),
+        }
+    }
+
+    pub fn into_instance_data(&self) -> InstanceData {
+        InstanceData {
+            src: self.tex_rect.as_vec(),
+            color: self.color.as_vec(),
+            transform: self.transform.as_mat4().into(),
+        }
+    }
+
+    pub fn translate(&mut self, x: f32, y: f32, z: f32) {
+        self.transform.translate(x, y, z);
+    }
+
+    pub fn rotate(&mut self, x: f32, y: f32, z: f32) {
+        self.transform.rotate(x, y, z);
+    }
+
+    pub fn rotate_value(&mut self, r: f32) {
+        self.transform.rotate_value(Rad(r));
+    }
+
+    pub fn nonuniform_scale(&mut self, x: f32, y: f32, z: f32) {
+        self.transform.nonuniform_scale(x, y, z);
+    }
+
+    pub fn scale(&mut self, s: f32) {
+        self.transform.nonuniform_scale(s, s, s);
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -174,82 +317,30 @@ impl Transform {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct DrawInfo {
-    pub texture_rect: Rect,
-    pub color: [f32; 4],
-    pub transform: Transform,
-}
+#[derive(Clone, Debug, PartialEq)]
+pub struct Color([f32; 4]);
 
-impl Default for DrawInfo {
-    fn default() -> Self {
-        Self {
-            texture_rect: Rect::default(),
-            color: [0.0, 0.0, 0.0, 1.0],
-            transform: Transform::identity(),
-        }
+impl From<[f32; 4]> for Color {
+    fn from(a: [f32; 4]) -> Color {
+        Color(a)
     }
 }
 
-impl DrawInfo {
-    pub fn new() -> Self {
-        Self {
-            texture_rect: Rect::default(),
-            color: [0.0, 0.0, 0.0, 1.0],
-            transform: Transform::identity(),
-        }
-    }
-    
-    pub fn with_rect(rect: Rect) -> Self {
-        Self {
-            texture_rect: rect,
-            color: [0.0, 0.0, 0.0, 1.0],
-            transform: Transform::identity(),
-        }
+impl Color {
+    pub fn black() -> Color {
+        Color([0.0, 0.0, 0.0, 1.0])
     }
 
-    pub fn with_transform(transform: Transform) -> Self {
-        Self {
-            texture_rect: Rect::default(),
-            color: [0.0, 0.0, 0.0, 1.0],
-            transform: transform,
-        }
+    pub fn white() -> Color {
+        Color([1.0, 1.0, 1.0, 1.0])
     }
 
-    pub fn with_color(color: [f32; 4]) -> Self {
-        Self {
-            texture_rect: Rect::default(),
-            color: color,
-            transform: Transform::identity(),
-        }
+    pub fn transparent() -> Color {
+        Color([0.0, 0.0, 0.0, 0.0])
     }
 
-    pub fn into_instance_data(&self) -> InstanceData {
-        InstanceData {
-            a_src: self.texture_rect.as_vec(),
-            a_color: self.color,
-            a_transform: self.transform.as_mat4().into(),
-        }
-    }
-
-    pub fn translate(&mut self, x: f32, y: f32, z: f32) {
-        self.transform.translate(x, y, z);
-    }
-
-    pub fn rotate(&mut self, x: f32, y: f32, z: f32) {
-        self.transform.rotate(x, y, z);
-    }
-
-    pub fn rotate_value(&mut self, r: f32) {
-        self.transform.rotate_value(Rad(r));
-    }
-
-    pub fn nonuniform_scale(&mut self, x: f32, y: f32, z: f32) {
-        self.transform.nonuniform_scale(x, y, z);
-    }
-
-    pub fn scale(&mut self, s: f32) {
-        self.transform.nonuniform_scale(s, s, s);
+    pub fn as_vec(&self) -> [f32; 4] {
+        self.0
     }
 }
 
@@ -266,13 +357,3 @@ impl Rect {
         [self.x, self.y, self.w, self.h]
     }
 }
-
-#[allow(unused)]
-pub struct PipelineData {
-    vert_buf: Arc<dyn BufferAccess>,
-    // texture: Image,
-    instance_data: Option<Arc<dyn BufferAccess>>,
-    pub descriptor_sets: Option<HashMap<u32, Arc<dyn DescriptorSet + Send + Sync>>>,
-}
-
-pub struct Color(u16);

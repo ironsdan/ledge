@@ -142,8 +142,6 @@
 //!             },
 //!             Event::MainEventsCleared => { 
 //!                 context.create_command_buffer();
-//!          
-//!                 context.begin_frame();
 //! 
 //!                 context.draw(triangle.clone(), shader_program.clone(), descriptor.clone());
 //! 
@@ -176,16 +174,16 @@ pub mod conf;
 /// TODO: Add some audio module.
 // pub mod audio;
 /// A module that stores timing data.
-pub mod timer;
+// pub mod timer;
 
 // pub mod scene;
 
 pub mod prelude {
-    pub use crate::graphics::*;
-    pub use crate::graphics::camera::*;
-    pub use crate::graphics::context::*;
-    pub use crate::graphics::shader::*;
-    pub use crate::graphics::material::*;
+    pub use crate::*;
+    // pub use crate::graphics::camera::*;
+    // // pub use crate::graphics::context::*;
+    // pub use crate::graphics::shader::*;
+    // pub use crate::graphics::material::*;
 
-    pub use crate::conf::*;
+    // pub use crate::conf::*;
 }

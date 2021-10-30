@@ -8,5 +8,5 @@ layout(binding=1,set=0) uniform sampler2D t_tex;
 layout(location=0) out vec4 f_color;
 
 void main() {
-    f_color = texture(t_tex, v_uv);
+    f_color = texture(t_tex, v_uv) * v_color;
 }

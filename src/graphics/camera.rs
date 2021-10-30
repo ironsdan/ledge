@@ -1,6 +1,32 @@
 use cgmath::{Matrix4, Vector4, Vector3, Rad, Deg};
 use cgmath::prelude::*;
 
+pub trait Camera {
+    fn model_array(&self) -> [[f32; 4]; 4];
+
+    fn view_array(&self) -> [[f32; 4]; 4];
+
+    fn proj_array(&self) -> [[f32; 4]; 4];
+
+    fn mv_array(&self) -> [[f32; 4]; 4];
+
+    fn mvp_array(&self) -> [[f32; 4]; 4];
+
+    fn rotate_x(&mut self, degs: Deg<f32>);
+
+    fn rotate_y(&mut self, degs: Deg<f32>);
+
+    fn rotate_z(&mut self, degs: Deg<f32>);
+
+    fn translate_x(&mut self, amount: f32);
+
+    fn translate_y(&mut self, amount: f32);
+
+    fn translate_z(&mut self, amount: f32);
+
+    fn as_mvp(&self) -> CameraMvp;
+}
+
 #[allow(unused)]
 /// A model of an ideal pinhole camera that follows perspective projection.
 ///  
@@ -88,65 +114,67 @@ impl PerspectiveCamera {
             proj: proj,
         }
     }
+}
 
-    pub fn model_array(&self) -> [[f32; 4]; 4] {
+impl Camera for PerspectiveCamera {
+    fn model_array(&self) -> [[f32; 4]; 4] {
         return self.model.into();
     }
 
-    pub fn view_array(&self) -> [[f32; 4]; 4] {
+    fn view_array(&self) -> [[f32; 4]; 4] {
         return self.view.into();
     }
 
-    pub fn proj_array(&self) -> [[f32; 4]; 4] {
+    fn proj_array(&self) -> [[f32; 4]; 4] {
         return self.proj.into();
     }
 
-    pub fn mv_array(&self) -> [[f32; 4]; 4] {
+    fn mv_array(&self) -> [[f32; 4]; 4] {
         let mv = self.model * self.view;
         return mv.into();
     }
 
-    pub fn mvp_array(&self) -> [[f32; 4]; 4] {
+    fn mvp_array(&self) -> [[f32; 4]; 4] {
         let mvp = self.model * self.view * self.proj;
 
         return mvp.into();
     }
 
-    pub fn rotate_x(&mut self, degs: Deg<f32>) {
+    fn rotate_x(&mut self, degs: Deg<f32>) {
         let rotation = Matrix4::from_angle_x(degs);
         self.model = rotation * self.model;
     }
 
-    pub fn rotate_y(&mut self, degs: Deg<f32>) {
+    fn rotate_y(&mut self, degs: Deg<f32>) {
         let rotation = Matrix4::from_angle_y(degs);
         self.model = rotation * self.model;
     }
 
-    pub fn rotate_z(&mut self, degs: Deg<f32>) {
+    fn rotate_z(&mut self, degs: Deg<f32>) {
         let rotation = Matrix4::from_angle_z(degs);
         self.model = rotation * self.model;
     }
 
-    pub fn translate_x(&mut self, amount: f32) {
+    fn translate_x(&mut self, amount: f32) {
         let translation = Matrix4::from_translation(Vector3::new(amount, 0.0, 0.0));
         self.view = translation * self.view;
     }
 
-    pub fn translate_y(&mut self, amount: f32) {
+    fn translate_y(&mut self, amount: f32) {
         let translation = Matrix4::from_translation(Vector3::new(0.0, amount, 0.0));
         self.view = translation * self.view;
     }
 
-    pub fn translate_z(&mut self, amount: f32) {
+    fn translate_z(&mut self, amount: f32) {
         let translation = Matrix4::from_translation(Vector3::new(0.0, 0.0, amount));
         self.view = translation * self.view;
     }
 
-    // pub fn zoom(&mut self, amount: f32) {
+    // fn zoom(&mut self, amount: f32) {
 
     // }
 
-    pub fn as_mvp(&self) -> CameraMvp {
+    fn as_mvp(&self) -> CameraMvp {
         CameraMvp {
             model: self.model_array(),
             view: self.view_array(),
