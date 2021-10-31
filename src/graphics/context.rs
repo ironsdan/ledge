@@ -12,7 +12,7 @@ use vulkano::{
     image::SwapchainImage,
     pipeline::{viewport::Viewport},
     image::view::ImageView,
-    buffer::{BufferAccess, BufferUsage, CpuAccessibleBuffer},
+    buffer::{BufferUsage, CpuAccessibleBuffer},
     device::physical::PhysicalDevice,
 };
 use vulkano::command_buffer::PrimaryCommandBuffer;
@@ -29,12 +29,11 @@ use std::rc::Rc;
 use crate::{
     conf::*,
     graphics::*,
-    graphics::shader::{ShaderId, ShaderHandle},
+    graphics::shader::{ShaderId},
 };
-use vulkano::descriptor_set::persistent::PersistentDescriptorSet;
-use vulkano::descriptor_set::layout::DescriptorDescTy;
-use vulkano::pipeline::{PipelineBindPoint};
 use vulkano::pipeline::vertex::BuffersDefinition;
+use vulkano::buffer::device_local::DeviceLocalBuffer;
+use vulkano::sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode};
 
 /// This is the context from which the graphics components gets all of its information 
 /// about the physical device and the presentation area. It serves as the Vulkano abstraction,
@@ -91,6 +90,7 @@ use vulkano::pipeline::vertex::BuffersDefinition;
 ///     });
 /// }
 /// ```
+#[allow(unused)]
 pub struct GraphicsContext {
     pub queue: std::sync::Arc<vulkano::device::Queue>,
     pub surface: std::sync::Arc<vulkano::swapchain::Surface<winit::window::Window>>,
@@ -103,18 +103,16 @@ pub struct GraphicsContext {
     previous_frame_end: Option<Box<dyn vulkano::sync::GpuFuture>>,
     present_future: Option<Box<dyn vulkano::sync::GpuFuture>>,
     pub command_buffer: Option<AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>>,
-    in_render_pass: bool,
-    camera: Option<Box<dyn crate::graphics::camera::Camera>>,
+    camera_buffer: Arc<DeviceLocalBuffer<camera::CameraMvp>>,
+    camera: Box<dyn crate::graphics::camera::Camera>,
     camera_binding: u32,
     default_shader: ShaderId,
     current_shader: Rc<RefCell<Option<ShaderId>>>,
-    pub shaders: Vec<Box<dyn crate::graphics::shader::ShaderHandle>>,
-    pub set: Option<Arc<dyn DescriptorSet>>,
+    pub shaders: Vec<Arc<dyn crate::graphics::shader::ShaderHandle>>,
+    pub samplers: Vec<Arc<Sampler>>,
     pub last_frame_time: std::time::Instant,
 
     pub pipe_data: PipelineData,
-    pub quad_vertex_buffer: [Vertex;4],
-    pub vertex_buffer: std::sync::Arc<vulkano::buffer::DeviceLocalBuffer<[Vertex;2601]>>,
 }
 
 impl GraphicsContext {
@@ -207,25 +205,52 @@ impl GraphicsContext {
         let framebuffers =
             window_size_dependent_setup(&images, render_pass.clone());
 
+        let mut samplers = Vec::new();
+
+        let default_sampler = Sampler::new(
+            device.clone(),
+            Filter::Linear,
+            Filter::Linear,
+            MipmapMode::Nearest,
+            SamplerAddressMode::Repeat,
+            SamplerAddressMode::Repeat,
+            SamplerAddressMode::Repeat,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+        )
+        .unwrap();
+
+        samplers.push(default_sampler);
+
         let pipe_data = PipelineData {
-            vert_buf: Arc::new(CpuAccessibleBuffer::from_data(
+            vertex_buffer: CpuAccessibleBuffer::from_iter(
                 device.clone(),
                 BufferUsage::vertex_buffer(),
-                false,
-                &[0]
-            ).unwrap()),
-            vert_count: 0,
-            instance_data: None,
-            descriptor_sets: HashMap::new(),
+                true,
+                [Vertex::default()].iter().cloned(),
+            ).unwrap(),
+            vertex_count: 0,
+            instance_buffer: CpuAccessibleBuffer::from_iter(
+                device.clone(),
+                BufferUsage::vertex_buffer(),
+                true,
+                [InstanceData::default()].iter().cloned(),
+            ).unwrap(),
+            instance_count: 0,
+            sampled_images: HashMap::new(),
+            uniform_buffers: HashMap::new(),
         };
 
-        let vertex_buffer: std::sync::Arc<vulkano::buffer::DeviceLocalBuffer<[Vertex;2601]>> = 
-        vulkano::buffer::device_local::DeviceLocalBuffer::new(
+        let camera_buffer = DeviceLocalBuffer::new(
             device.clone(),
-            BufferUsage::vertex_buffer(),
+            BufferUsage::uniform_buffer_transfer_destination(),
             physical.queue_families(),
         ).unwrap();
-        
+
+        let camera = camera::PerspectiveCamera::default();
+       
         let mut context = Self {
             queue: queue,
             surface: surface,
@@ -238,17 +263,15 @@ impl GraphicsContext {
             previous_frame_end: Some(default_future),
             recreate_swapchain: false,
             command_buffer: None,
-            in_render_pass: false,
-            camera: None,
+            camera_buffer: camera_buffer,
+            camera: Box::new(camera),
             camera_binding: 0,
             default_shader: 0,
             current_shader: Rc::new(RefCell::new(None)),
             shaders: Vec::new(),
+            samplers: samplers,
             last_frame_time: std::time::Instant::now(),
             pipe_data: pipe_data,
-            quad_vertex_buffer: QUAD_VERTS,
-            set: None,
-            vertex_buffer,
         };
 
         let v_shader = vs::Shader::load(context.device.clone()).unwrap();
@@ -259,13 +282,13 @@ impl GraphicsContext {
             BuffersDefinition::new()
             .vertex::<Vertex>()
             .instance::<InstanceData>(),
-            shader::VertexOrder::TriangleFan,
+            shader::VertexOrder::TriangleStrip,
             v_shader.main_entry_point(),
             f_shader.main_entry_point(),
             BlendMode::Alpha,
         );
 
-        context.shaders.push(Box::new(default_program));
+        context.shaders.push(Arc::new(default_program));
     
         (context, event_loop)
     }
@@ -288,6 +311,8 @@ impl GraphicsContext {
     /// as well as updating the image_num, optimality, and the swapcahin future.
     pub fn begin_frame(&mut self, color: Color) {
         self.create_command_buffer();
+
+        self.command_buffer.as_mut().unwrap().update_buffer(self.camera_buffer.clone(), Arc::new(self.camera.as_mvp())).unwrap();
 
         self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 
@@ -348,24 +373,19 @@ impl GraphicsContext {
 
     /// Interacts with the given shader handle (which by default is a ```ledge_engine::graphics::shader::ShaderProgram```)
     /// to use that specific shader to draw the vertex buffer to the screen.
-    pub fn draw<'a>(
-        &mut self, 
-        // vertices: Arc<dyn BufferAccess + Send + Sync>, 
-        vertices: Arc<dyn BufferAccess + Send + Sync>,
-        shader_handle: Arc<dyn ShaderHandle>, 
-    ) {
+    pub fn draw<'a>(&mut self) {
+        let shader_handle = self.shaders[0].clone();
         self.command_buffer.as_mut().unwrap().bind_pipeline_graphics(shader_handle.pipeline().clone());
 
-        self.command_buffer.as_mut().unwrap().bind_descriptor_sets(
-            PipelineBindPoint::Graphics,
-            shader_handle.pipeline().layout().clone(),
-            0,
-            self.set.clone().unwrap(),
-        );
+        // self.command_buffer.as_mut().unwrap().bind_descriptor_sets(
+        //     PipelineBindPoint::Graphics,
+        //     shader_handle.pipeline().layout().clone(),
+        //     1,
+        //     self.set.clone().unwrap(),
+        // );
 
-        self.command_buffer.as_mut().unwrap().bind_vertex_buffers(0, self.vertex_buffer.clone());
-        // self.command_buffer.as_mut().unwrap().draw(self.pipe_data.vert_count, 1, 0, 0).unwrap();
-        shader_handle.draw(&mut self.command_buffer.as_mut().unwrap(), vertices, self.set.as_ref().unwrap().clone(), &self.pipe_data).unwrap();
+        // self.command_buffer.as_mut().unwrap().bind_vertex_buffers(0, self.vertex_buffer.clone());
+        shader_handle.draw(&mut self.command_buffer.as_mut().unwrap(), &self.pipe_data).unwrap();
     }
 
     /// This function submits the command buffer to the queue and fences the operation, 
@@ -395,67 +415,54 @@ impl GraphicsContext {
         };
     }
 
-    pub fn buffer_from<T>(&self, data: T) -> Result<Arc<CpuAccessibleBuffer<T>>, vulkano::memory::DeviceMemoryAllocError> 
-    where
-        T: Copy + 'static 
-    {
-        CpuAccessibleBuffer::from_data(
-            self.device.clone(), 
-            BufferUsage::all(), 
-            false,
-            data,
-        )
+    pub fn update_vertex_data(&mut self, vertex_buffer: Vec<Vertex>) {
+        self.pipe_data.vertex_count = vertex_buffer.len() as u32;
+        self.pipe_data.vertex_buffer = CpuAccessibleBuffer::from_iter(
+            self.device.clone(),
+            BufferUsage::vertex_buffer(),
+            true,
+            vertex_buffer.iter().cloned(),
+        ).unwrap();
+        
+        // self.command_buffer.as_mut().unwrap().update_buffer(self.pipe_data.vertex_buffer.clone(), vertex_buffer).unwrap();
     }
 
-    pub fn bind_descriptor_sets(&mut self, shader_handle: Arc<dyn ShaderHandle>) {
-        self.command_buffer.as_mut().unwrap().bind_descriptor_sets(
-            PipelineBindPoint::Graphics,
-            shader_handle.pipeline().layout().clone(),
-            0,
-            self.set.as_ref().unwrap().clone(),
-        );
+    pub fn update_instance_properties(&mut self, instance_buffer: Arc<Vec<InstanceData>>) {
+        self.pipe_data.instance_count = instance_buffer.len() as u32;
+        self.pipe_data.instance_buffer = CpuAccessibleBuffer::from_iter(
+            self.device.clone(),
+            BufferUsage::vertex_buffer(),
+            true,
+            instance_buffer.iter().cloned(),
+        ).unwrap();
+        // self.command_buffer.as_mut().unwrap().update_buffer(self.pipe_data.instance_buffer.clone(), draw_info).unwrap();
     }
 
-    pub fn build_descriptor_set(&mut self, shader_handle: Arc<dyn ShaderHandle>) {
-        if !self.camera.is_none() {
-            let mvp = self.buffer_from(self.camera.as_ref().unwrap().as_mvp()).unwrap();
-            self.create_descriptor(mvp, 0);
-        }
+    pub fn set_blend_mode(&mut self, _blend_mode: BlendMode) {
 
-        let mut builder = PersistentDescriptorSet::start(shader_handle.layout()[0].clone());
-        for i in 0..shader_handle.layout()[0].num_bindings() {
-            match shader_handle.layout()[0].descriptor(i).unwrap().ty {
-                DescriptorDescTy::UniformBuffer => {builder.add_buffer(self.pipe_data.descriptor_sets.get(&i).unwrap().clone()).unwrap();},
-                _ => {panic!("Unsupported descriptor type in shader.")},
-            }
-        }
-
-        self.set = Some(Arc::new(builder.build().unwrap()));
     }
 
-    pub fn create_descriptor(&mut self, buffer: Arc<dyn BufferAccess + Send + Sync>, bind: usize) {
-        self.pipe_data.descriptor_sets.insert(bind as u32, buffer);
-    }
+    // pub fn bind_descriptor_sets(&mut self, shader_handle: Arc<dyn ShaderHandle>) {
+    //     self.command_buffer.as_mut().unwrap().bind_descriptor_sets(
+    //         PipelineBindPoint::Graphics,
+    //         shader_handle.pipeline().layout().clone(),
+    //         0,
+    //         self.set.as_ref().unwrap().clone(),
+    //     );
+    // }
 
-    pub fn add_perspective_camera(&mut self) {
-        self.camera = Some(Box::new(camera::PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0)));
-    }
+    // pub fn add_perspective_camera(&mut self) {
+    //     self.camera = Some(Box::new(camera::PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0)));
+    // }
 
-    pub fn add_perspective_camera_with_binding(&mut self, binding: u32) {
-
-        self.camera = Some(Box::new(camera::PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0)));
-    }
+    // pub fn add_perspective_camera_with_binding(&mut self, binding: u32) {
+    //     self.camera_binding = binding;
+    //     self.camera = Some(Box::new(camera::PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0)));
+    // }
 
     pub fn camera(&mut self) -> &mut Box<dyn camera::Camera> {
-        self.camera.as_mut().unwrap()
+        &mut self.camera
     }
-
-    // pub fn update_camera(&mut self, x: f32) {
-    //     self.camera().translate_x(x);
-    //     let mvp = self.buffer_from(self.camera.as_ref().unwrap().as_mvp()).unwrap();
-    //     let buf = self.pipe_data.descriptor_sets.get(&0).unwrap().clone();
-    //     self.command_buffer.as_mut().unwrap().update_buffer(buf, Arc::new(self.camera.as_ref().unwrap().as_mvp())).unwrap();
-    // }
 }
 
 // This method is called once during initialization, then again whenever the window is resized

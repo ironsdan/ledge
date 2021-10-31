@@ -17,12 +17,9 @@ pub mod material;
 /// Holds all graphics error enums.
 pub mod error;
 
-// pub mod encoder;
-
 use crate::graphics::context::GraphicsContext;
 use std::collections::HashMap;
 use vulkano::buffer::BufferAccess;
-use vulkano::descriptor_set::DescriptorSet;
 
 use cgmath::{
     Matrix,
@@ -34,6 +31,9 @@ use cgmath::{
 };
 
 use std::sync::Arc;
+use vulkano::image::view::ImageViewAbstract;
+use vulkano::buffer::CpuAccessibleBuffer;
+use vulkano::sampler::Sampler;
 
 #[derive(Clone, Copy, PartialEq, Hash, Eq)]
 pub enum BlendMode {
@@ -51,13 +51,13 @@ pub trait Drawable {
     fn draw(&self, context: &mut GraphicsContext, info: DrawInfo);
 }
 
-#[allow(unused)]
 pub struct PipelineData {
-    pub vert_buf: Arc<dyn BufferAccess>,
-    pub vert_count: u32,
-    pub instance_data: Option<Arc<dyn BufferAccess>>,
-    // pub texture: Arc<ImageView<Arc<ImmutableImage>>>,
-    pub descriptor_sets: HashMap<u32, Arc<dyn BufferAccess + Send + Sync>>,
+    pub vertex_buffer: Arc<CpuAccessibleBuffer<[Vertex]>>,
+    pub vertex_count: u32,
+    pub instance_buffer: Arc<CpuAccessibleBuffer<[InstanceData]>>,
+    pub instance_count: u32,
+    pub sampled_images: HashMap<u32, (Arc<dyn ImageViewAbstract + Send + Sync>, Arc<Sampler>)>,
+    pub uniform_buffers: HashMap<u32, Arc<dyn BufferAccess + Send + Sync>>,
 }
 
 pub fn clear(ctx: &mut GraphicsContext, color: Color) {
@@ -98,30 +98,6 @@ pub struct InstanceData {
 
 vulkano::impl_vertex!(InstanceData, src, color, transform);
 
-#[allow(unused)]
-const QUAD_VERTS: [Vertex; 4] = [
-    Vertex {
-        pos: [0.0, 0.0, 0.0],
-        uv: [0.0, 0.0],
-        vert_color: [1.0, 1.0, 1.0, 1.0],
-    },
-    Vertex {
-        pos: [1.0, 0.0, 0.0],
-        uv: [1.0, 0.0],
-        vert_color: [1.0, 1.0, 1.0, 1.0],
-    },
-    Vertex {
-        pos: [1.0, 1.0, 0.0],
-        uv: [1.0, 1.0],
-        vert_color: [1.0, 1.0, 1.0, 1.0],
-    },
-    Vertex {
-        pos: [0.0, 1.0, 0.0],
-        uv: [0.0, 1.0],
-        vert_color: [1.0, 1.0, 1.0, 1.0],
-    },
-];
-
 pub mod vs { vulkano_shaders::shader! { ty: "vertex", path: "src/graphics/shaders/texture.vert", } }
 
 pub mod fs { vulkano_shaders::shader! { ty: "fragment", path: "src/graphics/shaders/texture.frag", } }
@@ -137,7 +113,7 @@ impl Default for DrawInfo {
     fn default() -> Self {
         Self {
             tex_rect: Rect::default(),
-            color: Color::black(),
+            color: Color::white(),
             transform: Transform::identity(),
         }
     }
@@ -147,7 +123,7 @@ impl DrawInfo {
     pub fn new() -> Self {
         Self {
             tex_rect: Rect::default(),
-            color: Color::black(),
+            color: Color::white(),
             transform: Transform::identity(),
         }
     }
@@ -155,7 +131,7 @@ impl DrawInfo {
     pub fn with_rect(rect: Rect) -> Self {
         Self {
             tex_rect: rect,
-            color: Color::black(),
+            color: Color::white(),
             transform: Transform::identity(),
         }
     }
@@ -163,7 +139,7 @@ impl DrawInfo {
     pub fn with_transform(transform: Transform) -> Self {
         Self {
             tex_rect: Rect::default(),
-            color: Color::black(),
+            color: Color::white(),
             transform: transform,
         }
     }
@@ -344,7 +320,7 @@ impl Color {
     }
 }
 
-#[derive(Default, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Rect {
     pub x: f32,
     pub y: f32,
@@ -355,5 +331,16 @@ pub struct Rect {
 impl Rect {
     pub fn as_vec(&self) -> [f32; 4] {
         [self.x, self.y, self.w, self.h]
+    }
+}
+
+impl Default for Rect {
+    fn default() -> Self {
+        Rect {
+            x: 0.0,
+            y: 0.0,
+            w: 1.0,
+            h: 1.0,
+        }
     }
 }

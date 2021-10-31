@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use vulkano::{
     descriptor_set::{
         layout::DescriptorSetLayout,
-        DescriptorSet,
     },
     render_pass::{Subpass},
     pipeline::{
@@ -20,13 +19,11 @@ use vulkano::{
             BlendFactor,
         }
     },
-    buffer::BufferAccess,
     command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer},
 };
 use vulkano::pipeline::{PipelineBindPoint};
 use vulkano::descriptor_set::persistent::PersistentDescriptorSet;
 use vulkano::descriptor_set::layout::DescriptorDescTy;
-// use vulkano::descriptor_set::layout::DescriptorSetLayout;
 
 use crate::graphics::{
     context::GraphicsContext,
@@ -62,7 +59,7 @@ pub struct ShaderProgram {
 }
 
 pub trait ShaderHandle {
-    fn draw(&self, command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, slice: Arc<dyn BufferAccess + Send + Sync>, set: Arc<dyn DescriptorSet>, pipe_data: &PipelineData) -> Result<(), GraphicsError>;
+    fn draw(&self, command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, pipe_data: &PipelineData) -> Result<(), GraphicsError>;
     fn set_blend_mode(&mut self, mode: BlendMode) -> Result<(), GraphicsError>;
     fn blend_mode(&self) -> BlendMode;
     fn layout(&self) -> &[Arc<DescriptorSetLayout>];
@@ -70,21 +67,34 @@ pub trait ShaderHandle {
 }
 
 impl ShaderHandle for ShaderProgram {
-    fn draw(&self, command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, slice: Arc<dyn BufferAccess + Send + Sync>, set: Arc<dyn DescriptorSet>, pipe_data: &PipelineData) -> Result<(), GraphicsError> {
+    fn draw(&self, command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, pipe_data: &PipelineData) -> Result<(), GraphicsError> {
         command_buffer.bind_pipeline_graphics(self.pipeline().clone());
 
-        // let mut builder = PersistentDescriptorSet::start(self.layout().clone());
-        // for i in 0..self.layout().num_bindings() {
-        //     match self.layout().descriptor(i).unwrap().ty {
-        //         DescriptorDescTy::UniformBuffer => {builder.add_buffer(pipe_data.descriptor_sets.get(&i).unwrap().clone()).unwrap();},
-        //         _ => {panic!("Unsupported descriptor type in shader.")},
-        //     }
-        // }
+        let layout = self.layout()[0].clone();
 
-        // let set = builder.build().unwrap();
+        let mut builder = PersistentDescriptorSet::start(layout.clone());
+        for i in 0..layout.num_bindings() {
+            match layout.descriptor(i).unwrap().ty {
+                DescriptorDescTy::UniformBuffer => {builder.add_buffer(pipe_data.uniform_buffers.get(&i).unwrap().clone()).unwrap();},
+                DescriptorDescTy::CombinedImageSampler{..} => {
+                    let image_sampler = pipe_data.sampled_images.get(&i).unwrap();
+                    builder.add_sampled_image(image_sampler.0.clone(), image_sampler.1.clone()).unwrap();},
+                _ => {panic!("Unsupported descriptor type ({:?}) in shader.", layout.descriptor(i).unwrap().ty)},
+            }
+        }
 
-        command_buffer.bind_vertex_buffers(0, slice);
-        command_buffer.draw(pipe_data.vert_count, 1, 0, 0).unwrap();
+        let set = builder.build().unwrap();
+
+        command_buffer.bind_descriptor_sets(
+            PipelineBindPoint::Graphics,
+            self.pipeline().layout().clone(),
+            0,
+            set,
+        );
+
+        command_buffer.bind_vertex_buffers(0, (pipe_data.vertex_buffer.clone(), pipe_data.instance_buffer.clone()));
+
+        command_buffer.draw(pipe_data.vertex_count, pipe_data.instance_count, 0, 0).unwrap();
         Ok(())
     }
 
@@ -207,8 +217,7 @@ where
     };
         
     Arc::new(
-        pipeline.build(context.device.clone())
-                .unwrap()
+        pipeline.build(context.device.clone()).unwrap()
     )
 }
 

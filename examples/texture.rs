@@ -9,6 +9,9 @@ use winit::{
 fn main() {
     let (mut context, event_loop) = graphics::context::GraphicsContext::new(conf::Conf::new("Texture")); // Creating a new context.
 
+    let image = graphics::image::Image::new(&context, "examples/images/pokeball.png");
+
+
     event_loop.run(move |event, _, control_flow| {
         let now = std::time::Instant::now();
         
@@ -22,6 +25,8 @@ fn main() {
                 graphics::clear(&mut context, graphics::Color::black());
 
                 // Do some drawing.
+
+                graphics::draw(&mut context, &image, graphics::DrawInfo::default());
 
                 graphics::present(&mut context);
 
