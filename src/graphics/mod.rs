@@ -14,6 +14,8 @@ pub mod shader;
 
 pub mod sprite;
 
+pub mod animation;
+
 use crate::graphics::context::GraphicsContext;
 use cgmath::SquareMatrix;
 use std::collections::HashMap;
