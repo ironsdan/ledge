@@ -1,10 +1,9 @@
 [package]
 name = "ledge_engine"
 version = "0.1.0"
-authors = ["Daniel Irons <daniel.w.irons@gmail.com>"]
-edition = "2018"
+authors = ["Daniel Irons <daniel.w.irons@protonmail.com>"]
+edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "ledge_engine"
 path = "src/lib.rs"
@@ -14,6 +13,6 @@ vulkano = "0.26"
 vulkano-shaders = "0.26"
 vulkano-win = "0.26"
 winit = "0.25"
-winit_input_helper = "0.7"
+winit_input_helper = "0.10.0"
 png = "0.17.2"
 cgmath = "0.18.0"
