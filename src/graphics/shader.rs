@@ -1,37 +1,22 @@
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 
-use vulkano::{
-    descriptor_set::{
-        layout::DescriptorSetLayout,
-    },
-    render_pass::{Subpass},
-    pipeline::{
-        shader::GraphicsEntryPoint,
-        GraphicsPipeline, 
-        vertex::VertexDefinition,
-        blend::{
-            AttachmentBlend,
-            AttachmentsBlend,
-            Blend,
-            LogicOp,
-            BlendOp,
-            BlendFactor,
-        }
-    },
-    command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer},
-};
-use vulkano::pipeline::{PipelineBindPoint};
-use vulkano::descriptor_set::persistent::PersistentDescriptorSet;
 use vulkano::descriptor_set::layout::DescriptorDescTy;
-
-use crate::graphics::{
-    context::GraphicsContext,
-    PipelineData,
-    BlendMode,
-    error::*,
+use vulkano::descriptor_set::persistent::PersistentDescriptorSet;
+use vulkano::pipeline::PipelineBindPoint;
+use vulkano::{
+    command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer},
+    descriptor_set::layout::DescriptorSetLayout,
+    pipeline::{
+        blend::{AttachmentBlend, AttachmentsBlend, Blend, BlendFactor, BlendOp, LogicOp},
+        shader::GraphicsEntryPoint,
+        vertex::VertexDefinition,
+        GraphicsPipeline,
+    },
+    render_pass::Subpass,
 };
 
+use crate::graphics::{context::GraphicsContext, error::*, BlendMode, PipelineData};
 
 pub enum VertexOrder {
     LineList,
@@ -59,7 +44,11 @@ pub struct ShaderProgram {
 }
 
 pub trait ShaderHandle {
-    fn draw(&self, command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, pipe_data: &PipelineData) -> Result<(), GraphicsError>;
+    fn draw(
+        &self,
+        command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
+        pipe_data: &PipelineData,
+    ) -> Result<(), GraphicsError>;
     fn set_blend_mode(&mut self, mode: BlendMode) -> Result<(), GraphicsError>;
     fn blend_mode(&self) -> BlendMode;
     fn layout(&self) -> &[Arc<DescriptorSetLayout>];
@@ -67,7 +56,11 @@ pub trait ShaderHandle {
 }
 
 impl ShaderHandle for ShaderProgram {
-    fn draw(&self, command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, pipe_data: &PipelineData) -> Result<(), GraphicsError> {
+    fn draw(
+        &self,
+        command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
+        pipe_data: &PipelineData,
+    ) -> Result<(), GraphicsError> {
         command_buffer.bind_pipeline_graphics(self.pipeline().clone());
 
         let layout = self.layout()[0].clone();
@@ -75,11 +68,23 @@ impl ShaderHandle for ShaderProgram {
         let mut builder = PersistentDescriptorSet::start(layout.clone());
         for i in 0..layout.num_bindings() {
             match layout.descriptor(i).unwrap().ty {
-                DescriptorDescTy::UniformBuffer => {builder.add_buffer(pipe_data.uniform_buffers.get(&i).unwrap().clone()).unwrap();},
-                DescriptorDescTy::CombinedImageSampler{..} => {
+                DescriptorDescTy::UniformBuffer => {
+                    builder
+                        .add_buffer(pipe_data.uniform_buffers.get(&i).unwrap().clone())
+                        .unwrap();
+                }
+                DescriptorDescTy::CombinedImageSampler { .. } => {
                     let image_sampler = pipe_data.sampled_images.get(&i).unwrap();
-                    builder.add_sampled_image(image_sampler.0.clone(), image_sampler.1.clone()).unwrap();},
-                _ => {panic!("Unsupported descriptor type ({:?}) in shader.", layout.descriptor(i).unwrap().ty)},
+                    builder
+                        .add_sampled_image(image_sampler.0.clone(), image_sampler.1.clone())
+                        .unwrap();
+                }
+                _ => {
+                    panic!(
+                        "Unsupported descriptor type ({:?}) in shader.",
+                        layout.descriptor(i).unwrap().ty
+                    )
+                }
             }
         }
 
@@ -92,9 +97,17 @@ impl ShaderHandle for ShaderProgram {
             set,
         );
 
-        command_buffer.bind_vertex_buffers(0, (pipe_data.vertex_buffer.clone(), pipe_data.instance_buffer.clone()));
+        command_buffer.bind_vertex_buffers(
+            0,
+            (
+                pipe_data.vertex_buffer.clone(),
+                pipe_data.instance_buffer.clone(),
+            ),
+        );
 
-        command_buffer.draw(pipe_data.vertex_count, pipe_data.instance_count, 0, 0).unwrap();
+        command_buffer
+            .draw(pipe_data.vertex_count, pipe_data.instance_count, 0, 0)
+            .unwrap();
         Ok(())
     }
 
@@ -109,7 +122,11 @@ impl ShaderHandle for ShaderProgram {
     }
 
     fn layout(&self) -> &[Arc<DescriptorSetLayout>] {
-        self.pipelines.get(&self.current_mode).unwrap().layout().descriptor_set_layouts()
+        self.pipelines
+            .get(&self.current_mode)
+            .unwrap()
+            .layout()
+            .descriptor_set_layouts()
     }
 
     fn pipeline(&self) -> Arc<GraphicsPipeline> {
@@ -119,22 +136,22 @@ impl ShaderHandle for ShaderProgram {
 
 impl ShaderProgram {
     pub fn new<Vd>(
-        context: &mut GraphicsContext, 
-        vertex_type: Vd, 
-        vertex_order: VertexOrder, 
-        vertex_shader: GraphicsEntryPoint, 
-        fragment_shader: GraphicsEntryPoint, 
-        blend: BlendMode
-    ) -> Self 
+        context: &mut GraphicsContext,
+        vertex_type: Vd,
+        vertex_order: VertexOrder,
+        vertex_shader: GraphicsEntryPoint,
+        fragment_shader: GraphicsEntryPoint,
+        blend: BlendMode,
+    ) -> Self
     where
         Vd: VertexDefinition + 'static + Sync + Send,
     {
         let po = new_pipeline(
-            context, 
-            vertex_type, 
+            context,
+            vertex_type,
             vertex_order,
-            vertex_shader, 
-            fragment_shader, 
+            vertex_shader,
+            fragment_shader,
             blend,
         );
 
@@ -156,7 +173,6 @@ impl ShaderProgram {
         }
     }
 }
-
 
 // This structure is to store multiple pipelines for different blend modes.
 pub struct PipelineObjectSet {
@@ -189,24 +205,24 @@ impl PipelineObjectSet {
 }
 
 pub fn new_pipeline<Vd>(
-    context: &mut GraphicsContext, 
-    vertex_type: Vd, 
+    context: &mut GraphicsContext,
+    vertex_type: Vd,
     vertex_order: VertexOrder,
-    vertex_shader: GraphicsEntryPoint, 
-    fragment_shader: GraphicsEntryPoint, 
-    blend: BlendMode) -> Arc<GraphicsPipeline>
+    vertex_shader: GraphicsEntryPoint,
+    fragment_shader: GraphicsEntryPoint,
+    blend: BlendMode,
+) -> Arc<GraphicsPipeline>
 where
     Vd: VertexDefinition + 'static + Sync + Send,
 {
-    let mut pipeline =
-        GraphicsPipeline::start()
-            .vertex_input::<Vd>(vertex_type)
-            .vertex_shader(vertex_shader, ())
-            .viewports_dynamic_scissors_irrelevant(1)
-            .fragment_shader(fragment_shader, ())
-            .blend_collective(blend.into())
-            .render_pass(Subpass::from(context.render_pass.clone(), 0).unwrap());
-    
+    let mut pipeline = GraphicsPipeline::start()
+        .vertex_input::<Vd>(vertex_type)
+        .vertex_shader(vertex_shader, ())
+        .viewports_dynamic_scissors_irrelevant(1)
+        .fragment_shader(fragment_shader, ())
+        .blend_collective(blend.into())
+        .render_pass(Subpass::from(context.render_pass.clone(), 0).unwrap());
+
     pipeline = match vertex_order {
         VertexOrder::LineList => pipeline.line_list(),
         VertexOrder::LineStrip => pipeline.line_strip(),
@@ -215,10 +231,8 @@ where
         VertexOrder::TriangleList => pipeline.triangle_list(),
         VertexOrder::TriangleStrip => pipeline.triangle_strip(),
     };
-        
-    Arc::new(
-        pipeline.build(context.device.clone()).unwrap()
-    )
+
+    Arc::new(pipeline.build(context.device.clone()).unwrap())
 }
 
 impl From<BlendMode> for Blend {
@@ -242,7 +256,7 @@ impl From<BlendMode> for Blend {
                     mask_blue: true,
                     mask_alpha: true,
                 };
-            },
+            }
             BlendMode::Subtract => {
                 attachments = AttachmentBlend {
                     enabled: true,
@@ -257,20 +271,20 @@ impl From<BlendMode> for Blend {
                     mask_blue: true,
                     mask_alpha: true,
                 };
-            },
+            }
             BlendMode::Alpha => {
                 attachments = AttachmentBlend::alpha_blending();
-            },
+            }
             BlendMode::Invert => {
                 logic_op = Some(LogicOp::Invert);
-            },
+            }
         };
 
         return Blend {
             logic_op,
             attachments: AttachmentsBlend::Collective(attachments),
             blend_constants,
-        }
+        };
     }
 }
 
@@ -278,9 +292,7 @@ impl From<BlendMode> for AttachmentBlend {
     fn from(blend_mode: BlendMode) -> AttachmentBlend {
         let blend: Blend = blend_mode.into();
         match blend.attachments {
-            AttachmentsBlend::Collective(attachment) => {
-                attachment
-            },
+            AttachmentsBlend::Collective(attachment) => attachment,
             _ => {
                 AttachmentBlend::pass_through() // TODO Fix so it cannot fail.
             }

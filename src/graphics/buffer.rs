@@ -17,12 +17,12 @@ pub type BufferUsage = vulkano::buffer::BufferUsage;
 // impl<T : 'static + Copy> BufferAttribute<T> {
 //     pub fn from_data(data: T, device: Arc<Device>) -> Self {
 //         let cpu_buffer = CpuAccessibleBuffer::from_data(
-//             device.clone(), 
-//             BufferUsage::all(), 
+//             device.clone(),
+//             BufferUsage::all(),
 //             false,
 //             data,
 //         ).unwrap();
-        
+
 //         Self {
 //             inner: cpu_buffer
 //         }

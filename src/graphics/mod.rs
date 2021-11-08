@@ -1,38 +1,34 @@
-/// The main Vulkan interface, holds backend components and 
+/// The main Vulkan interface, holds backend components and
 /// contextual information such as device, queue, and swapchain information.
 pub mod context;
 // pub mod encoder;
-/// The shader module defines types, traits, and structs to abstract complex operations that involve shaders.
-/// This module has a lot of intense types from Vulkano wrapped in less scary interfaces that are not as troublesome to deal with 
-pub mod shader;
-/// TODO: A module dedicated to images, used for textures and other image related things.
-pub mod image;
-/// The camera module holds the different camera options and helper functions for creating and 
-/// manipulating views.
-pub mod camera;
 /// TODO: Partially implemented wrapper for Vulkano buffers.
 pub mod buffer;
-/// TODO: Material is a module that will hold information about how to correctly render a specific object.
-pub mod material;
+/// The camera module holds the different camera options and helper functions for creating and
+/// manipulating views.
+pub mod camera;
 /// Holds all graphics error enums.
 pub mod error;
+/// TODO: A module dedicated to images, used for textures and other image related things.
+pub mod image;
+/// TODO: Material is a module that will hold information about how to correctly render a specific object.
+pub mod material;
+/// The shader module defines types, traits, and structs to abstract complex operations that involve shaders.
+/// This module has a lot of intense types from Vulkano wrapped in less scary interfaces that are not as troublesome to deal with
+pub mod shader;
+
+pub mod sprite;
 
 use crate::graphics::context::GraphicsContext;
+use cgmath::SquareMatrix;
 use std::collections::HashMap;
 use vulkano::buffer::BufferAccess;
 
-use cgmath::{
-    Matrix,
-    Matrix4,
-    Vector4,
-    Vector3,
-    Rad,
-    prelude::Angle,
-};
+use cgmath::{prelude::Angle, Matrix, Matrix4, Rad, Vector3, Vector4};
 
 use std::sync::Arc;
-use vulkano::image::view::ImageViewAbstract;
 use vulkano::buffer::CpuAccessibleBuffer;
+use vulkano::image::view::ImageViewAbstract;
 use vulkano::sampler::Sampler;
 
 #[derive(Clone, Copy, PartialEq, Hash, Eq)]
@@ -75,8 +71,8 @@ where
 
 // TODO add result.
 pub fn present(ctx: &mut GraphicsContext) {
-    let sleep_time = std::time::Duration::from_secs_f64(0.0166).checked_sub(ctx.last_frame_time.elapsed());
-    if let Some(value) = sleep_time { std::thread::sleep(value); }
+    // let sleep_time = std::time::Duration::from_secs_f64(0.0166).checked_sub(ctx.last_frame_time.elapsed());
+    // if let Some(value) = sleep_time { std::thread::sleep(value); }
     ctx.present();
 }
 
@@ -98,9 +94,13 @@ pub struct InstanceData {
 
 vulkano::impl_vertex!(InstanceData, src, color, transform);
 
-pub mod vs { vulkano_shaders::shader! { ty: "vertex", path: "src/graphics/shaders/texture.vert", } }
+pub mod vs {
+    vulkano_shaders::shader! { ty: "vertex", path: "src/graphics/shaders/texture.vert", }
+}
 
-pub mod fs { vulkano_shaders::shader! { ty: "fragment", path: "src/graphics/shaders/texture.frag", } }
+pub mod fs {
+    vulkano_shaders::shader! { ty: "fragment", path: "src/graphics/shaders/texture.frag", }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DrawInfo {
@@ -127,7 +127,7 @@ impl DrawInfo {
             transform: Transform::identity(),
         }
     }
-    
+
     pub fn with_rect(rect: Rect) -> Self {
         Self {
             tex_rect: rect,
@@ -189,7 +189,7 @@ pub enum Transform {
         scale: Vector3<f32>,
         offset: Vector3<f32>,
     },
-    Matrix(Matrix4<f32>)
+    Matrix(Matrix4<f32>),
 }
 
 impl Default for Transform {
@@ -200,12 +200,13 @@ impl Default for Transform {
 
 impl Transform {
     fn identity() -> Self {
-        Self::Components {
-            pos: Vector3::from((0.0, 0.0, 0.0)),
-            rotation: Rad(0.0),
-            scale: Vector3::from((1.0, 1.0, 0.0)),
-            offset: Vector3::from((0.0, 0.0, 0.0)),
-        }
+        Self::Matrix(Matrix4::identity())
+        // Self::Components {
+        //     pos: Vector3::from((0.0, 0.0, 0.0)),
+        //     rotation: Rad(0.0),
+        //     scale: Vector3::from((1.0, 1.0, 1.0)),
+        //     offset: Vector3::from((0.0, 0.0, 0.0)),
+        // }
     }
 
     pub fn as_mat4(&self) -> Matrix4<f32> {
@@ -224,13 +225,14 @@ impl Transform {
                 let cr11 = cosr * scale.y;
                 let cr03 = offset.x * (1.0 - cr00) - offset.y * cr01 + pos.x;
                 let cr13 = offset.y * (1.0 - cr11) - offset.x * cr10 + pos.y;
-                
+
                 Matrix4::from_cols(
-                    Vector4::new(cr00, cr01, 0.0, cr03,),
-                    Vector4::new(cr10, cr11, 0.0, cr13,),
-                    Vector4::new(0.0, 0.0, 1.0, 0.0,),
-                    Vector4::new(0.0, 0.0, 0.0, 1.0,),
-                ).transpose()
+                    Vector4::new(cr00, cr01, 0.0, cr03),
+                    Vector4::new(cr10, cr11, 0.0, cr13),
+                    Vector4::new(0.0, 0.0, 1.0, 0.0),
+                    Vector4::new(0.0, 0.0, 0.0, 1.0),
+                )
+                .transpose()
             }
         }
     }
@@ -238,21 +240,18 @@ impl Transform {
     fn translate(&mut self, x: f32, y: f32, z: f32) {
         match self {
             Transform::Matrix(mat) => {
-                *mat = *mat + Matrix4::from_translation(Vector3::new(x, y, z));
+                *mat = *mat * Matrix4::from_translation(Vector3::new(x, y, z));
             }
-            Transform::Components {
-                pos,
-                ..
-            } => {
+            Transform::Components { pos, .. } => {
                 *pos += Vector3::from((x, y, z));
             }
         }
     }
 
     fn rotate(&mut self, x: f32, y: f32, z: f32) {
-        let rotation = Matrix4::from_angle_x(Rad(x)) + 
-                       Matrix4::from_angle_y(Rad(y)) + 
-                       Matrix4::from_angle_z(Rad(z));
+        let rotation = Matrix4::from_angle_x(Rad(x))
+            + Matrix4::from_angle_y(Rad(y))
+            + Matrix4::from_angle_z(Rad(z));
         match self {
             Transform::Matrix(mat) => {
                 *mat = *mat * rotation;
@@ -269,10 +268,7 @@ impl Transform {
     fn rotate_value(&mut self, r: Rad<f32>) {
         match self {
             Transform::Matrix(_) => {}
-            Transform::Components {
-                rotation,
-                ..
-            } => {
+            Transform::Components { rotation, .. } => {
                 *rotation = r;
             }
         }
@@ -283,10 +279,7 @@ impl Transform {
             Transform::Matrix(mat) => {
                 *mat = *mat * Matrix4::from_nonuniform_scale(x, y, z);
             }
-            Transform::Components {
-                scale,
-                ..
-            } => {
+            Transform::Components { scale, .. } => {
                 *scale = Vector3::from((x, y, z));
             }
         }
@@ -305,6 +298,10 @@ impl From<[f32; 4]> for Color {
 impl Color {
     pub fn black() -> Color {
         Color([0.0, 0.0, 0.0, 1.0])
+    }
+
+    pub fn grey() -> Color {
+        Color([0.25, 0.25, 0.25, 1.0])
     }
 
     pub fn white() -> Color {

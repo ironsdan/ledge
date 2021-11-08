@@ -2,6 +2,12 @@ pub struct MouseContext {
     pub(crate) last_position: (f64, f64),
 }
 
+impl Default for MouseContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MouseContext {
     pub fn new() -> Self {
         Self {

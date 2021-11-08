@@ -1,6 +1,7 @@
-use crate::error::*;
 use crate::conf::*;
+use crate::error::*;
 
+#[allow(unused)]
 pub struct InterfaceBuilder {
     pub(crate) game_name: String,
     pub(crate) author: String,
@@ -34,14 +35,15 @@ impl InterfaceBuilder {
 
 pub struct Interface {
     pub graphics_context: crate::graphics::context::GraphicsContext,
-    pub keyboard_context: crate::input::keyboard::KeyboardContext, 
-    pub mouse_context: crate::input::mouse::MouseContext, 
+    pub keyboard_context: crate::input::keyboard::KeyboardContext,
+    pub mouse_context: crate::input::mouse::MouseContext,
     pub timer_state: crate::timer::TimerState,
 }
 
 impl Interface {
     pub fn from_conf(instance_conf: Conf) -> GameResult<(Self, winit::event_loop::EventLoop<()>)> {
-        let (graphics_context, event_loop) = crate::graphics::context::GraphicsContext::new(instance_conf);
+        let (graphics_context, event_loop) =
+            crate::graphics::context::GraphicsContext::new(instance_conf);
         let interface_ctx = Interface {
             graphics_context,
             keyboard_context: crate::input::keyboard::KeyboardContext::new(),
@@ -56,28 +58,20 @@ impl Interface {
         match event {
             // Window events.
             winit::event::Event::WindowEvent { event, .. } => match event {
-                winit::event::WindowEvent::Resized(size) => {
-
-                },
-                winit::event::WindowEvent::CursorMoved {
-                    position,
-                    ..
-                } => {
-                    self.mouse_context.set_last_position((position.x / 400.0 - 1.0, position.y / 300.0 - 1.0));
-                    // println!("mouse: ({}, {})", position.x / 400.0 - 1.0, position.y / 300.0 - 1.0);
-                },
-                winit::event::WindowEvent::MouseInput { button, state, ..} => {
-
-                },
-                winit::event::WindowEvent::ModifiersChanged(mods) => {
-
-                },
+                winit::event::WindowEvent::Resized(_) => {
+                    self.graphics_context.recreate_swapchain = true;
+                }
+                winit::event::WindowEvent::CursorMoved { position, .. } => {
+                    self.mouse_context
+                        .set_last_position((position.x / 400.0 - 1.0, position.y / 300.0 - 1.0));
+                }
                 winit::event::WindowEvent::KeyboardInput {
-                    input: winit::event::KeyboardInput {
-                        state,
-                        virtual_keycode: Some(keycode),
-                        ..
-                    },
+                    input:
+                        winit::event::KeyboardInput {
+                            state,
+                            virtual_keycode: Some(keycode),
+                            ..
+                        },
                     ..
                 } => {
                     let pressed = match state {
@@ -85,15 +79,10 @@ impl Interface {
                         winit::event::ElementState::Released => false,
                     };
                     self.keyboard_context.set_key(*keycode, pressed);
-                    // println!("{:?} {}", keycode, pressed);
-                },
+                    println!("{:?} {}", keycode, pressed);
+                }
                 _ => {}
             },
-            // Device events.
-            winit::event::Event::DeviceEvent { 
-                event: winit::event::DeviceEvent::MouseMotion { delta: (x, y) },
-                ..
-            } => {},
             // Others.
             _ => {}
         }

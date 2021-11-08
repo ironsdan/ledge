@@ -7,9 +7,15 @@ pub struct TimerState {
     pub accumulator: time::Duration,
 }
 
+impl Default for TimerState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TimerState {
     pub fn new() -> Self {
-        Self{
+        Self {
             _initial_instant: time::Instant::now(),
             last_instant: time::Instant::now(),
             frame_times: Vec::new(),

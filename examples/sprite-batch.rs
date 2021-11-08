@@ -2,7 +2,7 @@ use ledge_engine::conf;
 use ledge_engine::graphics;
 // use cgmath::{Deg, Rad, Angle};
 use winit::{
-    event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
+    event::{Event, WindowEvent},
     event_loop::ControlFlow,
 };
 
@@ -11,26 +11,30 @@ fn main() {
         graphics::context::GraphicsContext::new(conf::Conf::new("Texture")); // Creating a new context.
 
     let image = graphics::image::Image::new(&context, "examples/images/pokeball.png");
+    let mut batch = graphics::sprite::SpriteBatch::new(image);
     let mut params = graphics::DrawInfo::default();
-    params.translate(0.0, 0.0, 5.1);
-    params.scale(0.01);
-    println!("{:?}", params);
+    params.translate(0.5, 0.5, 6.0);
+    // params.scale(0.01);
+    batch.add(params);
+    let mut params = graphics::DrawInfo::default();
+    params.translate(-0.5, 0.5, 6.0);
+    // params.scale(0.01);
+    batch.add(params);
+    let mut params = graphics::DrawInfo::default();
+    params.translate(0.5, -0.5, 6.0);
+    // params.scale(0.01);
+    batch.add(params);
+    let mut params = graphics::DrawInfo::default();
+    params.translate(-0.5, -0.5, 6.0);
+    // params.scale(0.01);
+    batch.add(params);
 
     event_loop.run(move |event, _, control_flow| {
         let now = std::time::Instant::now();
 
         match event {
             Event::WindowEvent { event, .. } => match event {
-                WindowEvent::KeyboardInput {
-                    input:
-                        KeyboardInput {
-                            virtual_keycode: Some(VirtualKeyCode::Escape),
-                            state: ElementState::Pressed,
-                            ..
-                        },
-                    ..
-                }
-                | WindowEvent::CloseRequested => {
+                WindowEvent::CloseRequested => {
                     *control_flow = ControlFlow::Exit;
                 }
                 WindowEvent::Resized(_) => {
@@ -39,9 +43,9 @@ fn main() {
                 _ => {}
             },
             Event::MainEventsCleared => {
-                graphics::clear(&mut context, graphics::Color::grey());
+                graphics::clear(&mut context, graphics::Color::black());
 
-                graphics::draw(&mut context, &image, params.clone());
+                graphics::draw(&mut context, &batch, graphics::DrawInfo::default());
 
                 graphics::present(&mut context);
 

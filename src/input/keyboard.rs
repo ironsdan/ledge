@@ -1,7 +1,6 @@
 use std::collections::HashSet;
-use winit::event::ModifiersState;
+// use winit::event::ModifiersState;
 pub use winit::event::VirtualKeyCode as KeyCode;
-
 
 pub struct KeyboardContext {
     pressed_keys: HashSet<KeyCode>,
@@ -31,9 +30,7 @@ impl KeyboardContext {
         // self.set_key_modifier(key, pressed);
     }
 
-    pub(crate) fn pressed_keys(&self) -> &HashSet<KeyCode> {
-        &self.pressed_keys
-    }
-
-    
+    // pub(crate) fn pressed_keys(&self) -> &HashSet<KeyCode> {
+    //     &self.pressed_keys
+    // }
 }

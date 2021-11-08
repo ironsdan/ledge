@@ -10,17 +10,10 @@ name = "ledge_engine"
 path = "src/lib.rs"
 
 [dependencies]
-# vulkano = { git = "https://github.com/Rua/vulkano.git", branch = "descriptor-set-bounds" }
-# vulkano-shaders = { git = "https://github.com/Rua/vulkano.git", branch = "descriptor-set-bounds" }
-# vulkano-win = { git = "https://github.com/Rua/vulkano.git", branch = "descriptor-set-bounds" }
 vulkano = "0.26"
 vulkano-shaders = "0.26"
 vulkano-win = "0.26"
 winit = "0.25"
-fnv = "*"
 winit_input_helper = "0.7"
-png = "*"
-image = "0.23.12"
-vector-map = "1.0.1"
-rand = "0.8.3"
+png = "0.17.2"
 cgmath = "0.18.0"

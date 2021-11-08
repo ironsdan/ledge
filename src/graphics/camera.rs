@@ -1,5 +1,5 @@
-use cgmath::{Matrix4, Vector4, Vector3, Rad, Deg};
 use cgmath::prelude::*;
+use cgmath::{Deg, Matrix4, Rad, Vector3, Vector4};
 
 pub trait Camera {
     fn model_array(&self) -> [[f32; 4]; 4];
@@ -32,13 +32,13 @@ pub trait Camera {
 ///  
 /// Useful for 3D images where perspective is necessary. The struct contains methods for doing any
 /// common transformation on the camera by transforming the model, view, or projection component.
-/// 
-/// Note: Follows Vulkan tradition of x: (-1, 1), y: (-1, 1), z: (0, 1) starting at the top left-front (-1,-1, 0), 
+///
+/// Note: Follows Vulkan tradition of x: (-1, 1), y: (-1, 1), z: (0, 1) starting at the top left-front (-1,-1, 0),
 /// continuing with the consitency of Vulkan the camera looks down the POSITIVE z-direction rather than the negative
 /// that is the standard in OpenGL.
-/// 
+///
 /// Note: Default values are fov: 75, aspect_ratio: 4.0/3.0, near: 5, far: 1000.
-/// 
+///
 /// # Examples
 /// ```
 /// use ledge_engine::graphics::camera;
@@ -50,6 +50,7 @@ pub trait Camera {
 ///     camera.translate_z(100.0);
 /// }
 /// ```
+#[derive(Debug)]
 pub struct PerspectiveCamera {
     fov: f32,
     aspect_ratio: f32,
@@ -63,7 +64,7 @@ pub struct PerspectiveCamera {
 impl Default for PerspectiveCamera {
     fn default() -> Self {
         let fov: f32 = 75.0;
-        let aspect_ratio = 4.0/3.0;
+        let aspect_ratio = 4.0 / 3.0;
         let n = 5.0;
         let f = 1000.0;
 
@@ -71,35 +72,47 @@ impl Default for PerspectiveCamera {
     }
 }
 
+// impl Display for PerspectiveCamera {
+//     fn display() -> String {
+
+//     }
+// }
+
 impl PerspectiveCamera {
     pub fn new(fov: f32, aspect_ratio: f32, near: f32, far: f32) -> Self {
         let angle_rad: Rad<f32> = Deg(fov).into();
-        let focal_length = 1.0 / Rad::tan(angle_rad/2.0);
-        let n = near;
-        let f = far;
+        let focal_length = 1.0 / Rad::tan(angle_rad / 2.0);
 
         let model_x = Vector4::new(1.0, 0.0, 0.0, 0.0);
         let model_y = Vector4::new(0.0, 1.0, 0.0, 0.0);
         let model_z = Vector4::new(0.0, 0.0, 1.0, 0.0);
         let model_w = Vector4::new(0.0, 0.0, 0.0, 1.0);
-        
+
         let model = Matrix4::from_cols(model_x, model_y, model_z, model_w);
 
         let view_x = Vector4::new(1.0, 0.0, 0.0, 0.0);
         let view_y = Vector4::new(0.0, 1.0, 0.0, 0.0);
         let view_z = Vector4::new(0.0, 0.0, 1.0, 0.0);
         let view_w = Vector4::new(0.0, 0.0, 0.0, 1.0);
-        
+
         let view = Matrix4::from_cols(view_x, view_y, view_z, view_w);
 
-        let c0r0 = -focal_length / aspect_ratio;
-        let c1r1 = -focal_length;
-        let c2r2 = (-f) / (f - n);
-        let c3r2 = (f * n) / (f - n);
+        // let c0r0 = -focal_length / aspect_ratio;
+        // let c1r1 = -focal_length;
+        // let c2r2 = (f) / (f-n);
+        // let c3r2 = -(f * n) / (f-n);
+        // let c0r0 = n/800.;
+        // let c1r1 = n/600.;
+        // let c2r2 = f/(f-n);
+        // let c3r2 = -n*f/(f-n);
+        let c0r0 = focal_length / aspect_ratio;
+        let c1r1 = focal_length;
+        let c2r2 = (far) / (far - near);
+        let c3r2 = -(far * near) / (far - near);
 
         let proj_x = Vector4::new(c0r0, 0.0, 0.0, 0.0);
         let proj_y = Vector4::new(0.0, c1r1, 0.0, 0.0);
-        let proj_z = Vector4::new(0.0, 0.0, c2r2, -1.0);
+        let proj_z = Vector4::new(0.0, 0.0, c2r2, 1.0);
         let proj_w = Vector4::new(0.0, 0.0, c3r2, 0.0);
 
         let proj = Matrix4::from_cols(proj_x, proj_y, proj_z, proj_w);
@@ -107,37 +120,36 @@ impl PerspectiveCamera {
         Self {
             fov,
             aspect_ratio,
-            near: n,
-            far: f,
-            model: model,
-            view: view,
-            proj: proj,
+            near,
+            far,
+            model,
+            view,
+            proj,
         }
     }
 }
 
 impl Camera for PerspectiveCamera {
     fn model_array(&self) -> [[f32; 4]; 4] {
-        return self.model.into();
+        self.model.into()
     }
 
     fn view_array(&self) -> [[f32; 4]; 4] {
-        return self.view.into();
+        self.view.into()
     }
 
     fn proj_array(&self) -> [[f32; 4]; 4] {
-        return self.proj.into();
+        self.proj.into()
     }
 
     fn mv_array(&self) -> [[f32; 4]; 4] {
         let mv = self.model * self.view;
-        return mv.into();
+        mv.into()
     }
 
     fn mvp_array(&self) -> [[f32; 4]; 4] {
         let mvp = self.model * self.view * self.proj;
-
-        return mvp.into();
+        mvp.into()
     }
 
     fn rotate_x(&mut self, degs: Deg<f32>) {
@@ -183,9 +195,10 @@ impl Camera for PerspectiveCamera {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[allow(unused)]
-pub struct CameraMvp { // Camera struct for conversion to uniform.
+pub struct CameraMvp {
+    // Camera struct for conversion to uniform.
     model: [[f32; 4]; 4],
     view: [[f32; 4]; 4],
     proj: [[f32; 4]; 4],

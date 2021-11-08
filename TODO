@@ -1,25 +1,8 @@
-To work on next:
-1) Look around to see how the context/backend is usualyl split up and do it roughly that way.
-2) Create a gfx 'Factory' like struct to create buffers and descriptorsets and whatever else the user will need to abstract the vulkano bits.
-3) Try writing a resuable command_buffer (encoder) to aleve some of the ugly .as_mut().unwrap() calls.
-4) Complete using the pipe_data for drawing.
-
-
 Big ideas:
 
 CONTEXT
-* Create a backend struct to store all the non-context-related information for vulkano.
-* Create a vector of shaders for the context to use, that the users can add to.
 * Also create some default shaders for the users to use.
 * Generally clean up code flow.
 CAMERA
-* Make the camera part of the context some how so that it can automatically add the camera descriptor set for the user.
 * Orhtographic camera.
 * Zoom for projection camera.
-ENCODER
-* Write the encoder to abstract the command_buffer.
-BUFFER
-
-IMAGE
-
-SHADER
