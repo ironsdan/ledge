@@ -16,7 +16,7 @@ use vulkano::{
     render_pass::Subpass,
 };
 
-use crate::graphics::{context::GraphicsContext, error::*, BlendMode, PipelineData};
+use crate::graphics::{context::GraphicsContext, BlendMode, PipelineData};
 
 pub enum VertexOrder {
     LineList,
@@ -48,8 +48,8 @@ pub trait ShaderHandle {
         &self,
         command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
         pipe_data: &PipelineData,
-    ) -> Result<(), GraphicsError>;
-    fn set_blend_mode(&mut self, mode: BlendMode) -> Result<(), GraphicsError>;
+    );
+    // fn set_blend_mode(&mut self, mode: BlendMode);
     fn blend_mode(&self) -> BlendMode;
     fn layout(&self) -> &[Arc<DescriptorSetLayout>];
     fn pipeline(&self) -> Arc<GraphicsPipeline>;
@@ -60,7 +60,7 @@ impl ShaderHandle for ShaderProgram {
         &self,
         command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
         pipe_data: &PipelineData,
-    ) -> Result<(), GraphicsError> {
+    ) {
         command_buffer.bind_pipeline_graphics(self.pipeline().clone());
 
         let layout = self.layout()[0].clone();
@@ -108,14 +108,12 @@ impl ShaderHandle for ShaderProgram {
         command_buffer
             .draw(pipe_data.vertex_count, pipe_data.instance_count, 0, 0)
             .unwrap();
-        Ok(())
     }
 
-    fn set_blend_mode(&mut self, mode: BlendMode) -> Result<(), GraphicsError> {
-        let _ = self.pipelines.mode(&mode)?;
-        self.current_mode = mode;
-        Ok(())
-    }
+    // fn set_blend_mode(&mut self, mode: BlendMode) {
+    //     let _ = self.pipelines.mode(&mode)?;
+    //     self.current_mode = mode;
+    // }
 
     fn blend_mode(&self) -> BlendMode {
         self.current_mode
@@ -194,14 +192,12 @@ impl PipelineObjectSet {
         self.pipelines.get(blend_mode)
     }
 
-    pub fn mode(&self, mode: &BlendMode) -> Result<&GraphicsPipeline, GraphicsError> {
-        match self.pipelines.get(&mode) {
-            Some(po) => Ok(po),
-            None => Err(GraphicsError::PipelineError(
-                "Couldn't find a pipeline for the specified shader and BlendMode".into(),
-            )),
-        }
-    }
+    // pub fn mode(&self, mode: &BlendMode) -> Result<&GraphicsPipeline, GraphicsError> {
+    //     match self.pipelines.get(&mode) {
+    //         Some(po) => Ok(po),
+    //         None => {},
+    //     }
+    // }
 }
 
 pub fn new_pipeline<Vd>(

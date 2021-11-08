@@ -1,18 +1,13 @@
-/// The main Vulkan interface, holds backend components and
-/// contextual information such as device, queue, and swapchain information.
-pub mod context;
-// pub mod encoder;
-/// TODO: Partially implemented wrapper for Vulkano buffers.
-pub mod buffer;
 /// The camera module holds the different camera options and helper functions for creating and
 /// manipulating views.
 pub mod camera;
+/// The main Vulkan interface, holds backend components and
+/// contextual information such as device, queue, and swapchain information.
+pub mod context;
 /// Holds all graphics error enums.
-pub mod error;
+// pub mod error;
 /// TODO: A module dedicated to images, used for textures and other image related things.
 pub mod image;
-/// TODO: Material is a module that will hold information about how to correctly render a specific object.
-pub mod material;
 /// The shader module defines types, traits, and structs to abstract complex operations that involve shaders.
 /// This module has a lot of intense types from Vulkano wrapped in less scary interfaces that are not as troublesome to deal with
 pub mod shader;

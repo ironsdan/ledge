@@ -1,37 +1,31 @@
-use vulkano::command_buffer::PrimaryCommandBuffer;
 use vulkano::{
-    buffer::{BufferUsage, CpuAccessibleBuffer},
+    buffer::{device_local::DeviceLocalBuffer, BufferUsage, CpuAccessibleBuffer},
     command_buffer::{
-        AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer, SubpassContents,
+        AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer,
+        PrimaryCommandBuffer, SubpassContents,
     },
     device::physical::{PhysicalDevice, PhysicalDeviceType},
     device::{Device, DeviceExtensions, Features},
-    image::view::ImageView,
-    image::ImageUsage,
-    image::SwapchainImage,
+    image::{view::ImageView, ImageUsage, SwapchainImage},
     instance::Instance,
-    pipeline::viewport::Viewport,
+    pipeline::{vertex::BuffersDefinition, viewport::Viewport},
     render_pass::{Framebuffer, FramebufferAbstract, RenderPass},
-    // descriptor_set::{SingleLayoutDescSetPool},
-    // sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode},
+    sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode},
     swapchain::{self, AcquireError, Swapchain, SwapchainCreationError},
     sync::{self, FlushError, GpuFuture},
+    Version,
 };
 
-use vulkano::Version;
 use vulkano_win::VkSurfaceBuild;
 use winit::event_loop::EventLoop;
 use winit::window::{Window, WindowBuilder};
 
-use crate::{conf::*, graphics::shader::ShaderId, graphics::*};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
-use vulkano::buffer::device_local::DeviceLocalBuffer;
-use vulkano::pipeline::vertex::BuffersDefinition;
-use vulkano::sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode};
-// use renderdoc::*;
+
+use crate::{conf::*, graphics::shader::ShaderId, graphics::*};
 
 /// This is the context from which the graphics components gets all of its information
 /// about the physical device and the presentation area. It serves as the Vulkano abstraction,
@@ -90,35 +84,30 @@ use vulkano::sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode};
 /// ```
 #[allow(unused)]
 pub struct GraphicsContext {
-    pub queue: std::sync::Arc<vulkano::device::Queue>,
-    pub surface: std::sync::Arc<vulkano::swapchain::Surface<winit::window::Window>>,
-    pub device: std::sync::Arc<vulkano::device::Device>,
-    pub swapchain: std::sync::Arc<vulkano::swapchain::Swapchain<winit::window::Window>>,
-    pub framebuffers: std::vec::Vec<
-        std::sync::Arc<
-            dyn vulkano::render_pass::FramebufferAbstract + std::marker::Send + std::marker::Sync,
-        >,
-    >,
-    pub render_pass: std::sync::Arc<RenderPass>,
+    pub queue: Arc<vulkano::device::Queue>,
+    surface: Arc<vulkano::swapchain::Surface<winit::window::Window>>,
+    pub device: Arc<vulkano::device::Device>,
+    swapchain: Arc<vulkano::swapchain::Swapchain<winit::window::Window>>,
+    framebuffers: std::vec::Vec<Arc<dyn vulkano::render_pass::FramebufferAbstract + Send + Sync>>,
+    pub render_pass: Arc<RenderPass>,
     image_num: usize,
     pub recreate_swapchain: bool,
     previous_frame_end: Option<Box<dyn vulkano::sync::GpuFuture>>,
     present_future: Option<Box<dyn vulkano::sync::GpuFuture>>,
-    pub command_buffer: Option<AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>>,
+    command_buffer: Option<AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>>,
     camera_buffer: Arc<DeviceLocalBuffer<camera::CameraMvp>>,
     pub camera: Box<dyn crate::graphics::camera::Camera>,
     camera_binding: u32,
     default_shader: ShaderId,
     current_shader: Rc<RefCell<Option<ShaderId>>>,
-    pub shaders: Vec<Arc<dyn crate::graphics::shader::ShaderHandle>>,
+    shaders: Vec<Arc<dyn crate::graphics::shader::ShaderHandle>>,
     pub samplers: Vec<Arc<Sampler>>,
     pub last_frame_time: std::time::Instant,
-
     pub pipe_data: PipelineData,
 }
 
 impl GraphicsContext {
-    pub fn new(conf: Conf) -> (Self, winit::event_loop::EventLoop<()>) {
+    pub fn new(_conf: Conf) -> (Self, winit::event_loop::EventLoop<()>) {
         let required_extensions = vulkano_win::required_extensions();
         let instance = Instance::new(None, Version::V1_1, &required_extensions, None).unwrap();
 
@@ -320,8 +309,6 @@ impl GraphicsContext {
             .unwrap()
             .update_buffer(self.camera_buffer.clone(), Arc::new(self.camera.as_mvp()))
             .unwrap();
-        // println!("{:?}", self.camera.as_mvp());
-        // loop{}
 
         self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 
@@ -410,10 +397,7 @@ impl GraphicsContext {
             camera_desc.clone(),
         );
 
-        // self.command_buffer.as_mut().unwrap().bind_vertex_buffers(0, self.vertex_buffer.clone());
-        shader_handle
-            .draw(&mut self.command_buffer.as_mut().unwrap(), &self.pipe_data)
-            .unwrap();
+        shader_handle.draw(&mut self.command_buffer.as_mut().unwrap(), &self.pipe_data);
     }
 
     /// This function submits the command buffer to the queue and fences the operation,
@@ -463,8 +447,6 @@ impl GraphicsContext {
             vertex_buffer.iter().cloned(),
         )
         .unwrap();
-
-        // self.command_buffer.as_mut().unwrap().update_buffer(self.pipe_data.vertex_buffer.clone(), vertex_buffer).unwrap();
     }
 
     pub fn update_instance_properties(&mut self, instance_buffer: Arc<Vec<InstanceData>>) {
@@ -476,30 +458,9 @@ impl GraphicsContext {
             instance_buffer.iter().cloned(),
         )
         .unwrap();
-        // self.command_buffer.as_mut().unwrap().update_buffer(self.pipe_data.instance_buffer.clone(), draw_info).unwrap();
     }
 
     pub fn set_blend_mode(&mut self, _blend_mode: BlendMode) {}
-
-    pub fn update_camera() {}
-
-    // pub fn bind_descriptor_sets(&mut self, shader_handle: Arc<dyn ShaderHandle>) {
-    //     self.command_buffer.as_mut().unwrap().bind_descriptor_sets(
-    //         PipelineBindPoint::Graphics,
-    //         shader_handle.pipeline().layout().clone(),
-    //         0,
-    //         self.set.as_ref().unwrap().clone(),
-    //     );
-    // }
-
-    // pub fn add_perspective_camera(&mut self) {
-    //     self.camera = Some(Box::new(camera::PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0)));
-    // }
-
-    // pub fn add_perspective_camera_with_binding(&mut self, binding: u32) {
-    //     self.camera_binding = binding;
-    //     self.camera = Some(Box::new(camera::PerspectiveCamera::new(75.0, 4.3/3.0, 5.0, 1000.0)));
-    // }
 
     pub fn camera(&mut self) -> &mut Box<dyn camera::Camera> {
         &mut self.camera
