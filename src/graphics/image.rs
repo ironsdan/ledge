@@ -75,22 +75,22 @@ impl Drawable for Image {
         let y_r = self.height as f32 / 2.;
         context.update_vertex_data(vec![
             Vertex {
-                pos: [-x_r, -y_r, 0.0],
+                pos: [-1.0, -1.0, 0.0],
                 uv: [0.0, 0.0],
                 vert_color: [1.0, 1.0, 1.0, 1.0],
             },
             Vertex {
-                pos: [-x_r, y_r, 0.0],
+                pos: [-1.0, 1.0, 0.0],
                 uv: [0.0, 1.0],
                 vert_color: [1.0, 1.0, 1.0, 1.0],
             },
             Vertex {
-                pos: [x_r, -y_r, 0.0],
+                pos: [1.0, -1.0, 0.0],
                 uv: [1.0, 0.0],
                 vert_color: [1.0, 1.0, 1.0, 1.0],
             },
             Vertex {
-                pos: [x_r, y_r, 0.0],
+                pos: [1.0, 1.0, 0.0],
                 uv: [1.0, 1.0],
                 vert_color: [1.0, 1.0, 1.0, 1.0],
             },

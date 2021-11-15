@@ -97,14 +97,6 @@ impl PerspectiveCamera {
 
         let view = Matrix4::from_cols(view_x, view_y, view_z, view_w);
 
-        // let c0r0 = -focal_length / aspect_ratio;
-        // let c1r1 = -focal_length;
-        // let c2r2 = (f) / (f-n);
-        // let c3r2 = -(f * n) / (f-n);
-        // let c0r0 = n/800.;
-        // let c1r1 = n/600.;
-        // let c2r2 = f/(f-n);
-        // let c3r2 = -n*f/(f-n);
         let c0r0 = focal_length / aspect_ratio;
         let c1r1 = focal_length;
         let c2r2 = (far) / (far - near);

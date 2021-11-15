@@ -1,5 +1,5 @@
 // use std::time::{Duration, SystemTime};
-use crate::{error::*, interface::*};
+use crate::{error::*, interface::*, graphics};
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -31,6 +31,8 @@ where
             Event::UserEvent(_) => {}
             Event::LoopDestroyed => {}
             Event::MainEventsCleared => {
+                graphics::clear(&mut interface.graphics_context, graphics::Color::grey());
+
                 interface.timer_state.tick();
 
                 if let Err(e) = game_state.update(interface) {
@@ -40,6 +42,8 @@ where
                 if let Err(e) = game_state.draw(interface) {
                     println!("Error on EventHandler::draw(): {:?}", e);
                 }
+
+                graphics::present(&mut interface.graphics_context);
             }
             Event::RedrawRequested(_) => {}
             Event::RedrawEventsCleared => {}
@@ -50,9 +54,4 @@ where
 pub trait EventHandler {
     fn update(&mut self, interface: &mut Interface) -> GameResult;
     fn draw(&mut self, interface: &mut Interface) -> GameResult;
-
-    // fn mouse_button_down_event(&mut self, interface: &mut Interface, button: MouseButton, x: f32, y: f32);
-    // fn mouse_button_up_event();
-    // fn mouse_motion_event();
-    // fn mouse_wheel_event();
 }
