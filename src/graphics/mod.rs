@@ -152,7 +152,7 @@ impl DrawInfo {
     pub fn into_instance_data(&self) -> InstanceData {
         InstanceData {
             src: self.tex_rect.as_vec(),
-            color: self.color.as_vec(),
+            color: self.color.as_arr(),
             transform: self.transform.as_mat4().into(),
         }
     }
@@ -309,8 +309,26 @@ impl Color {
         Color([0.0, 0.0, 0.0, 0.0])
     }
 
-    pub fn as_vec(&self) -> [f32; 4] {
+    pub fn as_arr(&self) -> [f32; 4] {
         self.0
+    }
+
+    pub fn as_u8_arr(&self) -> [u8; 4] {
+        let mut arr = [0u8; 4];
+        arr[0] = (self.0[0] * 255.) as u8;
+        arr[1] = (self.0[1] * 255.) as u8;
+        arr[2] = (self.0[2] * 255.) as u8;
+        arr[3] = (self.0[3] * 255.) as u8;
+        arr
+    }
+
+    pub fn as_u8_vec(&self) -> Vec<u8> {
+        let mut v = Vec::new();
+        v.push((self.0[0] * 255.) as u8);
+        v.push((self.0[1] * 255.) as u8);
+        v.push((self.0[2] * 255.) as u8);
+        v.push((self.0[3] * 255.) as u8);
+        v
     }
 }
 

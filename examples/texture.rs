@@ -12,8 +12,8 @@ fn main() {
 
     let image = graphics::image::Image::new(&context, "examples/images/pokeball.png");
     let mut params = graphics::DrawInfo::default();
-    params.translate(0.0, 0.0, 5.1);
-    params.scale(0.01);
+    params.translate(0.0, 0.0, 10.1);
+    // params.scale(0.1);
     println!("{:?}", params);
 
     event_loop.run(move |event, _, control_flow| {

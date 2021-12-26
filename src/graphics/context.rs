@@ -8,8 +8,8 @@ use vulkano::{
     device::{Device, DeviceExtensions, Features},
     image::{view::ImageView, ImageUsage, SwapchainImage},
     instance::Instance,
-    pipeline::{vertex::BuffersDefinition, viewport::Viewport},
-    render_pass::{Framebuffer, FramebufferAbstract, RenderPass},
+    pipeline::{graphics::vertex_input::BuffersDefinition, graphics::viewport::Viewport},
+    render_pass::{Framebuffer, RenderPass},
     sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode},
     swapchain::{self, AcquireError, Swapchain, SwapchainCreationError},
     sync::{self, FlushError, GpuFuture},
@@ -24,6 +24,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
+use vulkano::pipeline::Pipeline;
 
 use crate::{conf::*, graphics::shader::ShaderId, graphics::*};
 
@@ -88,7 +89,7 @@ pub struct GraphicsContext {
     surface: Arc<vulkano::swapchain::Surface<winit::window::Window>>,
     pub device: Arc<vulkano::device::Device>,
     swapchain: Arc<vulkano::swapchain::Swapchain<winit::window::Window>>,
-    framebuffers: std::vec::Vec<Arc<dyn vulkano::render_pass::FramebufferAbstract + Send + Sync>>,
+    framebuffers: std::vec::Vec<Arc<vulkano::render_pass::Framebuffer>>,
     pub render_pass: Arc<RenderPass>,
     image_num: usize,
     pub recreate_swapchain: bool,
@@ -170,23 +171,21 @@ impl GraphicsContext {
                 .unwrap()
         };
 
-        let render_pass = Arc::new(
-            vulkano::single_pass_renderpass!(device.clone(),
-                attachments: {
-                    color: {
-                        load: Clear,
-                        store: Store,
-                        format: swapchain.format(),
-                        samples: 1,
-                    }
-                },
-                pass: {
-                    color: [color],
-                    depth_stencil: {}
+        let render_pass = vulkano::single_pass_renderpass!(device.clone(),
+            attachments: {
+                color: {
+                    load: Clear,
+                    store: Store,
+                    format: swapchain.format(),
+                    samples: 1,
                 }
-            )
-            .unwrap(),
-        );
+            },
+            pass: {
+                color: [color],
+                depth_stencil: {}
+            }
+        )
+        .unwrap();
 
         let default_future = sync::now(device.clone()).boxed();
 
@@ -264,8 +263,8 @@ impl GraphicsContext {
             pipe_data,
         };
 
-        let v_shader = vs::Shader::load(context.device.clone()).unwrap();
-        let f_shader = fs::Shader::load(context.device.clone()).unwrap();
+        let v_shader = vs::load(context.device.clone()).unwrap();
+        let f_shader = fs::load(context.device.clone()).unwrap();
 
         let default_program = shader::ShaderProgram::new(
             &mut context,
@@ -273,8 +272,8 @@ impl GraphicsContext {
                 .vertex::<Vertex>()
                 .instance::<InstanceData>(),
             shader::VertexOrder::TriangleStrip,
-            v_shader.main_entry_point(),
-            f_shader.main_entry_point(),
+            v_shader.entry_point("main").unwrap(),
+            f_shader.entry_point("main").unwrap(),
             BlendMode::Alpha,
         );
 
@@ -341,7 +340,7 @@ impl GraphicsContext {
         }
 
         self.image_num = image_num;
-        let clear_values = vec![color.as_vec().into()];
+        let clear_values = vec![color.as_arr().into()];
         self.command_buffer
             .as_mut()
             .unwrap()
@@ -388,7 +387,7 @@ impl GraphicsContext {
         camera_builder
             .add_buffer(self.camera_buffer.clone())
             .unwrap();
-        let camera_desc = Arc::new(camera_builder.build().unwrap());
+        let camera_desc = camera_builder.build().unwrap();
 
         self.command_buffer.as_mut().unwrap().bind_descriptor_sets(
             vulkano::pipeline::PipelineBindPoint::Graphics,
@@ -471,17 +470,15 @@ impl GraphicsContext {
 pub fn window_size_dependent_setup(
     images: &[Arc<SwapchainImage<Window>>],
     render_pass: Arc<RenderPass>,
-) -> Vec<Arc<dyn FramebufferAbstract + Send + Sync>> {
+) -> Vec<Arc<Framebuffer>> {
     images
         .iter()
         .map(|image| {
-            Arc::new(
-                Framebuffer::start(render_pass.clone())
-                    .add(ImageView::new(image.clone()).unwrap())
-                    .unwrap()
-                    .build()
-                    .unwrap(),
-            ) as Arc<dyn FramebufferAbstract + Send + Sync>
+            Framebuffer::start(render_pass.clone())
+                .add(ImageView::new(image.clone()).unwrap())
+                .unwrap()
+                .build()
+                .unwrap()
         })
         .collect::<Vec<_>>()
 }

@@ -1,20 +1,24 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use vulkano::descriptor_set::layout::DescriptorDescTy;
+use vulkano::descriptor_set::layout::DescriptorType;
 use vulkano::descriptor_set::persistent::PersistentDescriptorSet;
 use vulkano::pipeline::PipelineBindPoint;
 use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer},
     descriptor_set::layout::DescriptorSetLayout,
     pipeline::{
-        blend::{AttachmentBlend, AttachmentsBlend, Blend, BlendFactor, BlendOp, LogicOp},
-        shader::GraphicsEntryPoint,
-        vertex::VertexDefinition,
+        graphics::color_blend::{AttachmentBlend, ColorBlendState, ColorBlendAttachmentState, BlendFactor, BlendOp, LogicOp},
+        graphics::vertex_input::VertexDefinition,
         GraphicsPipeline,
     },
+    shader::EntryPoint,
     render_pass::Subpass,
 };
+use vulkano::pipeline::Pipeline;
+use vulkano::pipeline::graphics::viewport::ViewportState;
+use vulkano::pipeline::StateMode;
+use vulkano::pipeline::graphics::color_blend::ColorComponents;
 
 use crate::graphics::{context::GraphicsContext, BlendMode, PipelineData};
 
@@ -68,12 +72,12 @@ impl ShaderHandle for ShaderProgram {
         let mut builder = PersistentDescriptorSet::start(layout.clone());
         for i in 0..layout.num_bindings() {
             match layout.descriptor(i).unwrap().ty {
-                DescriptorDescTy::UniformBuffer => {
+                DescriptorType::UniformBuffer => {
                     builder
                         .add_buffer(pipe_data.uniform_buffers.get(&i).unwrap().clone())
                         .unwrap();
                 }
-                DescriptorDescTy::CombinedImageSampler { .. } => {
+                DescriptorType::CombinedImageSampler { .. } => {
                     let image_sampler = pipe_data.sampled_images.get(&i).unwrap();
                     builder
                         .add_sampled_image(image_sampler.0.clone(), image_sampler.1.clone())
@@ -137,8 +141,8 @@ impl ShaderProgram {
         context: &mut GraphicsContext,
         vertex_type: Vd,
         vertex_order: VertexOrder,
-        vertex_shader: GraphicsEntryPoint,
-        fragment_shader: GraphicsEntryPoint,
+        vertex_shader: EntryPoint,
+        fragment_shader: EntryPoint,
         blend: BlendMode,
     ) -> Self
     where
@@ -204,19 +208,19 @@ pub fn new_pipeline<Vd>(
     context: &mut GraphicsContext,
     vertex_type: Vd,
     vertex_order: VertexOrder,
-    vertex_shader: GraphicsEntryPoint,
-    fragment_shader: GraphicsEntryPoint,
+    vertex_shader: EntryPoint,
+    fragment_shader: EntryPoint,
     blend: BlendMode,
 ) -> Arc<GraphicsPipeline>
 where
     Vd: VertexDefinition + 'static + Sync + Send,
 {
     let mut pipeline = GraphicsPipeline::start()
-        .vertex_input::<Vd>(vertex_type)
+        .vertex_input_state::<Vd>(vertex_type)
         .vertex_shader(vertex_shader, ())
-        .viewports_dynamic_scissors_irrelevant(1)
+        .viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
         .fragment_shader(fragment_shader, ())
-        .blend_collective(blend.into())
+        .color_blend_state(blend.into())
         .render_pass(Subpass::from(context.render_pass.clone(), 0).unwrap());
 
     pipeline = match vertex_order {
@@ -228,70 +232,53 @@ where
         VertexOrder::TriangleStrip => pipeline.triangle_strip(),
     };
 
-    Arc::new(pipeline.build(context.device.clone()).unwrap())
+    pipeline.build(context.device.clone()).unwrap()
 }
 
-impl From<BlendMode> for Blend {
+impl From<BlendMode> for ColorBlendState {
     fn from(blend_mode: BlendMode) -> Self {
-        let mut logic_op: Option<LogicOp> = None;
-        let mut attachments: AttachmentBlend = AttachmentBlend::ignore_source();
-        let blend_constants: Option<[f32; 4]> = Some([1.0, 1.0, 1.0, 1.0]); // TODO implement these.
+
+        let mut logic_op: Option<StateMode<LogicOp>> = None;
+        let mut attach: Option<AttachmentBlend> = None;
+        let blend_constants: [f32; 4] = [1.0, 1.0, 1.0, 1.0]; // TODO implement these.
 
         match blend_mode {
             BlendMode::Add => {
-                attachments = AttachmentBlend {
-                    enabled: true,
+                attach = Some(AttachmentBlend {
                     color_op: BlendOp::Add,
                     color_source: BlendFactor::One,
                     color_destination: BlendFactor::One,
                     alpha_op: BlendOp::Add,
                     alpha_source: BlendFactor::One,
                     alpha_destination: BlendFactor::One,
-                    mask_red: true,
-                    mask_green: true,
-                    mask_blue: true,
-                    mask_alpha: true,
-                };
+                });
             }
             BlendMode::Subtract => {
-                attachments = AttachmentBlend {
-                    enabled: true,
+                attach = Some(AttachmentBlend {
                     color_op: BlendOp::Subtract,
                     color_source: BlendFactor::One,
                     color_destination: BlendFactor::One,
                     alpha_op: BlendOp::Subtract,
                     alpha_source: BlendFactor::One,
                     alpha_destination: BlendFactor::One,
-                    mask_red: true,
-                    mask_green: true,
-                    mask_blue: true,
-                    mask_alpha: true,
-                };
+                });
             }
             BlendMode::Alpha => {
-                attachments = AttachmentBlend::alpha_blending();
+                attach = Some(AttachmentBlend::alpha());
             }
             BlendMode::Invert => {
-                logic_op = Some(LogicOp::Invert);
+                logic_op = Some(StateMode::Fixed(LogicOp::Invert));
             }
         };
 
-        return Blend {
-            logic_op,
-            attachments: AttachmentsBlend::Collective(attachments),
-            blend_constants,
+        return ColorBlendState {
+            logic_op: logic_op,
+            attachments: vec![ColorBlendAttachmentState {
+                blend: attach,
+                color_write_mask: ColorComponents::all(),
+                color_write_enable: StateMode::Fixed(true),
+            }],
+            blend_constants: StateMode::Fixed(blend_constants),
         };
-    }
-}
-
-impl From<BlendMode> for AttachmentBlend {
-    fn from(blend_mode: BlendMode) -> AttachmentBlend {
-        let blend: Blend = blend_mode.into();
-        match blend.attachments {
-            AttachmentsBlend::Collective(attachment) => attachment,
-            _ => {
-                AttachmentBlend::pass_through() // TODO Fix so it cannot fail.
-            }
-        }
     }
 }

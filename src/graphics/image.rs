@@ -13,10 +13,10 @@ use std::sync::Arc;
 use vulkano::format::Format;
 use vulkano::image::{view::ImageView, ImageDimensions, ImmutableImage, MipmapsCount};
 
-// #[derive(Clone, Default)]
+#[derive(Clone)]
 #[allow(unused)]
 pub struct Image {
-    inner: Arc<ImageView<std::sync::Arc<ImmutableImage>>>,
+    inner: Arc<ImageView<ImmutableImage>>,
     width: u32,
     height: u32,
 }
@@ -63,7 +63,33 @@ impl Image {
         }
     }
 
-    pub fn inner(&self) -> &Arc<ImageView<std::sync::Arc<ImmutableImage>>> {
+    pub fn from_color(ctx: &GraphicsContext, color: Color) -> Self {
+        let mut image_data: Vec<u8> = Vec::new();
+        image_data.append(&mut color.as_u8_vec());
+        let dimensions = ImageDimensions::Dim2d {
+            width: 1,
+            height: 1,
+            array_layers: 1,
+        };
+
+        let (image, _) = ImmutableImage::from_iter(
+            image_data.iter().cloned(),
+            dimensions,
+            MipmapsCount::One,
+            Format::R8G8B8A8_SRGB,
+            ctx.queue.clone(),
+        )
+        .unwrap();
+        let image_view = ImageView::new(image).unwrap();
+
+        Self {
+            inner: image_view,
+            width: 1,
+            height: 1,
+        }
+    }
+
+    pub fn inner(&self) -> &Arc<ImageView<ImmutableImage>> {
         &self.inner
     }
 }
