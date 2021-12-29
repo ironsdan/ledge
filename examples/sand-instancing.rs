@@ -27,7 +27,7 @@ impl SandPixel {
 struct MainState {
     particles: Vec<Vec<Option<SandPixel>>>,
     sprite_batch: graphics::sprite::SpriteBatch,
-    particle_count: (usize, usize),
+    size: usize,
 }
 
 impl event::EventHandler for MainState {
@@ -35,12 +35,12 @@ impl event::EventHandler for MainState {
         let mut updated = Vec::new();
 
         if let Some(button) = interface.mouse_context.current_pressed {
-            let x = ((1. + interface.mouse_context.last_position.0) * (1./2.) * self.particle_count.0 as f64) as usize;
-            let y = ((1. + interface.mouse_context.last_position.1) * (1./2.) * self.particle_count.1 as f64) as usize;
+            let x = ((1. + interface.mouse_context.last_position.0) * (1./2.) * self.size as f64) as usize;
+            let y = ((1. + interface.mouse_context.last_position.1) * (1./2.) * self.size as f64) as usize;
             
-            if !(x > self.particle_count.0-1 || y > self.particle_count.1-1) && self.particles[x][y].is_none(){
+            if !(x > self.size-1 || y > self.size-1) && self.particles[x][y].is_none(){
                 if button == input::mouse::MouseButton::Left {
-                    self.particles[x][y] = Some(SandPixel::new(&interface.graphics_context, self.particle_count.0, graphics::Color::rgba(194, 168, 128, 255)));
+                    self.particles[x][y] = Some(SandPixel::new(&interface.graphics_context, self.size, graphics::Color::rgba(194, 168, 128, 255)));
                 }
             }
         }
@@ -60,7 +60,7 @@ impl event::EventHandler for MainState {
                 if self.particles[i][j+1].is_none() {
                     self.particles[i][j+1] = self.particles[i][j].take();        
                     updated.push((i,j+1));
-                } else if i < self.particle_count.0-1 && self.particles[i+1][j+1].is_none() && n > 6 {
+                } else if i < self.size-1 && self.particles[i+1][j+1].is_none() && n > 6 {
                     self.particles[i+1][j+1] = self.particles[i][j].take();
                     updated.push((i+1,j+1));
                 } else if i > 0 && self.particles[i-1][j+1].is_none() && n > 6  {
@@ -74,15 +74,14 @@ impl event::EventHandler for MainState {
     }
     
     fn draw(&mut self, interface: &mut Interface) -> GameResult {
-        let x = self.particle_count.0 as f32;
-        let y = self.particle_count.1 as f32;
+        let n = self.size as f32;
 
         self.sprite_batch = graphics::sprite::SpriteBatch::new(image::Image::from_color(&interface.graphics_context, graphics::Color::rgba(194, 168, 128, 255)));
 
         for i in 0..self.particles.len() {
             for j in 0..self.particles[i].len() {
                 if let Some(pixel) = &mut self.particles[i][j] {
-                    pixel.draw_info.dest((i as f32 - x/2.) / (x/2.), ((j+1) as f32 - y/2.) / (y/2.), 0.);
+                    pixel.draw_info.dest((i as f32 - n/2.) / (n/2.), ((j) as f32 - n/2.) / (n/2.), 0.);
                     self.sprite_batch.add(pixel.draw_info.clone());
                 }
             }
@@ -95,18 +94,18 @@ impl event::EventHandler for MainState {
 }
 
 impl MainState {
-    pub fn new(ctx: &graphics::context::GraphicsContext, x: usize, y: usize) -> Self {
+    pub fn new(ctx: &graphics::context::GraphicsContext, n: usize) -> Self {
         let mut v = Vec::new();
-        for _ in 0..x {
+        for _ in 0..n {
             let mut nv: Vec<Option<SandPixel>> = Vec::new();
-            nv.resize(y as usize, None);
+            nv.resize(n as usize, None);
             v.push(nv);
         }
 
         Self{
             particles: v,
             sprite_batch: graphics::sprite::SpriteBatch::new(image::Image::from_color(ctx, graphics::Color::rgba(194, 168, 128, 255))),
-            particle_count: (x, y),
+            size: n,
         }
     }
 }
@@ -114,6 +113,6 @@ impl MainState {
 fn main() {
     let builder = InterfaceBuilder::new("sand", "author");
     let (interface, event_loop) = builder.build().unwrap();
-    let state = MainState::new(&interface.graphics_context, 128, 128);
+    let state = MainState::new(&interface.graphics_context, 256);
     event::run(interface, event_loop, state);
 }
