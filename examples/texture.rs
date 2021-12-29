@@ -1,6 +1,5 @@
 use ledge_engine::conf;
 use ledge_engine::graphics;
-// use cgmath::{Deg, Rad, Angle};
 use winit::{
     event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::ControlFlow,
@@ -12,8 +11,14 @@ fn main() {
 
     let image = graphics::image::Image::new(&context, "examples/images/pokeball.png");
     let mut params = graphics::DrawInfo::default();
-    params.translate(0.0, 0.0, 10.1);
-    // params.scale(0.1);
+    
+    // params.translate(0., 0., 10.);
+    // params.dest((8.-8.)/8., (8.-8.)/8., 0.);
+    params.scale(1./16.);
+    params.dest(-15./16., -15./16., 0.);
+    // params.rotate(0., 0., 20.);
+    // params.nonuniform_scale(1.,2.,1.);
+    
     println!("{:?}", params);
 
     event_loop.run(move |event, _, control_flow| {

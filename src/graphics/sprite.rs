@@ -26,22 +26,22 @@ impl Drawable for SpriteBatch {
     fn draw(&self, context: &mut GraphicsContext, _info: DrawInfo) {
         context.update_vertex_data(vec![
             Vertex {
-                pos: [-0.5, -0.5, 0.0],
+                pos: [0.0, 0.0, 0.0],
                 uv: [0.0, 0.0],
                 vert_color: [1.0, 1.0, 1.0, 1.0],
             },
             Vertex {
-                pos: [-0.5, 0.5, 0.0],
+                pos: [0.0, 1.0, 0.0],
                 uv: [0.0, 1.0],
                 vert_color: [1.0, 1.0, 1.0, 1.0],
             },
             Vertex {
-                pos: [0.5, -0.5, 0.0],
+                pos: [1.0, 0.0, 0.0],
                 uv: [1.0, 0.0],
                 vert_color: [1.0, 1.0, 1.0, 1.0],
             },
             Vertex {
-                pos: [0.5, 0.5, 0.0],
+                pos: [1.0, 1.0, 0.0],
                 uv: [1.0, 1.0],
                 vert_color: [1.0, 1.0, 1.0, 1.0],
             },

@@ -125,6 +125,12 @@ impl DrawInfo {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.tex_rect = Rect::default();
+        self.color = Color::white();
+        self.transform = Transform::identity();
+    }
+
     pub fn with_rect(rect: Rect) -> Self {
         Self {
             tex_rect: rect,
@@ -176,6 +182,10 @@ impl DrawInfo {
     pub fn scale(&mut self, s: f32) {
         self.transform.nonuniform_scale(s, s, s);
     }
+
+    pub fn dest(&mut self, x: f32, y: f32, z: f32) {
+        self.transform.dest(x,y,z);
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -197,13 +207,13 @@ impl Default for Transform {
 
 impl Transform {
     fn identity() -> Self {
-        Self::Matrix(Matrix4::identity())
-        // Self::Components {
-        //     pos: Vector3::from((0.0, 0.0, 0.0)),
-        //     rotation: Rad(0.0),
-        //     scale: Vector3::from((1.0, 1.0, 1.0)),
-        //     offset: Vector3::from((0.0, 0.0, 0.0)),
-        // }
+        // Self::Matrix(Matrix4::identity())
+        Self::Components {
+            pos: Vector3::from((0.0, 0.0, 0.0)),
+            rotation: Rad(0.0),
+            scale: Vector3::from((1.0, 1.0, 1.0)),
+            offset: Vector3::from((0.0, 0.0, 0.0)),
+        }
     }
 
     pub fn as_mat4(&self) -> Matrix4<f32> {
@@ -234,10 +244,21 @@ impl Transform {
         }
     }
 
+    fn dest(&mut self, x: f32, y: f32, z: f32) {
+        match self {
+            Transform::Matrix(_mat) => {
+                // *mat = Matrix4::from_translation(Vector3::new(x, y, z)) * *mat;
+            }
+            Transform::Components { pos, .. } => {
+                *pos = Vector3::from((x, y, z));
+            }
+        }
+    }
+
     fn translate(&mut self, x: f32, y: f32, z: f32) {
         match self {
             Transform::Matrix(mat) => {
-                *mat = *mat * Matrix4::from_translation(Vector3::new(x, y, z));
+                *mat = Matrix4::from_translation(Vector3::new(x, y, z)) * *mat;
             }
             Transform::Components { pos, .. } => {
                 *pos += Vector3::from((x, y, z));
@@ -251,7 +272,7 @@ impl Transform {
             + Matrix4::from_angle_z(Rad(z));
         match self {
             Transform::Matrix(mat) => {
-                *mat = *mat * rotation;
+                *mat = rotation * *mat;
             }
             Transform::Components {
                 // rotation,
@@ -274,7 +295,8 @@ impl Transform {
     fn nonuniform_scale(&mut self, x: f32, y: f32, z: f32) {
         match self {
             Transform::Matrix(mat) => {
-                *mat = *mat * Matrix4::from_nonuniform_scale(x, y, z);
+                println!("{:?}", Matrix4::from_nonuniform_scale(x, y, z));
+                *mat = Matrix4::from_nonuniform_scale(x, y, z) * *mat;
             }
             Transform::Components { scale, .. } => {
                 *scale = Vector3::from((x, y, z));
@@ -293,6 +315,10 @@ impl From<[f32; 4]> for Color {
 }
 
 impl Color {
+    pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
+        Color([r as f32 / 255., g as f32 / 255., b as f32 / 255., a as f32 / 255.])
+    }
+
     pub fn black() -> Color {
         Color([0.0, 0.0, 0.0, 1.0])
     }

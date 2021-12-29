@@ -4,6 +4,7 @@ use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
 };
+use std::time;
 
 pub fn run<S: 'static>(mut interface: Interface, event_loop: EventLoop<()>, mut game_state: S) -> !
 where
@@ -35,13 +36,21 @@ where
 
                 interface.timer_state.tick();
 
+                let upda = time::Instant::now();
                 if let Err(e) = game_state.update(interface) {
                     println!("Error on EventHandler::update(): {:?}", e);
                 }
 
+                let update_time = 1000.*upda.elapsed().as_secs_f32();
+
+                let draw = time::Instant::now();
                 if let Err(e) = game_state.draw(interface) {
                     println!("Error on EventHandler::draw(): {:?}", e);
                 }
+
+                let draw_time = 1000.*draw.elapsed().as_secs_f32();
+
+                print!("ttu: {:.2} ttd: {:.2}\r", update_time, draw_time);
 
                 graphics::present(&mut interface.graphics_context);
             }

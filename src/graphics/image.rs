@@ -97,21 +97,21 @@ impl Image {
 impl Drawable for Image {
     fn draw(&self, context: &mut GraphicsContext, info: DrawInfo) {
         // Add quad vertex to pipe data
-        let x_r = self.width as f32 / 2.;
-        let y_r = self.height as f32 / 2.;
+        // let x_r = self.width as f32 / 2.;
+        // let y_r = self.height as f32 / 2.;
         context.update_vertex_data(vec![
             Vertex {
-                pos: [-1.0, -1.0, 0.0],
+                pos: [0.0, 0.0, 0.0],
                 uv: [0.0, 0.0],
                 vert_color: [1.0, 1.0, 1.0, 1.0],
             },
             Vertex {
-                pos: [-1.0, 1.0, 0.0],
+                pos: [0.0, 1.0, 0.0],
                 uv: [0.0, 1.0],
                 vert_color: [1.0, 1.0, 1.0, 1.0],
             },
             Vertex {
-                pos: [1.0, -1.0, 0.0],
+                pos: [1.0, 0.0, 0.0],
                 uv: [1.0, 0.0],
                 vert_color: [1.0, 1.0, 1.0, 1.0],
             },

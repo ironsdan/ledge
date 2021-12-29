@@ -65,6 +65,21 @@ impl Interface {
                     self.mouse_context
                         .set_last_position((position.x / 400.0 - 1.0, position.y / 300.0 - 1.0));
                 }
+                winit::event::WindowEvent::MouseInput { state, button, .. } => {
+                    let button = match button {
+                        winit::event::MouseButton::Left => crate::input::mouse::MouseButton::Left,
+                        winit::event::MouseButton::Right => crate::input::mouse::MouseButton::Right,
+                        winit::event::MouseButton::Middle => crate::input::mouse::MouseButton::Middle,
+                        winit::event::MouseButton::Other(val) => crate::input::mouse::MouseButton::Misc(*val),
+                    };
+
+                    let pressed = match state {
+                        winit::event::ElementState::Pressed => true,
+                        winit::event::ElementState::Released => false,
+                    };
+
+                    self.mouse_context.set_button(button, pressed);
+                }
                 winit::event::WindowEvent::KeyboardInput {
                     input:
                         winit::event::KeyboardInput {
@@ -79,7 +94,6 @@ impl Interface {
                         winit::event::ElementState::Released => false,
                     };
                     self.keyboard_context.set_key(*keycode, pressed);
-                    println!("{:?} {}", keycode, pressed);
                 }
                 _ => {}
             },

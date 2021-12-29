@@ -238,7 +238,8 @@ impl GraphicsContext {
         )
         .unwrap();
 
-        let camera = camera::PerspectiveCamera::default();
+        let camera = camera::OrthographicCamera::default();
+        // let camera = camera::PerspectiveCamera::default();
 
         let mut context = Self {
             queue,
@@ -460,10 +461,6 @@ impl GraphicsContext {
     }
 
     pub fn set_blend_mode(&mut self, _blend_mode: BlendMode) {}
-
-    pub fn camera(&mut self) -> &mut Box<dyn camera::Camera> {
-        &mut self.camera
-    }
 }
 
 // This method is called once during initialization, then again whenever the window is resized

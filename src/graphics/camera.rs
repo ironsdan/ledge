@@ -72,12 +72,6 @@ impl Default for PerspectiveCamera {
     }
 }
 
-// impl Display for PerspectiveCamera {
-//     fn display() -> String {
-
-//     }
-// }
-
 impl PerspectiveCamera {
     pub fn new(fov: f32, aspect_ratio: f32, near: f32, far: f32) -> Self {
         let angle_rad: Rad<f32> = Deg(fov).into();
@@ -108,6 +102,18 @@ impl PerspectiveCamera {
         let proj_w = Vector4::new(0.0, 0.0, c3r2, 0.0);
 
         let proj = Matrix4::from_cols(proj_x, proj_y, proj_z, proj_w);
+
+        // let x_x = Vector4::new(1.0, 0.0, 0.0, 0.0);
+        // let x_y = Vector4::new(0.0, -1.0, 0.0, 0.0);
+        // let x_z = Vector4::new(0.0, 0.0, -1.0, 1.0);
+        // let x_w = Vector4::new(0.0, 0.0, 0.0, 1.0);
+
+        // let mut x = Matrix4::from_cols(x_x, x_y, x_z, x_w);
+        // x = x.invert().unwrap();
+
+        // proj = proj * x;
+
+        println!("m: {:?}\nv: {:?}\np: {:?}", model, view, proj);
 
         Self {
             fov,
@@ -174,9 +180,101 @@ impl Camera for PerspectiveCamera {
         self.view = translation * self.view;
     }
 
-    // fn zoom(&mut self, amount: f32) {
+    fn as_mvp(&self) -> CameraMvp {
+        CameraMvp {
+            model: self.model_array(),
+            view: self.view_array(),
+            proj: self.proj_array(),
+        }
+    }
+}
 
-    // }
+pub struct OrthographicCamera {
+    near: f32,
+    far: f32,
+    model: Matrix4<f32>,
+    view: Matrix4<f32>,
+    proj: Matrix4<f32>,
+}
+
+impl Default for OrthographicCamera {
+    fn default() -> Self {
+        let n = 0.0;
+        let f = 1.0;
+
+        OrthographicCamera::new(n, f)
+    }
+}
+
+impl OrthographicCamera {
+    pub fn new(near: f32, far: f32) -> Self {
+        let x = Vector4::new(1.0, 0.0, 0.0, 0.0);
+        let y = Vector4::new(0.0, 1.0, 0.0, 0.0);
+        let z = Vector4::new(0.0, 0.0, 1.0, 0.0);
+        let w = Vector4::new(0.0, 0.0, 0.0, 1.0);
+
+        Self {
+            near: 0.0,
+            far: 1.0,
+            model: Matrix4::from_cols(x, y, z, w),
+            view: Matrix4::from_cols(x, y, z, w),
+            proj: Matrix4::from_cols(x, y, z, w),
+        }
+    }
+}
+
+impl Camera for OrthographicCamera {
+    fn model_array(&self) -> [[f32; 4]; 4] {
+        self.model.into()
+    }
+
+    fn view_array(&self) -> [[f32; 4]; 4] {
+        self.view.into()
+    }
+
+    fn proj_array(&self) -> [[f32; 4]; 4] {
+        self.proj.into()
+    }
+
+    fn mv_array(&self) -> [[f32; 4]; 4] {
+        let mv = self.model * self.view;
+        mv.into()
+    }
+
+    fn mvp_array(&self) -> [[f32; 4]; 4] {
+        let mvp = self.model * self.view * self.proj;
+        mvp.into()
+    }
+
+    fn rotate_x(&mut self, degs: Deg<f32>) {
+        let rotation = Matrix4::from_angle_x(degs);
+        self.model = rotation * self.model;
+    }
+
+    fn rotate_y(&mut self, degs: Deg<f32>) {
+        let rotation = Matrix4::from_angle_y(degs);
+        self.model = rotation * self.model;
+    }
+
+    fn rotate_z(&mut self, degs: Deg<f32>) {
+        let rotation = Matrix4::from_angle_z(degs);
+        self.model = rotation * self.model;
+    }
+
+    fn translate_x(&mut self, amount: f32) {
+        let translation = Matrix4::from_translation(Vector3::new(amount, 0.0, 0.0));
+        self.view = translation * self.view;
+    }
+
+    fn translate_y(&mut self, amount: f32) {
+        let translation = Matrix4::from_translation(Vector3::new(0.0, amount, 0.0));
+        self.view = translation * self.view;
+    }
+
+    fn translate_z(&mut self, amount: f32) {
+        let translation = Matrix4::from_translation(Vector3::new(0.0, 0.0, amount));
+        self.view = translation * self.view;
+    }   
 
     fn as_mvp(&self) -> CameraMvp {
         CameraMvp {
@@ -186,6 +284,7 @@ impl Camera for PerspectiveCamera {
         }
     }
 }
+
 
 #[derive(Clone, Copy, Debug)]
 #[allow(unused)]
