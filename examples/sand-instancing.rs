@@ -113,6 +113,6 @@ impl MainState {
 fn main() {
     let builder = InterfaceBuilder::new("sand", "author");
     let (interface, event_loop) = builder.build().unwrap();
-    let state = MainState::new(&interface.graphics_context, 256);
+    let state = MainState::new(&interface.graphics_context, 96);
     event::run(interface, event_loop, state);
 }
