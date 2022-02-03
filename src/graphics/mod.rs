@@ -17,7 +17,6 @@ pub mod sprite;
 pub mod animation;
 
 use crate::graphics::context::GraphicsContext;
-use cgmath::SquareMatrix;
 use std::collections::HashMap;
 use vulkano::buffer::BufferAccess;
 
@@ -27,6 +26,7 @@ use std::sync::Arc;
 use vulkano::buffer::CpuAccessibleBuffer;
 use vulkano::image::view::ImageViewAbstract;
 use vulkano::sampler::Sampler;
+use std::time;
 
 #[derive(Clone, Copy, PartialEq, Hash, Eq)]
 pub enum BlendMode {
@@ -53,7 +53,7 @@ pub struct PipelineData {
     pub uniform_buffers: HashMap<u32, Arc<dyn BufferAccess + Send + Sync>>,
 }
 
-pub fn clear(ctx: &mut GraphicsContext, color: Color) {
+pub fn begin_frame(ctx: &mut GraphicsContext, color: Color) {
     ctx.begin_frame(color);
 }
 
@@ -62,8 +62,7 @@ where
     D: Drawable,
     T: Into<DrawInfo>,
 {
-    let info = info.into();
-    drawable.draw(ctx, info);
+    drawable.draw(ctx, info.into());
 }
 
 // TODO add result.
@@ -88,6 +87,39 @@ pub struct InstanceData {
     color: [f32; 4],
     transform: [[f32; 4]; 4],
 }
+
+impl From<DrawInfo> for InstanceData {
+    fn from(info: DrawInfo) -> InstanceData {
+        InstanceData {
+            src: info.tex_rect.as_vec(),
+            color: info.color.into(),
+            transform: info.transform.as_mat4().into(),
+        }
+    }
+}
+
+const QUAD_VERTICES: [Vertex; 4] = [
+    Vertex {
+        pos: [0.0, 0.0, 0.0],
+        uv: [0.0, 0.0],
+        vert_color: [1.0, 1.0, 1.0, 1.0],
+    },
+    Vertex {
+        pos: [0.0, 1.0, 0.0],
+        uv: [0.0, 1.0],
+        vert_color: [1.0, 1.0, 1.0, 1.0],
+    },
+    Vertex {
+        pos: [1.0, 0.0, 0.0],
+        uv: [1.0, 0.0],
+        vert_color: [1.0, 1.0, 1.0, 1.0],
+    },
+    Vertex {
+        pos: [1.0, 1.0, 0.0],
+        uv: [1.0, 1.0],
+        vert_color: [1.0, 1.0, 1.0, 1.0],
+    },
+];
 
 vulkano::impl_vertex!(InstanceData, src, color, transform);
 
@@ -152,14 +184,6 @@ impl DrawInfo {
             tex_rect: Rect::default(),
             color: color,
             transform: Transform::identity(),
-        }
-    }
-
-    pub fn into_instance_data(&self) -> InstanceData {
-        InstanceData {
-            src: self.tex_rect.as_vec(),
-            color: self.color.as_arr(),
-            transform: self.transform.as_mat4().into(),
         }
     }
 
@@ -305,6 +329,12 @@ impl Transform {
     }
 }
 
+impl From<Color> for [f32; 4] {
+    fn from(color: Color) -> [f32; 4] {
+        color.0
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Color([f32; 4]);
 
@@ -333,10 +363,6 @@ impl Color {
 
     pub fn transparent() -> Color {
         Color([0.0, 0.0, 0.0, 0.0])
-    }
-
-    pub fn as_arr(&self) -> [f32; 4] {
-        self.0
     }
 
     pub fn as_u8_arr(&self) -> [u8; 4] {

@@ -32,7 +32,9 @@ where
             Event::UserEvent(_) => {}
             Event::LoopDestroyed => {}
             Event::MainEventsCleared => {
-                graphics::clear(&mut interface.graphics_context, graphics::Color::grey());
+                let start = time::Instant::now();
+
+                graphics::begin_frame(&mut interface.graphics_context, graphics::Color::grey());
 
                 interface.timer_state.tick();
 
@@ -50,9 +52,23 @@ where
 
                 let draw_time = 1000.*draw.elapsed().as_secs_f32();
 
-                print!("ttu: {:.2} ttd: {:.2}\r", update_time, draw_time);
-
+                let pres = time::Instant::now();
                 graphics::present(&mut interface.graphics_context);
+
+                let present_time = 1000.*pres.elapsed().as_secs_f32();
+
+                let mut sleep_time: f64 = 0.5 - start.elapsed().as_secs_f64();
+                if sleep_time < 0.0 {
+                    sleep_time = 0.0
+                }
+
+                std::thread::sleep(std::time::Duration::from_secs_f64(sleep_time));
+
+                let frame_time = 1000.*start.elapsed().as_secs_f32();
+
+                // print!("frame time: {:.2} u: {:.2} d: {:.2} p: {:.2} i: {:.2}\r", 
+                // frame_time, update_time, draw_time, present_time, 
+                // frame_time - update_time - draw_time - present_time);
             }
             Event::RedrawRequested(_) => {}
             Event::RedrawEventsCleared => {}

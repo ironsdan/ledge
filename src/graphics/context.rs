@@ -341,7 +341,8 @@ impl GraphicsContext {
         }
 
         self.image_num = image_num;
-        let clear_values = vec![color.as_arr().into()];
+        let color_value: [f32; 4] = color.into();
+        let clear_values = vec![color_value.into()];
         self.command_buffer
             .as_mut()
             .unwrap()
@@ -371,11 +372,7 @@ impl GraphicsContext {
                 .join(acquire_future)
                 .boxed(),
         );
-    }
 
-    /// Interacts with the given shader handle (which by default is a ```ledge_engine::graphics::shader::ShaderProgram```)
-    /// to use that specific shader to draw the vertex buffer to the screen.
-    pub fn draw<'a>(&mut self) {
         let shader_handle = self.shaders[0].clone();
         self.command_buffer
             .as_mut()
@@ -396,6 +393,12 @@ impl GraphicsContext {
             1,
             camera_desc.clone(),
         );
+    }
+
+    /// Interacts with the given shader handle (which by default is a ```ledge_engine::graphics::shader::ShaderProgram```)
+    /// to use that specific shader to draw the vertex buffer to the screen.
+    pub fn draw<'a>(&mut self) {
+        let shader_handle = self.shaders[0].clone();
 
         shader_handle.draw(&mut self.command_buffer.as_mut().unwrap(), &self.pipe_data);
     }

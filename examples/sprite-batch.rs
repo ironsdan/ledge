@@ -43,7 +43,7 @@ fn main() {
                 _ => {}
             },
             Event::MainEventsCleared => {
-                graphics::clear(&mut context, graphics::Color::black());
+                graphics::begin_frame(&mut context, graphics::Color::black());
 
                 graphics::draw(&mut context, &batch, graphics::DrawInfo::default());
 

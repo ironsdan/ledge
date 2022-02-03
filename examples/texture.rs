@@ -44,7 +44,7 @@ fn main() {
                 _ => {}
             },
             Event::MainEventsCleared => {
-                graphics::clear(&mut context, graphics::Color::grey());
+                graphics::begin_frame(&mut context, graphics::Color::grey());
 
                 graphics::draw(&mut context, &image, params.clone());
 
