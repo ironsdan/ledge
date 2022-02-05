@@ -63,7 +63,7 @@ impl Interface {
                 }
                 winit::event::WindowEvent::CursorMoved { position, .. } => {
                     self.mouse_context
-                        .set_last_position((position.x / 400.0 - 1.0, position.y / 300.0 - 1.0));
+                        .set_last_position((position.x, position.y));
                 }
                 winit::event::WindowEvent::MouseInput { state, button, .. } => {
                     let button = match button {

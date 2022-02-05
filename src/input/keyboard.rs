@@ -5,7 +5,7 @@ pub use winit::event::VirtualKeyCode as KeyCode;
 pub struct KeyboardContext {
     pressed_keys: HashSet<KeyCode>,
     last_pressed: Option<KeyCode>,
-    current_pressed: Option<KeyCode>,
+    pub current_pressed: Option<KeyCode>,
 }
 
 impl KeyboardContext {

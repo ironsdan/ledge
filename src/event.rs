@@ -20,8 +20,9 @@ where
                 WindowEvent::CloseRequested => {
                     *control_flow = ControlFlow::Exit;
                 }
-                WindowEvent::Resized(_) => {
+                WindowEvent::Resized(size) => {
                     interface.graphics_context.recreate_swapchain = true;
+                    game_state.resize(size.width, size.height).unwrap();
                 }
                 _ => {}
             },
@@ -34,7 +35,7 @@ where
             Event::MainEventsCleared => {
                 let start = time::Instant::now();
 
-                graphics::begin_frame(&mut interface.graphics_context, graphics::Color::grey());
+                graphics::begin_frame(&mut interface.graphics_context, graphics::Color::black());
 
                 interface.timer_state.tick();
 
@@ -57,18 +58,18 @@ where
 
                 let present_time = 1000.*pres.elapsed().as_secs_f32();
 
-                let mut sleep_time: f64 = 0.5 - start.elapsed().as_secs_f64();
-                if sleep_time < 0.0 {
-                    sleep_time = 0.0
-                }
+                // let mut sleep_time: f64 = 0.008 - start.elapsed().as_secs_f64();
+                // if sleep_time < 0.0 {
+                //     sleep_time = 0.0
+                // }
 
-                std::thread::sleep(std::time::Duration::from_secs_f64(sleep_time));
+                // std::thread::sleep(std::time::Duration::from_secs_f64(sleep_time));
 
                 let frame_time = 1000.*start.elapsed().as_secs_f32();
 
-                // print!("frame time: {:.2} u: {:.2} d: {:.2} p: {:.2} i: {:.2}\r", 
-                // frame_time, update_time, draw_time, present_time, 
-                // frame_time - update_time - draw_time - present_time);
+                print!("frame time: {:.2}ms u: {:.2}ms d: {:.2}ms p: {:.2}ms i: {:.2}ms\r", 
+                frame_time, update_time, draw_time, present_time, 
+                frame_time - update_time - draw_time - present_time);
             }
             Event::RedrawRequested(_) => {}
             Event::RedrawEventsCleared => {}
@@ -79,4 +80,5 @@ where
 pub trait EventHandler {
     fn update(&mut self, interface: &mut Interface) -> GameResult;
     fn draw(&mut self, interface: &mut Interface) -> GameResult;
+    fn resize(&mut self, width: u32, height: u32) -> GameResult;
 }
