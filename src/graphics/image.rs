@@ -63,6 +63,46 @@ impl Image {
         }
     }
 
+    pub fn with_size(ctx: &GraphicsContext, w: usize, h: usize) -> Self {
+        Self::with_size_color(ctx, w, h, Color::black())
+    }
+
+    pub fn with_size_color(ctx: &GraphicsContext, w: usize, h: usize, color: Color) -> Self {
+        let mut v: Vec<u8> = Vec::new();
+        for _ in 0..w {
+            for _ in 0..h {
+                v.append(&mut color.as_u8_vec());
+            }
+        }
+
+        Self::from_u8(ctx, w as u32, h as u32, v)
+    }
+
+    pub fn from_u8(ctx: &GraphicsContext, w: u32, h: u32, v: Vec<u8>) -> Self {
+        let mut image_data = v;
+        let dimensions = ImageDimensions::Dim2d {
+            width: w,
+            height: h,
+            array_layers: 1,
+        };
+
+        let (image, _) = ImmutableImage::from_iter(
+            image_data.iter().cloned(),
+            dimensions,
+            MipmapsCount::One,
+            Format::R8G8B8A8_SRGB,
+            ctx.queue.clone(),
+        )
+        .unwrap();
+        let image_view = ImageView::new(image).unwrap();
+
+        Self {
+            inner: image_view,
+            width: w,
+            height: h,
+        }
+    }
+
     pub fn from_color(ctx: &GraphicsContext, color: Color) -> Self {
         let mut image_data: Vec<u8> = Vec::new();
         image_data.append(&mut color.as_u8_vec());

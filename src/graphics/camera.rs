@@ -209,7 +209,7 @@ impl Default for OrthographicCamera {
 impl OrthographicCamera {
     pub fn new(near: f32, far: f32) -> Self {
         let x = Vector4::new(1.0, 0.0, 0.0, 0.0);
-        let y = Vector4::new(0.0, 1.0, 0.0, 0.0);
+        let y = Vector4::new(0.0, -1.0, 0.0, 0.0);
         let z = Vector4::new(0.0, 0.0, 1.0, 0.0);
         let w = Vector4::new(0.0, 0.0, 0.0, 1.0);
 

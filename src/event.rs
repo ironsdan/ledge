@@ -58,13 +58,6 @@ where
 
                 let present_time = 1000.*pres.elapsed().as_secs_f32();
 
-                // let mut sleep_time: f64 = 0.008 - start.elapsed().as_secs_f64();
-                // if sleep_time < 0.0 {
-                //     sleep_time = 0.0
-                // }
-
-                // std::thread::sleep(std::time::Duration::from_secs_f64(sleep_time));
-
                 let frame_time = 1000.*start.elapsed().as_secs_f32();
 
                 print!("frame time: {:.2}ms u: {:.2}ms d: {:.2}ms p: {:.2}ms i: {:.2}ms\r", 
