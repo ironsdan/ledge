@@ -1,8 +1,8 @@
-use ledge_engine::event;
-use ledge_engine::input;
-use ledge_engine::interface::*;
-use ledge_engine::graphics::{self, image};
-use ledge_engine::error::GameResult;
+use ledge::event;
+use ledge::input;
+use ledge::interface::*;
+use ledge::graphics::{self, image};
+use ledge::error::GameResult;
 use rand::{thread_rng, Rng};
 
 #[derive(Clone)]
@@ -82,13 +82,17 @@ impl event::EventHandler for MainState {
             for j in 0..self.particles[i].len() {
                 if let Some(pixel) = &mut self.particles[i][j] {
                     pixel.draw_info.dest((i as f32 - n/2.) / (n/2.), ((j) as f32 - n/2.) / (n/2.), 0.);
-                    self.sprite_batch.add(pixel.draw_info.clone());
+                    self.sprite_batch.insert(pixel.draw_info.clone());
                 }
             }
         }
 
         graphics::draw(&mut interface.graphics_context, &self.sprite_batch, graphics::DrawInfo::default());
 
+        Ok(())
+    }
+
+    fn resize(&mut self, _width: u32, _height: u32) -> GameResult {
         Ok(())
     }
 }

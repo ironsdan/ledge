@@ -1,11 +1,11 @@
 [package]
-name = "ledge_engine"
+name = "ledge"
 version = "0.1.0"
 authors = ["Daniel Irons <daniel.w.irons@protonmail.com>"]
 edition = "2021"
 
 [lib]
-name = "ledge_engine"
+name = "ledge"
 path = "src/lib.rs"
 
 [dependencies]

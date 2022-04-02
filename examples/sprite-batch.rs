@@ -1,5 +1,5 @@
-use ledge_engine::conf;
-use ledge_engine::graphics;
+use ledge::conf;
+use ledge::graphics;
 // use cgmath::{Deg, Rad, Angle};
 use winit::{
     event::{Event, WindowEvent},
@@ -15,19 +15,19 @@ fn main() {
     let mut params = graphics::DrawInfo::default();
     params.translate(0.5, 0.5, 6.0);
     // params.scale(0.01);
-    batch.add(params);
+    batch.insert(params);
     let mut params = graphics::DrawInfo::default();
     params.translate(-0.5, 0.5, 6.0);
     // params.scale(0.01);
-    batch.add(params);
+    batch.insert(params);
     let mut params = graphics::DrawInfo::default();
     params.translate(0.5, -0.5, 6.0);
     // params.scale(0.01);
-    batch.add(params);
+    batch.insert(params);
     let mut params = graphics::DrawInfo::default();
     params.translate(-0.5, -0.5, 6.0);
     // params.scale(0.01);
-    batch.add(params);
+    batch.insert(params);
 
     event_loop.run(move |event, _, control_flow| {
         let now = std::time::Instant::now();

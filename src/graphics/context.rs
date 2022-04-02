@@ -16,14 +16,12 @@ use vulkano::{
     Version,
 };
 
-use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
-
+use vulkano::descriptor_set::WriteDescriptorSet;
 use vulkano_win::VkSurfaceBuild;
 use winit::event_loop::EventLoop;
 use winit::window::{Window, WindowBuilder};
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 use vulkano::pipeline::Pipeline;
@@ -166,7 +164,7 @@ impl GraphicsContext {
         .unwrap();
         let queue = queues.next().unwrap();
 
-        let (mut swapchain, images) = {
+        let (swapchain, images) = {
             // Querying the capabilities of the surface. When we create the swapchain we can only
             // pass values that are allowed by the capabilities.
             let surface_capabilities = physical_device

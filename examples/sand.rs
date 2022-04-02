@@ -1,8 +1,8 @@
-use ledge_engine::event;
-use ledge_engine::input;
-use ledge_engine::interface::*;
-use ledge_engine::graphics::{self, image};
-use ledge_engine::error::GameResult;
+use ledge::event;
+use ledge::input;
+use ledge::interface::*;
+use ledge::graphics::{self, image};
+use ledge::error::GameResult;
 use rand::{thread_rng, Rng};
 
 #[derive(Clone)]
@@ -84,6 +84,10 @@ impl event::EventHandler for MainState {
             }
         }
 
+        Ok(())
+    }
+
+    fn resize(&mut self, _width: u32, _height: u32) -> GameResult {
         Ok(())
     }
 }

@@ -1,5 +1,5 @@
-use ledge_engine::conf;
-use ledge_engine::graphics;
+use ledge::conf;
+use ledge::graphics;
 use winit::{
     event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::ControlFlow,

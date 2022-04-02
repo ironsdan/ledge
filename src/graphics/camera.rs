@@ -191,8 +191,8 @@ impl Camera for PerspectiveCamera {
 }
 
 pub struct OrthographicCamera {
-    near: f32,
-    far: f32,
+    // near: f32,
+    // far: f32,
     model: Matrix4<f32>,
     view: Matrix4<f32>,
     proj: Matrix4<f32>,
@@ -208,15 +208,15 @@ impl Default for OrthographicCamera {
 }
 
 impl OrthographicCamera {
-    pub fn new(near: f32, far: f32) -> Self {
+    pub fn new(_near: f32, _far: f32) -> Self {
         let x = Vector4::new(1.0, 0.0, 0.0, 0.0);
         let y = Vector4::new(0.0, -1.0, 0.0, 0.0);
         let z = Vector4::new(0.0, 0.0, 1.0, 0.0);
         let w = Vector4::new(0.0, 0.0, 0.0, 1.0);
 
         Self {
-            near: 0.0,
-            far: 1.0,
+            // near: 0.0,
+            // far: 1.0,
             model: Matrix4::from_cols(x, y, z, w),
             view: Matrix4::from_cols(x, y, z, w),
             proj: Matrix4::from_cols(x, y, z, w),
