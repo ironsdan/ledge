@@ -14,19 +14,19 @@ pub mod shader;
 
 pub mod sprite;
 
-pub mod animation;
-
 use crate::graphics::context::GraphicsContext;
-use std::collections::HashMap;
 use vulkano::buffer::BufferAccess;
 
 use cgmath::{prelude::Angle, Matrix, Matrix4, Rad, Vector3, Vector4};
 
+use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
+use std::rc::Rc;
+use std::cell::RefCell;
 use vulkano::buffer::CpuAccessibleBuffer;
 use vulkano::image::view::ImageViewAbstract;
 use vulkano::sampler::Sampler;
-use std::time;
+use vulkano::descriptor_set::WriteDescriptorSet;
 
 #[derive(Clone, Copy, PartialEq, Hash, Eq)]
 pub enum BlendMode {
@@ -49,8 +49,36 @@ pub struct PipelineData {
     pub vertex_count: u32,
     pub instance_buffer: Arc<CpuAccessibleBuffer<[InstanceData]>>,
     pub instance_count: u32,
-    pub sampled_images: HashMap<u32, (Arc<dyn ImageViewAbstract + Send + Sync>, Arc<Sampler>)>,
-    pub uniform_buffers: HashMap<u32, Arc<dyn BufferAccess + Send + Sync>>,
+    pub descriptors: Option<Vec<WriteDescriptorSet>>,
+}
+
+impl PipelineData {
+    pub fn buffer(&mut self, binding: u32, buffer: Arc<dyn BufferAccess>) {
+        if self.descriptors.is_none() {
+            self.descriptors = Some(Vec::new())
+        }
+
+        self.descriptors.as_mut().unwrap().push(WriteDescriptorSet::buffer(binding, buffer))
+    }
+
+    pub fn sampled_image(
+        &mut self, 
+        binding: u32, 
+        image_view: Arc<dyn ImageViewAbstract>, 
+        sampler: Arc<Sampler>,
+    ) {
+        if self.descriptors.is_none() {
+            self.descriptors = Some(Vec::new())
+        }
+
+        self.descriptors.as_mut().unwrap().push(
+            WriteDescriptorSet::image_view_sampler(
+                binding,
+                image_view,
+                sampler,
+            ),
+        )
+    }
 }
 
 pub fn begin_frame(ctx: &mut GraphicsContext, color: Color) {
@@ -65,6 +93,19 @@ where
     drawable.draw(ctx, info.into());
 }
 
+pub fn draw_with<D, T>(ctx: &mut GraphicsContext, drawable: &D, info: T, shader: shader::ShaderId)
+where
+    D: Drawable,
+    T: Into<DrawInfo>,
+{
+    let prev_shader = ctx.current_shader.take().unwrap();
+    ctx.current_shader = Rc::new(RefCell::new(Some(shader)));
+
+    drawable.draw(ctx, info.into());
+    
+    ctx.current_shader = Rc::new(RefCell::new(Some(prev_shader)));
+}
+
 // TODO add result.
 pub fn present(ctx: &mut GraphicsContext) {
     // let sleep_time = std::time::Duration::from_secs_f64(0.0166).checked_sub(ctx.last_frame_time.elapsed());
@@ -72,7 +113,8 @@ pub fn present(ctx: &mut GraphicsContext) {
     ctx.present();
 }
 
-#[derive(Default, Debug, Clone, Copy, PartialEq)]
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Zeroable, Pod)]
 pub struct Vertex {
     pub pos: [f32; 3],
     pub uv: [f32; 2],
@@ -81,7 +123,8 @@ pub struct Vertex {
 
 vulkano::impl_vertex!(Vertex, pos, uv, vert_color);
 
-#[derive(Default, Debug, Clone, PartialEq)]
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Zeroable, Pod)]
 pub struct InstanceData {
     src: [f32; 4],
     color: [f32; 4],
@@ -264,7 +307,7 @@ impl Transform {
                     Vector4::new(0.0, 0.0, 0.0, 1.0),
                 )
                 .transpose()
-            }
+            },
         }
     }
 
@@ -361,6 +404,10 @@ impl Color {
         Color([1.0, 1.0, 1.0, 1.0])
     }
 
+    pub fn red() -> Color {
+        Color([1.0, 0.05, 0.05, 1.0])
+    }
+
     pub fn transparent() -> Color {
         Color([0.0, 0.0, 0.0, 0.0])
     }
@@ -382,6 +429,8 @@ impl Color {
         v.push((self.0[3] * 255.) as u8);
         v
     }
+
+    
 }
 
 #[derive(Debug, Clone, PartialEq)]

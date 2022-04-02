@@ -10,17 +10,11 @@ fn main() {
         graphics::context::GraphicsContext::new(conf::Conf::new("Texture")); // Creating a new context.
 
     let image = graphics::image::Image::new(&context, "examples/images/pokeball.png");
-    let mut params = graphics::DrawInfo::default();
-    
-    // params.translate(0., 0., 10.);
-    // params.dest((8.-8.)/8., (8.-8.)/8., 0.);
-    params.scale(1./16.);
-    params.dest(-15./16., -15./16., 0.);
-    // params.rotate(0., 0., 20.);
-    // params.nonuniform_scale(1.,2.,1.);
-    
-    println!("{:?}", params);
+    let params = graphics::DrawInfo::default();
 
+    println!("{:?}", params.transform);
+    println!("{:?}", params.transform.as_mat4());
+    
     event_loop.run(move |event, _, control_flow| {
         let now = std::time::Instant::now();
 
@@ -44,7 +38,7 @@ fn main() {
                 _ => {}
             },
             Event::MainEventsCleared => {
-                graphics::begin_frame(&mut context, graphics::Color::grey());
+                graphics::begin_frame(&mut context, graphics::Color::black());
 
                 graphics::draw(&mut context, &image, params.clone());
 

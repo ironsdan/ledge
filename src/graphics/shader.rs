@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use vulkano::descriptor_set::layout::DescriptorType;
-use vulkano::descriptor_set::persistent::PersistentDescriptorSet;
 use vulkano::pipeline::PipelineBindPoint;
 use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer},
@@ -19,12 +17,11 @@ use vulkano::pipeline::Pipeline;
 use vulkano::pipeline::graphics::viewport::ViewportState;
 use vulkano::pipeline::StateMode;
 use vulkano::pipeline::graphics::color_blend::ColorComponents;
-
+use vulkano::pipeline::graphics::input_assembly::PrimitiveTopology;
+use vulkano::pipeline::graphics::input_assembly::InputAssemblyState;
 use crate::graphics::{context::GraphicsContext, BlendMode, PipelineData};
 
-pub enum VertexOrder {
-    LineList,
-    LineStrip,
+pub enum VertexTopology {
     PointList,
     TriangleFan,
     TriangleList,
@@ -51,7 +48,7 @@ pub trait ShaderHandle {
     fn draw(
         &self,
         command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
-        pipe_data: &PipelineData,
+        pipe_data: &mut PipelineData,
     );
     // fn set_blend_mode(&mut self, mode: BlendMode);
     fn blend_mode(&self) -> BlendMode;
@@ -63,41 +60,21 @@ impl ShaderHandle for ShaderProgram {
     fn draw(
         &self,
         command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
-        pipe_data: &PipelineData,
+        pipe_data: &mut PipelineData,
     ) {
         command_buffer.bind_pipeline_graphics(self.pipeline().clone());
 
-        let layout = self.layout()[0].clone();
+        let layout = self.layout()[1].clone();
 
-        let mut builder = PersistentDescriptorSet::start(layout.clone());
-        for i in 0..layout.num_bindings() {
-            match layout.descriptor(i).unwrap().ty {
-                DescriptorType::UniformBuffer => {
-                    builder
-                        .add_buffer(pipe_data.uniform_buffers.get(&i).unwrap().clone())
-                        .unwrap();
-                }
-                DescriptorType::CombinedImageSampler { .. } => {
-                    let image_sampler = pipe_data.sampled_images.get(&i).unwrap();
-                    builder
-                        .add_sampled_image(image_sampler.0.clone(), image_sampler.1.clone())
-                        .unwrap();
-                }
-                _ => {
-                    panic!(
-                        "Unsupported descriptor type ({:?}) in shader.",
-                        layout.descriptor(i).unwrap().ty
-                    )
-                }
-            }
-        }
-
-        let set = builder.build().unwrap();
+        let set = vulkano::descriptor_set::PersistentDescriptorSet::new(
+            layout.clone(),
+            pipe_data.descriptors.take().unwrap(),
+        ).unwrap();
 
         command_buffer.bind_descriptor_sets(
             PipelineBindPoint::Graphics,
             self.pipeline().layout().clone(),
-            0,
+            1,
             set,
         );
 
@@ -128,7 +105,7 @@ impl ShaderHandle for ShaderProgram {
             .get(&self.current_mode)
             .unwrap()
             .layout()
-            .descriptor_set_layouts()
+            .set_layouts()
     }
 
     fn pipeline(&self) -> Arc<GraphicsPipeline> {
@@ -140,7 +117,7 @@ impl ShaderProgram {
     pub fn new<Vd>(
         context: &mut GraphicsContext,
         vertex_type: Vd,
-        vertex_order: VertexOrder,
+        vertex_order: VertexTopology,
         vertex_shader: EntryPoint,
         fragment_shader: EntryPoint,
         blend: BlendMode,
@@ -207,7 +184,7 @@ impl PipelineObjectSet {
 pub fn new_pipeline<Vd>(
     context: &mut GraphicsContext,
     vertex_type: Vd,
-    vertex_order: VertexOrder,
+    vertex_order: VertexTopology,
     vertex_shader: EntryPoint,
     fragment_shader: EntryPoint,
     blend: BlendMode,
@@ -224,12 +201,10 @@ where
         .render_pass(Subpass::from(context.render_pass.clone(), 0).unwrap());
 
     pipeline = match vertex_order {
-        VertexOrder::LineList => pipeline.line_list(),
-        VertexOrder::LineStrip => pipeline.line_strip(),
-        VertexOrder::PointList => pipeline.point_list(),
-        VertexOrder::TriangleFan => pipeline.triangle_fan(),
-        VertexOrder::TriangleList => pipeline.triangle_list(),
-        VertexOrder::TriangleStrip => pipeline.triangle_strip(),
+        VertexTopology::PointList => pipeline.input_assembly_state(InputAssemblyState::new().topology(PrimitiveTopology::PointList)),
+        VertexTopology::TriangleFan => pipeline.input_assembly_state(InputAssemblyState::new().topology(PrimitiveTopology::TriangleFan)),
+        VertexTopology::TriangleList => pipeline.input_assembly_state(InputAssemblyState::new().topology(PrimitiveTopology::TriangleList)),
+        VertexTopology::TriangleStrip => pipeline.input_assembly_state(InputAssemblyState::new().topology(PrimitiveTopology::TriangleStrip)),
     };
 
     pipeline.build(context.device.clone()).unwrap()

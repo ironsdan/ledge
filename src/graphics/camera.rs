@@ -1,3 +1,4 @@
+use bytemuck::{Pod, Zeroable};
 use cgmath::prelude::*;
 use cgmath::{Deg, Matrix4, Rad, Vector3, Vector4};
 
@@ -286,7 +287,8 @@ impl Camera for OrthographicCamera {
 }
 
 
-#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Zeroable, Pod)]
 #[allow(unused)]
 pub struct CameraMvp {
     // Camera struct for conversion to uniform.

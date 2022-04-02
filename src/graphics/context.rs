@@ -5,16 +5,18 @@ use vulkano::{
         PrimaryCommandBuffer, SubpassContents,
     },
     device::physical::{PhysicalDevice, PhysicalDeviceType},
-    device::{Device, DeviceExtensions, Features},
+    device::{Device, DeviceCreateInfo, DeviceExtensions, QueueCreateInfo},
     image::{view::ImageView, ImageUsage, SwapchainImage},
-    instance::Instance,
+    instance::{Instance, InstanceCreateInfo},
     pipeline::{graphics::vertex_input::BuffersDefinition, graphics::viewport::Viewport},
-    render_pass::{Framebuffer, RenderPass},
-    sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode},
-    swapchain::{self, AcquireError, Swapchain, SwapchainCreationError},
+    render_pass::{Framebuffer, FramebufferCreateInfo, RenderPass},
+    sampler::{Filter, Sampler, SamplerAddressMode, SamplerCreateInfo},
+    swapchain::{self, AcquireError, Swapchain, SwapchainCreationError, SwapchainCreateInfo},
     sync::{self, FlushError, GpuFuture},
     Version,
 };
+
+use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 
 use vulkano_win::VkSurfaceBuild;
 use winit::event_loop::EventLoop;
@@ -25,6 +27,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 use vulkano::pipeline::Pipeline;
+use vulkano::image::ImageAccess;
 
 use crate::{conf::*, graphics::shader::ShaderId, graphics::*};
 
@@ -96,12 +99,14 @@ pub struct GraphicsContext {
     previous_frame_end: Option<Box<dyn vulkano::sync::GpuFuture>>,
     present_future: Option<Box<dyn vulkano::sync::GpuFuture>>,
     command_buffer: Option<AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>>,
+    viewport: Viewport,
     camera_buffer: Arc<DeviceLocalBuffer<camera::CameraMvp>>,
+    camera_updated: bool,
     pub camera: Box<dyn crate::graphics::camera::Camera>,
     camera_binding: u32,
-    default_shader: ShaderId,
-    current_shader: Rc<RefCell<Option<ShaderId>>>,
-    shaders: Vec<Arc<dyn crate::graphics::shader::ShaderHandle>>,
+    pub(crate) default_shader: ShaderId,
+    pub(crate) current_shader: Rc<RefCell<Option<ShaderId>>>,
+    pub(crate) shaders: Vec<Arc<dyn crate::graphics::shader::ShaderHandle>>,
     pub samplers: Vec<Arc<Sampler>>,
     pub last_frame_time: std::time::Instant,
     pub pipe_data: PipelineData,
@@ -110,7 +115,12 @@ pub struct GraphicsContext {
 impl GraphicsContext {
     pub fn new(_conf: Conf) -> (Self, winit::event_loop::EventLoop<()>) {
         let required_extensions = vulkano_win::required_extensions();
-        let instance = Instance::new(None, Version::V1_1, &required_extensions, None).unwrap();
+        let instance = Instance::new(InstanceCreateInfo {
+            application_name: None, 
+            application_version: Version::V1_1, 
+            enabled_extensions: required_extensions, 
+            ..Default::default()
+        }).unwrap();
 
         let event_loop = EventLoop::new();
         let surface = WindowBuilder::new()
@@ -125,7 +135,7 @@ impl GraphicsContext {
             .filter(|&p| p.supported_extensions().is_superset_of(&device_extensions))
             .filter_map(|p| {
                 p.queue_families()
-                    .find(|&q| q.supports_graphics() && surface.is_supported(q).unwrap_or(false))
+                    .find(|&q| q.supports_graphics() && q.supports_surface(&surface).unwrap_or(false))
                     .map(|q| (p, q))
             })
             .min_by_key(|(p, _)| match p.properties().device_type {
@@ -145,30 +155,50 @@ impl GraphicsContext {
 
         let (device, mut queues) = Device::new(
             physical_device,
-            &Features::none(),
-            &physical_device
-                .required_extensions()
-                .union(&device_extensions),
-            [(queue_family, 0.5)].iter().cloned(),
+            DeviceCreateInfo {
+                enabled_extensions: physical_device
+                    .required_extensions()
+                    .union(&device_extensions),
+                queue_create_infos: vec![QueueCreateInfo::family(queue_family)],
+                ..Default::default()
+            },
         )
         .unwrap();
         let queue = queues.next().unwrap();
 
-        let (swapchain, images) = {
-            let caps = surface.capabilities(physical_device).unwrap();
-            let composite_alpha = caps.supported_composite_alpha.iter().next().unwrap();
-            let format = caps.supported_formats[0].0;
-            let dimensions: [u32; 2] = surface.window().inner_size().into();
-
-            Swapchain::start(device.clone(), surface.clone())
-                .num_images(caps.min_image_count)
-                .format(format)
-                .dimensions(dimensions)
-                .usage(ImageUsage::color_attachment())
-                .sharing_mode(&queue)
-                .composite_alpha(composite_alpha)
-                .build()
-                .unwrap()
+        let (mut swapchain, images) = {
+            // Querying the capabilities of the surface. When we create the swapchain we can only
+            // pass values that are allowed by the capabilities.
+            let surface_capabilities = physical_device
+                .surface_capabilities(&surface, Default::default())
+                .unwrap();
+    
+            // Choosing the internal format that the images will have.
+            let image_format = Some(
+                physical_device
+                    .surface_formats(&surface, Default::default())
+                    .unwrap()[0]
+                    .0,
+            );
+    
+            // Please take a look at the docs for the meaning of the parameters we didn't mention.
+            Swapchain::new(
+                device.clone(),
+                surface.clone(),
+                SwapchainCreateInfo {
+                    min_image_count: surface_capabilities.min_image_count,
+                    image_format,
+                    image_extent: surface.window().inner_size().into(),
+                    image_usage: ImageUsage::color_attachment(),
+                    composite_alpha: surface_capabilities
+                        .supported_composite_alpha
+                        .iter()
+                        .next()
+                        .unwrap(),
+                    ..Default::default()
+                },
+            )
+            .unwrap()
         };
 
         let render_pass = vulkano::single_pass_renderpass!(device.clone(),
@@ -176,7 +206,7 @@ impl GraphicsContext {
                 color: {
                     load: Clear,
                     store: Store,
-                    format: swapchain.format(),
+                    format: swapchain.image_format(),
                     samples: 1,
                 }
             },
@@ -187,24 +217,26 @@ impl GraphicsContext {
         )
         .unwrap();
 
+        let mut viewport = Viewport {
+            origin: [0.0, 0.0],
+            dimensions: [0.0, 0.0],
+            depth_range: 0.0..1.0,
+        }; 
+
         let default_future = sync::now(device.clone()).boxed();
 
-        let framebuffers = window_size_dependent_setup(&images, render_pass.clone());
+        let framebuffers = window_size_dependent_setup(&images, render_pass.clone(), &mut viewport);
 
         let mut samplers = Vec::new();
 
         let default_sampler = Sampler::new(
             device.clone(),
-            Filter::Linear,
-            Filter::Linear,
-            MipmapMode::Nearest,
-            SamplerAddressMode::Repeat,
-            SamplerAddressMode::Repeat,
-            SamplerAddressMode::Repeat,
-            0.0,
-            1.0,
-            0.0,
-            0.0,
+            SamplerCreateInfo {
+                mag_filter: Filter::Linear,
+                min_filter: Filter::Linear,
+                address_mode: [SamplerAddressMode::Repeat; 3],
+                ..Default::default()
+            },
         )
         .unwrap();
 
@@ -227,8 +259,7 @@ impl GraphicsContext {
             )
             .unwrap(),
             instance_count: 0,
-            sampled_images: HashMap::new(),
-            uniform_buffers: HashMap::new(),
+            descriptors: Some(Vec::new()),
         };
 
         let camera_buffer = DeviceLocalBuffer::new(
@@ -239,7 +270,6 @@ impl GraphicsContext {
         .unwrap();
 
         let camera = camera::OrthographicCamera::default();
-        // let camera = camera::PerspectiveCamera::default();
 
         let mut context = Self {
             queue,
@@ -253,7 +283,9 @@ impl GraphicsContext {
             previous_frame_end: Some(default_future),
             recreate_swapchain: false,
             command_buffer: None,
+            viewport,
             camera_buffer,
+            camera_updated: true,
             camera: Box::new(camera),
             camera_binding: 0,
             default_shader: 0,
@@ -272,7 +304,7 @@ impl GraphicsContext {
             BuffersDefinition::new()
                 .vertex::<Vertex>()
                 .instance::<InstanceData>(),
-            shader::VertexOrder::TriangleStrip,
+            shader::VertexTopology::TriangleStrip,
             v_shader.entry_point("main").unwrap(),
             f_shader.entry_point("main").unwrap(),
             BlendMode::Alpha,
@@ -304,25 +336,35 @@ impl GraphicsContext {
     pub fn begin_frame(&mut self, color: Color) {
         self.create_command_buffer();
 
-        self.command_buffer
+        if self.camera_updated {
+            self.command_buffer
             .as_mut()
             .unwrap()
             .update_buffer(self.camera_buffer.clone(), Arc::new(self.camera.as_mvp()))
             .unwrap();
+        }
+
+        self.camera_updated = false;
 
         self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 
         if self.recreate_swapchain {
-            let dimensions: [u32; 2] = self.surface.window().inner_size().into();
             let (new_swapchain, new_images) =
-                match self.swapchain.recreate().dimensions(dimensions).build() {
+                match self.swapchain.recreate(SwapchainCreateInfo {
+                    image_extent: self.surface.window().inner_size().into(),
+                    ..self.swapchain.create_info()
+                }) {
                     Ok(r) => r,
-                    Err(SwapchainCreationError::UnsupportedDimensions) => return,
+                    Err(SwapchainCreationError::ImageExtentNotSupported { .. }) => return,
                     Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
                 };
 
             self.swapchain = new_swapchain;
-            self.framebuffers = window_size_dependent_setup(&new_images, self.render_pass.clone());
+            self.framebuffers = window_size_dependent_setup(
+                &new_images,
+                self.render_pass.clone(),
+                &mut self.viewport,
+            );
             self.recreate_swapchain = false;
         }
 
@@ -353,16 +395,9 @@ impl GraphicsContext {
             )
             .unwrap();
 
-        let mut dimensions: [f32; 2] = [0., 0.];
-        dimensions[0] = self.framebuffers[0].dimensions()[0] as f32;
-        dimensions[1] = self.framebuffers[0].dimensions()[1] as f32;
         self.command_buffer.as_mut().unwrap().set_viewport(
             0,
-            [Viewport {
-                origin: [0.0; 2],
-                dimensions: dimensions,
-                depth_range: 0.0..1.0,
-            }],
+            vec![self.viewport.clone()],
         );
 
         self.present_future = Some(
@@ -379,28 +414,33 @@ impl GraphicsContext {
             .unwrap()
             .bind_pipeline_graphics(shader_handle.pipeline().clone());
 
-        let mut camera_builder = vulkano::descriptor_set::PersistentDescriptorSet::start(
-            shader_handle.layout()[1].clone(),
-        );
-        camera_builder
-            .add_buffer(self.camera_buffer.clone())
-            .unwrap();
-        let camera_desc = camera_builder.build().unwrap();
+        let camera_desc = vulkano::descriptor_set::PersistentDescriptorSet::new(
+            shader_handle.layout()[0].clone(),
+            [WriteDescriptorSet::buffer(0, self.camera_buffer.clone())],
+        ).unwrap();
 
         self.command_buffer.as_mut().unwrap().bind_descriptor_sets(
             vulkano::pipeline::PipelineBindPoint::Graphics,
             shader_handle.pipeline().layout().clone(),
-            1,
+            0,
             camera_desc.clone(),
         );
     }
 
+    pub fn draw_with(&mut self, shader: ShaderId) {
+        let def = (*self.current_shader.borrow()).unwrap_or(self.default_shader);
+        let shader_handle = &self.shaders.get(shader).unwrap_or(&self.shaders[def]);
+
+        shader_handle.draw(&mut self.command_buffer.as_mut().unwrap(), &mut self.pipe_data);
+    }
+
     /// Interacts with the given shader handle (which by default is a ```ledge_engine::graphics::shader::ShaderProgram```)
     /// to use that specific shader to draw the vertex buffer to the screen.
-    pub fn draw<'a>(&mut self) {
-        let shader_handle = self.shaders[0].clone();
+    pub fn draw(&mut self) {
+        let id = (*self.current_shader.borrow()).unwrap_or(self.default_shader);
+        let shader_handle = &self.shaders[id];
 
-        shader_handle.draw(&mut self.command_buffer.as_mut().unwrap(), &self.pipe_data);
+        shader_handle.draw(&mut self.command_buffer.as_mut().unwrap(), &mut self.pipe_data);
     }
 
     /// This function submits the command buffer to the queue and fences the operation,
@@ -466,19 +506,26 @@ impl GraphicsContext {
     pub fn set_blend_mode(&mut self, _blend_mode: BlendMode) {}
 }
 
-// This method is called once during initialization, then again whenever the window is resized
-pub fn window_size_dependent_setup(
+fn window_size_dependent_setup(
     images: &[Arc<SwapchainImage<Window>>],
     render_pass: Arc<RenderPass>,
+    viewport: &mut Viewport,
 ) -> Vec<Arc<Framebuffer>> {
+    let dimensions = images[0].dimensions().width_height();
+    viewport.dimensions = [dimensions[0] as f32, dimensions[1] as f32];
+
     images
         .iter()
         .map(|image| {
-            Framebuffer::start(render_pass.clone())
-                .add(ImageView::new(image.clone()).unwrap())
-                .unwrap()
-                .build()
-                .unwrap()
+            let view = ImageView::new_default(image.clone()).unwrap();
+            Framebuffer::new(
+                render_pass.clone(),
+                FramebufferCreateInfo {
+                    attachments: vec![view],
+                    ..Default::default()
+                },
+            )
+            .unwrap()
         })
         .collect::<Vec<_>>()
 }

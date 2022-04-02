@@ -27,6 +27,10 @@ impl SpriteBatch {
     pub fn clear(&mut self) {
         Arc::get_mut(&mut self.sprites).unwrap().clear();
     }
+
+    pub fn count(&self) -> usize {
+        self.sprites.len()
+    }
 }
 
 impl Drawable for SpriteBatch {
@@ -38,8 +42,7 @@ impl Drawable for SpriteBatch {
         // Add texture to pipe data
         context
             .pipe_data
-            .sampled_images
-            .insert(0, (self.image.inner().clone(), context.samplers[0].clone()));
+            .sampled_image(0, self.image.inner().clone(), context.samplers[0].clone());
         
         // Set blend mode
         context.set_blend_mode(BlendMode::Alpha);

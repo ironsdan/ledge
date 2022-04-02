@@ -50,11 +50,11 @@ impl Image {
             image_data.iter().cloned(),
             dimensions,
             MipmapsCount::One,
-            Format::R8G8B8A8_SRGB,
+            Format::R8G8B8A8_UNORM,
             ctx.queue.clone(),
         )
         .unwrap();
-        let image_view = ImageView::new(image).unwrap();
+        let image_view = ImageView::new_default(image).unwrap();
 
         Self {
             inner: image_view,
@@ -79,7 +79,6 @@ impl Image {
     }
 
     pub fn from_u8(ctx: &GraphicsContext, w: u32, h: u32, v: Vec<u8>) -> Self {
-        let mut image_data = v;
         let dimensions = ImageDimensions::Dim2d {
             width: w,
             height: h,
@@ -87,14 +86,14 @@ impl Image {
         };
 
         let (image, _) = ImmutableImage::from_iter(
-            image_data.iter().cloned(),
+            v.iter().cloned(),
             dimensions,
             MipmapsCount::One,
-            Format::R8G8B8A8_SRGB,
+            Format::R8G8B8A8_UNORM,
             ctx.queue.clone(),
         )
         .unwrap();
-        let image_view = ImageView::new(image).unwrap();
+        let image_view = ImageView::new_default(image).unwrap();
 
         Self {
             inner: image_view,
@@ -104,8 +103,7 @@ impl Image {
     }
 
     pub fn from_color(ctx: &GraphicsContext, color: Color) -> Self {
-        let mut image_data: Vec<u8> = Vec::new();
-        image_data.append(&mut color.as_u8_vec());
+        let image_data: Vec<u8> = color.as_u8_vec();
         let dimensions = ImageDimensions::Dim2d {
             width: 1,
             height: 1,
@@ -116,11 +114,11 @@ impl Image {
             image_data.iter().cloned(),
             dimensions,
             MipmapsCount::One,
-            Format::R8G8B8A8_SRGB,
+            Format::R8G8B8A8_UNORM,
             ctx.queue.clone(),
         )
         .unwrap();
-        let image_view = ImageView::new(image).unwrap();
+        let image_view = ImageView::new_default(image).unwrap();
 
         Self {
             inner: image_view,
@@ -137,16 +135,13 @@ impl Image {
 impl Drawable for Image {
     fn draw(&self, context: &mut GraphicsContext, info: DrawInfo) {
         // Add quad vertex to pipe data
-        // let x_r = self.width as f32 / 2.;
-        // let y_r = self.height as f32 / 2.;
         context.update_vertex_data(QUAD_VERTICES.to_vec());
         // Update instance data
         context.update_instance_properties(Arc::new(vec![info.into()]));
         // Add texture to pipe data
         context
             .pipe_data
-            .sampled_images
-            .insert(0, (self.inner.clone(), context.samplers[0].clone()));
+            .sampled_image(0, self.inner.clone(), context.samplers[0].clone());
         // Set blend mode
         context.set_blend_mode(BlendMode::Alpha);
         // call context draw with none
