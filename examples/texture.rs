@@ -33,7 +33,7 @@ fn main() {
                     *control_flow = ControlFlow::Exit;
                 }
                 WindowEvent::Resized(_) => {
-                    context.recreate_swapchain = true;
+                    context.recreate_swapchain();
                 }
                 _ => {}
             },

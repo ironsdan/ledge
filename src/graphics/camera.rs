@@ -1,6 +1,6 @@
-use bytemuck::{Pod, Zeroable};
 use cgmath::prelude::*;
 use cgmath::{Deg, Matrix4, Rad, Vector3, Vector4};
+use crate::graphics::context::GraphicsContext;
 
 pub trait Camera {
     fn model_array(&self) -> [[f32; 4]; 4];
@@ -25,7 +25,9 @@ pub trait Camera {
 
     fn translate_z(&mut self, amount: f32);
 
-    fn as_mvp(&self) -> CameraMvp;
+    fn as_mvp(&self) -> [[f32; 4]; 4];
+
+    fn flush(&self, ctx: &mut GraphicsContext);
 }
 
 #[allow(unused)]
@@ -181,12 +183,12 @@ impl Camera for PerspectiveCamera {
         self.view = translation * self.view;
     }
 
-    fn as_mvp(&self) -> CameraMvp {
-        CameraMvp {
-            model: self.model_array(),
-            view: self.view_array(),
-            proj: self.proj_array(),
-        }
+    fn as_mvp(&self) -> [[f32; 4]; 4]{
+        (self.model * self.view * self.proj).into()
+    }
+
+    fn flush(&self, ctx: &mut GraphicsContext) {
+
     }
 }
 
@@ -210,7 +212,7 @@ impl Default for OrthographicCamera {
 impl OrthographicCamera {
     pub fn new(_near: f32, _far: f32) -> Self {
         let x = Vector4::new(1.0, 0.0, 0.0, 0.0);
-        let y = Vector4::new(0.0, -1.0, 0.0, 0.0);
+        let y = Vector4::new(0.0, 1.0, 0.0, 0.0);
         let z = Vector4::new(0.0, 0.0, 1.0, 0.0);
         let w = Vector4::new(0.0, 0.0, 0.0, 1.0);
 
@@ -275,24 +277,13 @@ impl Camera for OrthographicCamera {
     fn translate_z(&mut self, amount: f32) {
         let translation = Matrix4::from_translation(Vector3::new(0.0, 0.0, amount));
         self.view = translation * self.view;
-    }   
-
-    fn as_mvp(&self) -> CameraMvp {
-        CameraMvp {
-            model: self.model_array(),
-            view: self.view_array(),
-            proj: self.proj_array(),
-        }
     }
-}
+    
+    fn as_mvp(&self) -> [[f32; 4]; 4]{
+        (self.model * self.view * self.proj).into()
+    }
 
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, Zeroable, Pod)]
-#[allow(unused)]
-pub struct CameraMvp {
-    // Camera struct for conversion to uniform.
-    model: [[f32; 4]; 4],
-    view: [[f32; 4]; 4],
-    proj: [[f32; 4]; 4],
+    fn flush(&self, ctx: &mut GraphicsContext) {
+        // ctx.pipe_data.descriptors
+    }
 }

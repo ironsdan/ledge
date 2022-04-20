@@ -44,8 +44,6 @@ impl Image {
         image_data.resize((width * height * 8) as usize, 0);
         reader.next_frame(&mut image_data).unwrap();
 
-        println!("{} {}", dimensions.width(), dimensions.height());
-
         let (image, _) = ImmutableImage::from_iter(
             image_data.iter().cloned(),
             dimensions,

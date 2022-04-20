@@ -16,7 +16,7 @@ use vulkano::{
     Version,
 };
 
-use vulkano::descriptor_set::WriteDescriptorSet;
+// use vulkano::descriptor_set::WriteDescriptorSet;
 use vulkano_win::VkSurfaceBuild;
 use winit::event_loop::EventLoop;
 use winit::window::{Window, WindowBuilder};
@@ -24,7 +24,7 @@ use winit::window::{Window, WindowBuilder};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
-use vulkano::pipeline::Pipeline;
+// use vulkano::pipeline::Pipeline;
 use vulkano::image::ImageAccess;
 
 use crate::{conf::*, graphics::shader::ShaderId, graphics::*};
@@ -86,28 +86,22 @@ use crate::{conf::*, graphics::shader::ShaderId, graphics::*};
 /// ```
 #[allow(unused)]
 pub struct GraphicsContext {
-    pub queue: Arc<vulkano::device::Queue>,
-    surface: Arc<vulkano::swapchain::Surface<winit::window::Window>>,
+    pub(crate) queue: Arc<vulkano::device::Queue>,
+    pub(crate) surface: Arc<vulkano::swapchain::Surface<winit::window::Window>>,
     pub device: Arc<vulkano::device::Device>,
-    swapchain: Arc<vulkano::swapchain::Swapchain<winit::window::Window>>,
-    framebuffers: std::vec::Vec<Arc<vulkano::render_pass::Framebuffer>>,
-    pub render_pass: Arc<RenderPass>,
-    image_num: usize,
-    pub recreate_swapchain: bool,
-    previous_frame_end: Option<Box<dyn vulkano::sync::GpuFuture>>,
-    present_future: Option<Box<dyn vulkano::sync::GpuFuture>>,
-    command_buffer: Option<AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>>,
-    viewport: Viewport,
-    camera_buffer: Arc<DeviceLocalBuffer<camera::CameraMvp>>,
-    camera_updated: bool,
-    pub camera: Box<dyn crate::graphics::camera::Camera>,
-    camera_binding: u32,
-    pub(crate) default_shader: ShaderId,
+    pub(crate) swapchain: Arc<vulkano::swapchain::Swapchain<winit::window::Window>>,
+    pub(crate) framebuffers: std::vec::Vec<Arc<vulkano::render_pass::Framebuffer>>,
+    pub(crate) render_pass: Arc<RenderPass>,
+    pub(crate) image_num: usize,
+    pub(crate) recreate_swapchain: bool,
+    pub(crate) previous_frame_end: Option<Box<dyn vulkano::sync::GpuFuture>>,
+    pub(crate) present_future: Option<Box<dyn vulkano::sync::GpuFuture>>,
+    pub command_buffer: Option<AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>>,
+    pub default_shader: ShaderId,
     pub(crate) current_shader: Rc<RefCell<Option<ShaderId>>>,
-    pub(crate) shaders: Vec<Arc<dyn crate::graphics::shader::ShaderHandle>>,
-    pub samplers: Vec<Arc<Sampler>>,
-    pub last_frame_time: std::time::Instant,
-    pub pipe_data: PipelineData,
+    pub shaders: Vec<Arc<dyn crate::graphics::shader::ShaderHandle>>,
+    pub(crate) samplers: Vec<Arc<Sampler>>,
+    pub(crate) pipe_data: PipelineData,
 }
 
 impl GraphicsContext {
@@ -162,16 +156,14 @@ impl GraphicsContext {
             },
         )
         .unwrap();
+        
         let queue = queues.next().unwrap();
 
         let (swapchain, images) = {
-            // Querying the capabilities of the surface. When we create the swapchain we can only
-            // pass values that are allowed by the capabilities.
             let surface_capabilities = physical_device
                 .surface_capabilities(&surface, Default::default())
                 .unwrap();
     
-            // Choosing the internal format that the images will have.
             let image_format = Some(
                 physical_device
                     .surface_formats(&surface, Default::default())
@@ -179,7 +171,6 @@ impl GraphicsContext {
                     .0,
             );
     
-            // Please take a look at the docs for the meaning of the parameters we didn't mention.
             Swapchain::new(
                 device.clone(),
                 surface.clone(),
@@ -215,15 +206,17 @@ impl GraphicsContext {
         )
         .unwrap();
 
-        let mut viewport = Viewport {
-            origin: [0.0, 0.0],
-            dimensions: [0.0, 0.0],
-            depth_range: 0.0..1.0,
-        }; 
-
         let default_future = sync::now(device.clone()).boxed();
 
-        let framebuffers = window_size_dependent_setup(&images, render_pass.clone(), &mut viewport);
+        let framebuffers = window_size_dependent_setup(
+            &images, 
+            render_pass.clone(), 
+            &mut Viewport {
+                origin: [0.0, 0.0],
+                dimensions: [0.0, 0.0],
+                depth_range: 0.0..1.0,
+            },
+        );
 
         let mut samplers = Vec::new();
 
@@ -260,16 +253,7 @@ impl GraphicsContext {
             descriptors: Some(Vec::new()),
         };
 
-        let camera_buffer = DeviceLocalBuffer::new(
-            device.clone(),
-            BufferUsage::uniform_buffer_transfer_destination(),
-            physical_device.queue_families(),
-        )
-        .unwrap();
-
-        let camera = camera::OrthographicCamera::default();
-
-        let mut context = Self {
+        let mut context = GraphicsContext {
             queue,
             surface,
             device,
@@ -281,16 +265,10 @@ impl GraphicsContext {
             previous_frame_end: Some(default_future),
             recreate_swapchain: false,
             command_buffer: None,
-            viewport,
-            camera_buffer,
-            camera_updated: true,
-            camera: Box::new(camera),
-            camera_binding: 0,
             default_shader: 0,
             current_shader: Rc::new(RefCell::new(None)),
             shaders: Vec::new(),
             samplers,
-            last_frame_time: std::time::Instant::now(),
             pipe_data,
         };
 
@@ -313,8 +291,10 @@ impl GraphicsContext {
         (context, event_loop)
     }
 
-    /// Due to the nature of the command buffer and the safety requirements Vulkano tries to meet
-    /// the command buffer is recreated every frame.
+    pub fn recreate_swapchain(&mut self) {
+        self.recreate_swapchain = true
+    }
+
     fn create_command_buffer(&mut self) {
         self.command_buffer = Some(
             AutoCommandBufferBuilder::primary(
@@ -334,16 +314,6 @@ impl GraphicsContext {
     pub fn begin_frame(&mut self, color: Color) {
         self.create_command_buffer();
 
-        if self.camera_updated {
-            self.command_buffer
-            .as_mut()
-            .unwrap()
-            .update_buffer(self.camera_buffer.clone(), Arc::new(self.camera.as_mvp()))
-            .unwrap();
-        }
-
-        self.camera_updated = false;
-
         self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 
         if self.recreate_swapchain {
@@ -361,7 +331,11 @@ impl GraphicsContext {
             self.framebuffers = window_size_dependent_setup(
                 &new_images,
                 self.render_pass.clone(),
-                &mut self.viewport,
+                &mut Viewport {
+                    origin: [0.0, 0.0],
+                    dimensions: [0.0, 0.0],
+                    depth_range: 0.0..1.0,
+                },
             );
             self.recreate_swapchain = false;
         }
@@ -376,13 +350,23 @@ impl GraphicsContext {
                 Err(e) => panic!("Failed to acquire next image: {:?}", e),
             };
 
+        self.present_future = Some(
+            self.previous_frame_end
+                .take()
+                .unwrap()
+                .join(acquire_future)
+                .boxed()
+        );
+
         if suboptimal {
             self.recreate_swapchain = true;
         }
 
         self.image_num = image_num;
+
         let color_value: [f32; 4] = color.into();
         let clear_values = vec![color_value.into()];
+
         self.command_buffer
             .as_mut()
             .unwrap()
@@ -395,15 +379,11 @@ impl GraphicsContext {
 
         self.command_buffer.as_mut().unwrap().set_viewport(
             0,
-            vec![self.viewport.clone()],
-        );
-
-        self.present_future = Some(
-            self.previous_frame_end
-                .take()
-                .unwrap()
-                .join(acquire_future)
-                .boxed(),
+            vec![Viewport {
+                origin: [0.0, 0.0],
+                dimensions: [0.0, 0.0],
+                depth_range: 0.0..1.0,
+            }],
         );
 
         let shader_handle = self.shaders[0].clone();
@@ -411,25 +391,6 @@ impl GraphicsContext {
             .as_mut()
             .unwrap()
             .bind_pipeline_graphics(shader_handle.pipeline().clone());
-
-        let camera_desc = vulkano::descriptor_set::PersistentDescriptorSet::new(
-            shader_handle.layout()[0].clone(),
-            [WriteDescriptorSet::buffer(0, self.camera_buffer.clone())],
-        ).unwrap();
-
-        self.command_buffer.as_mut().unwrap().bind_descriptor_sets(
-            vulkano::pipeline::PipelineBindPoint::Graphics,
-            shader_handle.pipeline().layout().clone(),
-            0,
-            camera_desc.clone(),
-        );
-    }
-
-    pub fn draw_with(&mut self, shader: ShaderId) {
-        let def = (*self.current_shader.borrow()).unwrap_or(self.default_shader);
-        let shader_handle = &self.shaders.get(shader).unwrap_or(&self.shaders[def]);
-
-        shader_handle.draw(&mut self.command_buffer.as_mut().unwrap(), &mut self.pipe_data);
     }
 
     /// Interacts with the given shader handle (which by default is a ```ledge_engine::graphics::shader::ShaderProgram```)
@@ -451,17 +412,20 @@ impl GraphicsContext {
             .unwrap()
             .end_render_pass()
             .unwrap();
+
         let command_buffer = self.command_buffer.take().unwrap().build().unwrap();
 
         let future = command_buffer
             .execute_after(self.present_future.take().unwrap(), self.queue.clone())
             .unwrap();
+
         let future = swapchain::present(
             self.swapchain.clone(),
             future,
             self.queue.clone(),
             self.image_num,
         );
+
         let future = future.then_signal_fence_and_flush();
 
         match future {
@@ -501,7 +465,7 @@ impl GraphicsContext {
         .unwrap();
     }
 
-    pub fn set_blend_mode(&mut self, _blend_mode: BlendMode) {}
+    pub fn set_blend_mode(&mut self, _mode: BlendMode) {}
 }
 
 fn window_size_dependent_setup(
@@ -526,18 +490,4 @@ fn window_size_dependent_setup(
             .unwrap()
         })
         .collect::<Vec<_>>()
-}
-
-pub fn convert_to_screen_space(size: [u32; 2], dimensions: [u32; 2]) -> [f32; 2] {
-    let window_width = dimensions[0];
-    let window_height = dimensions[1];
-
-    let pixel_size_y = 1.0 / window_height as f32;
-    let pixel_size_x = 1.0 / window_width as f32;
-
-    let screen_width = 2.0 * pixel_size_x * size[0] as f32;
-    let screen_height = 2.0 * pixel_size_y * size[1] as f32;
-
-    let screen_size = [screen_width, screen_height];
-    return screen_size;
 }

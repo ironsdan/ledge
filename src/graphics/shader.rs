@@ -20,6 +20,7 @@ use vulkano::pipeline::graphics::color_blend::ColorComponents;
 use vulkano::pipeline::graphics::input_assembly::PrimitiveTopology;
 use vulkano::pipeline::graphics::input_assembly::InputAssemblyState;
 use crate::graphics::{context::GraphicsContext, BlendMode, PipelineData};
+use vulkano::descriptor_set::WriteDescriptorSet;
 
 pub enum VertexTopology {
     PointList,
@@ -66,9 +67,11 @@ impl ShaderHandle for ShaderProgram {
 
         let layout = self.layout()[1].clone();
 
+        let v: &Vec<WriteDescriptorSet> = &pipe_data.descriptors.take().unwrap();
+
         let set = vulkano::descriptor_set::PersistentDescriptorSet::new(
             layout.clone(),
-            pipe_data.descriptors.take().unwrap(),
+            v,
         ).unwrap();
 
         command_buffer.bind_descriptor_sets(

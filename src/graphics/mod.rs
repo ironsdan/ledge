@@ -14,19 +14,44 @@ pub mod shader;
 
 pub mod sprite;
 
+pub mod text;
+
 use crate::graphics::context::GraphicsContext;
 use vulkano::buffer::BufferAccess;
 
-use cgmath::{prelude::Angle, Matrix, Matrix4, Rad, Vector3, Vector4};
+use cgmath::{prelude::Angle, Matrix, Matrix4, Rad, Deg, Vector3, Vector4};
 
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use std::rc::Rc;
-use std::cell::RefCell;
 use vulkano::buffer::CpuAccessibleBuffer;
 use vulkano::image::view::ImageViewAbstract;
 use vulkano::sampler::Sampler;
 use vulkano::descriptor_set::WriteDescriptorSet;
+use vulkano::descriptor_set::PersistentDescriptorSet;
+use vulkano::descriptor_set::layout::DescriptorSetLayout;
+
+// trait PipelineData2 {
+//     type Data;
+//     fn bake_to(&self, _: Arc<DescriptorSetLayout>) -> Vec<PersistentDescriptorSet>;
+// }
+
+
+
+// struct PipeData {
+//     buffers: [Arc<dyn BufferAccess>;1],
+//     images: [Arc<dyn ImageViewAbstract>;1],
+// }
+
+// impl PipelineData2 for PipeData {
+//     type Data = Vec<u32>;
+//     fn bake_to(&self, layout: Arc<DescriptorSetLayout>) -> Vec<PersistentDescriptorSet> {
+//         PersistentDescriptorSet::new(
+//             layout.clone(),
+//             [WriteDescriptorSet::new(self.buffers[0])]
+//         );
+//     }
+// }
+
 
 #[derive(Clone, Copy, PartialEq, Hash, Eq)]
 pub enum BlendMode {
@@ -93,23 +118,8 @@ where
     drawable.draw(ctx, info.into());
 }
 
-pub fn draw_with<D, T>(ctx: &mut GraphicsContext, drawable: &D, info: T, shader: shader::ShaderId)
-where
-    D: Drawable,
-    T: Into<DrawInfo>,
-{
-    let prev_shader = ctx.current_shader.take().unwrap();
-    ctx.current_shader = Rc::new(RefCell::new(Some(shader)));
-
-    drawable.draw(ctx, info.into());
-    
-    ctx.current_shader = Rc::new(RefCell::new(Some(prev_shader)));
-}
-
 // TODO add result.
 pub fn present(ctx: &mut GraphicsContext) {
-    // let sleep_time = std::time::Duration::from_secs_f64(0.0166).checked_sub(ctx.last_frame_time.elapsed());
-    // if let Some(value) = sleep_time { std::thread::sleep(value); }
     ctx.present();
 }
 
@@ -133,6 +143,16 @@ pub struct InstanceData {
 
 impl From<DrawInfo> for InstanceData {
     fn from(info: DrawInfo) -> InstanceData {
+        InstanceData {
+            src: info.tex_rect.as_vec(),
+            color: info.color.into(),
+            transform: info.transform.as_mat4().into(),
+        }
+    }
+}
+
+impl From<&DrawInfo> for InstanceData {
+    fn from(info: &DrawInfo) -> InstanceData {
         InstanceData {
             src: info.tex_rect.as_vec(),
             color: info.color.into(),
@@ -174,7 +194,7 @@ pub mod fs {
     vulkano_shaders::shader! { ty: "fragment", path: "src/graphics/shaders/texture.frag", }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DrawInfo {
     pub tex_rect: Rect,
     pub color: Color,
@@ -230,6 +250,15 @@ impl DrawInfo {
         }
     }
 
+    pub fn color(&mut self, color: Color) {
+        self.color = color;
+    }
+
+    pub fn tex_offset(&mut self, offset: (f32, f32)) {
+        self.tex_rect.x = offset.0;
+        self.tex_rect.y = offset.1;
+    } 
+
     pub fn translate(&mut self, x: f32, y: f32, z: f32) {
         self.transform.translate(x, y, z);
     }
@@ -255,7 +284,7 @@ impl DrawInfo {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Transform {
     Components {
         pos: Vector3<f32>,
@@ -334,9 +363,9 @@ impl Transform {
     }
 
     fn rotate(&mut self, x: f32, y: f32, z: f32) {
-        let rotation = Matrix4::from_angle_x(Rad(x))
-            + Matrix4::from_angle_y(Rad(y))
-            + Matrix4::from_angle_z(Rad(z));
+        let rotation = Matrix4::from_angle_x(Deg(x))
+            + Matrix4::from_angle_y(Deg(y))
+            + Matrix4::from_angle_z(Deg(z));
         match self {
             Transform::Matrix(mat) => {
                 *mat = rotation * *mat;
@@ -378,7 +407,7 @@ impl From<Color> for [f32; 4] {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Color([f32; 4]);
 
 impl From<[f32; 4]> for Color {
@@ -429,11 +458,15 @@ impl Color {
         v.push((self.0[3] * 255.) as u8);
         v
     }
-
-    
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl Default for Color {
+    fn default() -> Color {
+        Color::black()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Rect {
     pub x: f32,
     pub y: f32,
@@ -455,5 +488,32 @@ impl Default for Rect {
             w: 1.0,
             h: 1.0,
         }
+    }
+}
+
+impl Into<[Vertex; 4]> for Rect {
+    fn into(self) -> [Vertex;4] {
+    [
+        Vertex {
+            pos: [0.0, 0.0, 0.0],
+            uv: [0.0, 0.0],
+            vert_color: [1.0, 1.0, 1.0, 1.0],
+        },
+        Vertex {
+            pos: [0.0, self.h*1.0, 0.0],
+            uv: [0.0, 1.0],
+            vert_color: [1.0, 1.0, 1.0, 1.0],
+        },
+        Vertex {
+            pos: [self.w*1.0, 0.0, 0.0],
+            uv: [1.0, 0.0],
+            vert_color: [1.0, 1.0, 1.0, 1.0],
+        },
+        Vertex {
+            pos: [self.w*1.0, self.h*1.0, 0.0],
+            uv: [1.0, 1.0],
+            vert_color: [1.0, 1.0, 1.0, 1.0],
+        },
+    ]
     }
 }
