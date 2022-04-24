@@ -52,9 +52,9 @@ pub trait PipelineData {
 
 pub struct DefaultPipelineData {
     device: Arc<Device>,
-    pub vertex_buffer: Arc<CpuAccessibleBuffer<[Vertex]>>,
+    pub vertex_buffer: Arc<dyn BufferAccess>,
     pub vertex_count: u32,
-    pub instance_buffer: Arc<CpuAccessibleBuffer<[InstanceData]>>,
+    pub instance_buffer: Arc<dyn BufferAccess>,
     pub instance_count: u32,
     pub descriptors: Vec<WriteDescriptorSet>,
 }

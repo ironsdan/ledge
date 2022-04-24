@@ -82,10 +82,6 @@ impl ShaderHandle for ShaderProgram {
 
         command_buffer.bind_vertex_buffers(
             0,
-            // (
-            //     pipe_data.vertex_buffer,
-            //     pipe_data.instance_buffer,
-            // ),
             buffers,
         );
 
