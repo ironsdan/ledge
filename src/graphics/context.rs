@@ -1,5 +1,4 @@
 use vulkano::{
-    buffer::{device_local::DeviceLocalBuffer, BufferUsage, CpuAccessibleBuffer},
     command_buffer::{
         AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer,
         PrimaryCommandBuffer, SubpassContents,
@@ -16,7 +15,6 @@ use vulkano::{
     Version,
 };
 
-// use vulkano::descriptor_set::WriteDescriptorSet;
 use vulkano_win::VkSurfaceBuild;
 use winit::event_loop::EventLoop;
 use winit::window::{Window, WindowBuilder};
@@ -24,7 +22,6 @@ use winit::window::{Window, WindowBuilder};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
-// use vulkano::pipeline::Pipeline;
 use vulkano::image::ImageAccess;
 
 use crate::{conf::*, graphics::shader::ShaderId, graphics::*};
@@ -92,6 +89,7 @@ pub struct GraphicsContext {
     pub(crate) swapchain: Arc<vulkano::swapchain::Swapchain<winit::window::Window>>,
     pub(crate) framebuffers: std::vec::Vec<Arc<vulkano::render_pass::Framebuffer>>,
     pub(crate) render_pass: Arc<RenderPass>,
+    pub(crate) viewport: Viewport,
     pub(crate) image_num: usize,
     pub(crate) recreate_swapchain: bool,
     pub(crate) previous_frame_end: Option<Box<dyn vulkano::sync::GpuFuture>>,
@@ -101,7 +99,6 @@ pub struct GraphicsContext {
     pub(crate) current_shader: Rc<RefCell<Option<ShaderId>>>,
     pub shaders: Vec<Arc<dyn crate::graphics::shader::ShaderHandle>>,
     pub(crate) samplers: Vec<Arc<Sampler>>,
-    pub(crate) pipe_data: PipelineData,
 }
 
 impl GraphicsContext {
@@ -156,7 +153,7 @@ impl GraphicsContext {
             },
         )
         .unwrap();
-        
+
         let queue = queues.next().unwrap();
 
         let (swapchain, images) = {
@@ -208,14 +205,16 @@ impl GraphicsContext {
 
         let default_future = sync::now(device.clone()).boxed();
 
+        let mut viewport = Viewport {
+            origin: [0.0, 0.0],
+            dimensions: [0.0, 0.0],
+            depth_range: 0.0..1.0,
+        };
+
         let framebuffers = window_size_dependent_setup(
             &images, 
             render_pass.clone(), 
-            &mut Viewport {
-                origin: [0.0, 0.0],
-                dimensions: [0.0, 0.0],
-                depth_range: 0.0..1.0,
-            },
+            &mut viewport,
         );
 
         let mut samplers = Vec::new();
@@ -233,26 +232,6 @@ impl GraphicsContext {
 
         samplers.push(default_sampler);
 
-        let pipe_data = PipelineData {
-            vertex_buffer: CpuAccessibleBuffer::from_iter(
-                device.clone(),
-                BufferUsage::vertex_buffer(),
-                true,
-                [Vertex::default()].iter().cloned(),
-            )
-            .unwrap(),
-            vertex_count: 0,
-            instance_buffer: CpuAccessibleBuffer::from_iter(
-                device.clone(),
-                BufferUsage::vertex_buffer(),
-                true,
-                [InstanceData::default()].iter().cloned(),
-            )
-            .unwrap(),
-            instance_count: 0,
-            descriptors: Some(Vec::new()),
-        };
-
         let mut context = GraphicsContext {
             queue,
             surface,
@@ -260,6 +239,7 @@ impl GraphicsContext {
             swapchain,
             framebuffers,
             render_pass,
+            viewport,
             image_num: 0,
             present_future: None,
             previous_frame_end: Some(default_future),
@@ -269,7 +249,6 @@ impl GraphicsContext {
             current_shader: Rc::new(RefCell::new(None)),
             shaders: Vec::new(),
             samplers,
-            pipe_data,
         };
 
         let v_shader = vs::load(context.device.clone()).unwrap();
@@ -331,11 +310,7 @@ impl GraphicsContext {
             self.framebuffers = window_size_dependent_setup(
                 &new_images,
                 self.render_pass.clone(),
-                &mut Viewport {
-                    origin: [0.0, 0.0],
-                    dimensions: [0.0, 0.0],
-                    depth_range: 0.0..1.0,
-                },
+                &mut self.viewport,
             );
             self.recreate_swapchain = false;
         }
@@ -379,11 +354,7 @@ impl GraphicsContext {
 
         self.command_buffer.as_mut().unwrap().set_viewport(
             0,
-            vec![Viewport {
-                origin: [0.0, 0.0],
-                dimensions: [0.0, 0.0],
-                depth_range: 0.0..1.0,
-            }],
+            vec![self.viewport.clone()],
         );
 
         let shader_handle = self.shaders[0].clone();
@@ -395,11 +366,11 @@ impl GraphicsContext {
 
     /// Interacts with the given shader handle (which by default is a ```ledge_engine::graphics::shader::ShaderProgram```)
     /// to use that specific shader to draw the vertex buffer to the screen.
-    pub fn draw(&mut self) {
+    pub fn draw(&mut self, pipe_data: Box<dyn PipelineData>) {
         let id = (*self.current_shader.borrow()).unwrap_or(self.default_shader);
         let shader_handle = &self.shaders[id];
 
-        shader_handle.draw(&mut self.command_buffer.as_mut().unwrap(), &mut self.pipe_data);
+        shader_handle.draw(&mut self.command_buffer.as_mut().unwrap(), pipe_data);
     }
 
     /// This function submits the command buffer to the queue and fences the operation,
@@ -441,28 +412,6 @@ impl GraphicsContext {
                 self.previous_frame_end = Some(sync::now(self.device.clone()).boxed());
             }
         };
-    }
-
-    pub fn update_vertex_data(&mut self, vertex_buffer: Vec<Vertex>) {
-        self.pipe_data.vertex_count = vertex_buffer.len() as u32;
-        self.pipe_data.vertex_buffer = CpuAccessibleBuffer::from_iter(
-            self.device.clone(),
-            BufferUsage::vertex_buffer(),
-            true,
-            vertex_buffer.iter().cloned(),
-        )
-        .unwrap();
-    }
-
-    pub fn update_instance_properties(&mut self, instance_buffer: Arc<Vec<InstanceData>>) {
-        self.pipe_data.instance_count = instance_buffer.len() as u32;
-        self.pipe_data.instance_buffer = CpuAccessibleBuffer::from_iter(
-            self.device.clone(),
-            BufferUsage::vertex_buffer(),
-            true,
-            instance_buffer.iter().cloned(),
-        )
-        .unwrap();
     }
 
     pub fn set_blend_mode(&mut self, _mode: BlendMode) {}

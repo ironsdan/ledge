@@ -132,17 +132,13 @@ impl Image {
 
 impl Drawable for Image {
     fn draw(&self, context: &mut GraphicsContext, info: DrawInfo) {
-        // Add quad vertex to pipe data
-        context.update_vertex_data(QUAD_VERTICES.to_vec());
-        // Update instance data
-        context.update_instance_properties(Arc::new(vec![info.into()]));
-        // Add texture to pipe data
-        context
-            .pipe_data
-            .sampled_image(0, self.inner.clone(), context.samplers[0].clone());
-        // Set blend mode
-        context.set_blend_mode(BlendMode::Alpha);
-        // call context draw with none
-        context.draw();
+        context.draw(Box::new(DefaultPipelineData::new(context.device.clone())
+        .vertex_buffer(QUAD_VERTICES.to_vec())
+        .instance_buffer(vec![info.into()])
+        .sampled_image(
+            0,
+            self.inner.clone(),
+            context.samplers[0].clone(),
+        )));
     }
 }

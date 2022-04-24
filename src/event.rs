@@ -4,6 +4,8 @@ use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
 };
+use crate::graphics::camera::*;
+use vulkano::pipeline::Pipeline;
 use std::time;
 
 pub fn run<S: 'static>(mut interface: Interface, event_loop: EventLoop<()>, mut game_state: S) -> !
@@ -36,6 +38,27 @@ where
                 let start = time::Instant::now();
 
                 graphics::begin_frame(&mut interface.graphics_context, graphics::Color::black());
+
+                let camera = OrthographicCamera::new(0.001, 1000.0);
+                let cam_buf = vulkano::buffer::CpuAccessibleBuffer::from_data(
+                    interface.graphics_context.device.clone(), 
+                    vulkano::buffer::BufferUsage::uniform_buffer(), 
+                    false, 
+                    camera.as_mvp(),
+                ).unwrap();
+            
+                let shader = interface.graphics_context.shaders[interface.graphics_context.default_shader].clone();
+                let set = vulkano::descriptor_set::PersistentDescriptorSet::new(
+                    shader.layout()[0].clone(),
+                    [vulkano::descriptor_set::WriteDescriptorSet::buffer(0, cam_buf)],
+                ).unwrap();
+
+                interface.graphics_context.command_buffer.as_mut().unwrap().bind_descriptor_sets(
+                    vulkano::pipeline::PipelineBindPoint::Graphics,
+                    shader.pipeline().layout().clone(),
+                    0,
+                    set,
+                );
 
                 interface.timer_state.tick();
 

@@ -187,7 +187,7 @@ impl Camera for PerspectiveCamera {
         (self.model * self.view * self.proj).into()
     }
 
-    fn flush(&self, ctx: &mut GraphicsContext) {
+    fn flush(&self, _ctx: &mut GraphicsContext) {
 
     }
 }
@@ -280,10 +280,11 @@ impl Camera for OrthographicCamera {
     }
     
     fn as_mvp(&self) -> [[f32; 4]; 4]{
-        (self.model * self.view * self.proj).into()
+        // (self.model * self.view * self.proj).into()
+        Matrix4::identity().into()
     }
 
-    fn flush(&self, ctx: &mut GraphicsContext) {
+    fn flush(&self, _ctx: &mut GraphicsContext) {
         // ctx.pipe_data.descriptors
     }
 }

@@ -20,7 +20,6 @@ use vulkano::pipeline::graphics::color_blend::ColorComponents;
 use vulkano::pipeline::graphics::input_assembly::PrimitiveTopology;
 use vulkano::pipeline::graphics::input_assembly::InputAssemblyState;
 use crate::graphics::{context::GraphicsContext, BlendMode, PipelineData};
-use vulkano::descriptor_set::WriteDescriptorSet;
 
 pub enum VertexTopology {
     PointList,
@@ -49,7 +48,7 @@ pub trait ShaderHandle {
     fn draw(
         &self,
         command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
-        pipe_data: &mut PipelineData,
+        pipe_data: Box<dyn PipelineData>,
     );
     // fn set_blend_mode(&mut self, mode: BlendMode);
     fn blend_mode(&self) -> BlendMode;
@@ -61,17 +60,17 @@ impl ShaderHandle for ShaderProgram {
     fn draw(
         &self,
         command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
-        pipe_data: &mut PipelineData,
+        pipe_data: Box<dyn PipelineData>,
     ) {
         command_buffer.bind_pipeline_graphics(self.pipeline().clone());
 
         let layout = self.layout()[1].clone();
 
-        let v: &Vec<WriteDescriptorSet> = &pipe_data.descriptors.take().unwrap();
+        let (buffers, descriptors, v_count, i_count) = pipe_data.flush();
 
         let set = vulkano::descriptor_set::PersistentDescriptorSet::new(
             layout.clone(),
-            v,
+            descriptors,
         ).unwrap();
 
         command_buffer.bind_descriptor_sets(
@@ -83,21 +82,17 @@ impl ShaderHandle for ShaderProgram {
 
         command_buffer.bind_vertex_buffers(
             0,
-            (
-                pipe_data.vertex_buffer.clone(),
-                pipe_data.instance_buffer.clone(),
-            ),
+            // (
+            //     pipe_data.vertex_buffer,
+            //     pipe_data.instance_buffer,
+            // ),
+            buffers,
         );
 
         command_buffer
-            .draw(pipe_data.vertex_count, pipe_data.instance_count, 0, 0)
+            .draw(v_count, i_count, 0, 0)
             .unwrap();
     }
-
-    // fn set_blend_mode(&mut self, mode: BlendMode) {
-    //     let _ = self.pipelines.mode(&mode)?;
-    //     self.current_mode = mode;
-    // }
 
     fn blend_mode(&self) -> BlendMode {
         self.current_mode

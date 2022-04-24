@@ -87,7 +87,9 @@ impl event::EventHandler for MainState {
             }
         }
 
-        graphics::draw(&mut interface.graphics_context, &self.sprite_batch, graphics::DrawInfo::default());
+        if self.sprite_batch.count() != 0 {
+            graphics::draw(&mut interface.graphics_context, &self.sprite_batch, graphics::DrawInfo::default());
+        }
 
         Ok(())
     }

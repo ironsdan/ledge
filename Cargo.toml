@@ -9,9 +9,9 @@ name = "ledge"
 path = "src/lib.rs"
 
 [dependencies]
-vulkano = { path = "../vulkano/vulkano" }
+vulkano = "0.29"
 vulkano-shaders = "0.29"
-vulkano-win = { path = "../vulkano/vulkano-win" }
+vulkano-win = "0.29"
 winit = "0.26"
 winit_input_helper = "0.10.0"
 png = "0.17.2"

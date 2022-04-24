@@ -14,7 +14,7 @@ pub mod shader;
 
 pub mod sprite;
 
-pub mod text;
+// pub mod text;
 
 use crate::graphics::context::GraphicsContext;
 use vulkano::buffer::BufferAccess;
@@ -27,31 +27,8 @@ use vulkano::buffer::CpuAccessibleBuffer;
 use vulkano::image::view::ImageViewAbstract;
 use vulkano::sampler::Sampler;
 use vulkano::descriptor_set::WriteDescriptorSet;
-use vulkano::descriptor_set::PersistentDescriptorSet;
-use vulkano::descriptor_set::layout::DescriptorSetLayout;
-
-// trait PipelineData2 {
-//     type Data;
-//     fn bake_to(&self, _: Arc<DescriptorSetLayout>) -> Vec<PersistentDescriptorSet>;
-// }
-
-
-
-// struct PipeData {
-//     buffers: [Arc<dyn BufferAccess>;1],
-//     images: [Arc<dyn ImageViewAbstract>;1],
-// }
-
-// impl PipelineData2 for PipeData {
-//     type Data = Vec<u32>;
-//     fn bake_to(&self, layout: Arc<DescriptorSetLayout>) -> Vec<PersistentDescriptorSet> {
-//         PersistentDescriptorSet::new(
-//             layout.clone(),
-//             [WriteDescriptorSet::new(self.buffers[0])]
-//         );
-//     }
-// }
-
+use vulkano::device::Device;
+use vulkano::buffer::BufferUsage;
 
 #[derive(Clone, Copy, PartialEq, Hash, Eq)]
 pub enum BlendMode {
@@ -69,40 +46,100 @@ pub trait Drawable {
     fn draw(&self, context: &mut GraphicsContext, info: DrawInfo);
 }
 
-pub struct PipelineData {
+pub trait PipelineData {
+    fn flush(self: Box<Self>) -> (Vec<Arc<dyn BufferAccess>>, Vec<WriteDescriptorSet>, u32, u32);
+}
+
+pub struct DefaultPipelineData {
+    device: Arc<Device>,
     pub vertex_buffer: Arc<CpuAccessibleBuffer<[Vertex]>>,
     pub vertex_count: u32,
     pub instance_buffer: Arc<CpuAccessibleBuffer<[InstanceData]>>,
     pub instance_count: u32,
-    pub descriptors: Option<Vec<WriteDescriptorSet>>,
+    pub descriptors: Vec<WriteDescriptorSet>,
 }
 
-impl PipelineData {
-    pub fn buffer(&mut self, binding: u32, buffer: Arc<dyn BufferAccess>) {
-        if self.descriptors.is_none() {
-            self.descriptors = Some(Vec::new())
-        }
+impl PipelineData for DefaultPipelineData {
+    fn flush(self: Box<Self>) -> (Vec<Arc<dyn BufferAccess>>, Vec<WriteDescriptorSet>, u32, u32) {
+        (vec![self.vertex_buffer, self.instance_buffer], self.descriptors, self.vertex_count, self.instance_count)
+    }
+}
 
-        self.descriptors.as_mut().unwrap().push(WriteDescriptorSet::buffer(binding, buffer))
+impl DefaultPipelineData {
+    pub fn buffer(mut self, binding: u32, buffer: Arc<dyn BufferAccess>) -> Self {
+        self.descriptors = Vec::new();
+
+        self.descriptors.push(WriteDescriptorSet::buffer(binding, buffer));
+
+        self
     }
 
     pub fn sampled_image(
-        &mut self, 
+        mut self, 
         binding: u32, 
         image_view: Arc<dyn ImageViewAbstract>, 
         sampler: Arc<Sampler>,
-    ) {
-        if self.descriptors.is_none() {
-            self.descriptors = Some(Vec::new())
-        }
+    ) -> Self {
+        self.descriptors = Vec::new();
 
-        self.descriptors.as_mut().unwrap().push(
+        self.descriptors.push(
             WriteDescriptorSet::image_view_sampler(
                 binding,
                 image_view,
                 sampler,
             ),
+        );
+
+        self
+    }
+
+    pub fn vertex_buffer(mut self, vertex_buffer: Vec<Vertex>) -> Self {
+        self.vertex_count = vertex_buffer.len() as u32;
+        self.vertex_buffer = CpuAccessibleBuffer::from_iter(
+            self.device.clone(),
+            BufferUsage::vertex_buffer(),
+            true,
+            vertex_buffer.iter().cloned(),
         )
+        .unwrap();
+
+        self
+    }
+
+    pub fn instance_buffer(mut self, instance_buffer: Vec<InstanceData>) -> Self {
+        self.instance_count = instance_buffer.len() as u32;
+        self.instance_buffer = CpuAccessibleBuffer::from_iter(
+            self.device.clone(),
+            BufferUsage::vertex_buffer(),
+            true,
+            instance_buffer.iter().cloned(),
+        )
+        .unwrap();
+
+        self
+    }
+
+    fn new(device: Arc<vulkano::device::Device>) -> DefaultPipelineData {
+        DefaultPipelineData {
+            device: device.clone(),
+            vertex_buffer: CpuAccessibleBuffer::from_iter(
+                device.clone(),
+                vulkano::buffer::BufferUsage::vertex_buffer(),
+                true,
+                [Vertex::default()].iter().cloned(),
+            )
+            .unwrap(),
+            vertex_count: 0,
+            instance_buffer: CpuAccessibleBuffer::from_iter(
+                device.clone(),
+                vulkano::buffer::BufferUsage::vertex_buffer(),
+                true,
+                [InstanceData::default()].iter().cloned(),
+            )
+            .unwrap(),
+            instance_count: 0,
+            descriptors: Vec::new(),
+        }
     }
 }
 

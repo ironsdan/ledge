@@ -69,7 +69,7 @@ fn main() {
                 let shader = ctx.shaders[ctx.default_shader].clone();
                 let set = vulkano::descriptor_set::PersistentDescriptorSet::new(
                     shader.layout()[0].clone(),
-                    &[vulkano::descriptor_set::WriteDescriptorSet::buffer(0, cam_buf)],
+                    [vulkano::descriptor_set::WriteDescriptorSet::buffer(0, cam_buf)],
                 ).unwrap();
 
                 ctx.command_buffer.as_mut().unwrap().bind_descriptor_sets(
