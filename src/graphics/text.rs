@@ -1,19 +1,11 @@
-use std::sync::Arc;
-use std::rc::Rc;
-use std::cell::{RefCell, RefMut, Ref};
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
+use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::graphics::{
-    BlendMode,
-    DrawInfo, 
-    Drawable,
-    InstanceData,
-    Color,
-    Rect,
-    Vertex,
-    QUAD_VERTICES,
-    context::GraphicsContext,
-    image::Image,
+    context::GraphicsContext, image::Image, BlendMode, Color, DrawInfo, Drawable, InstanceData,
+    Rect, Vertex, QUAD_VERTICES,
 };
 
 pub trait DocumentElement: Drawable {
@@ -33,10 +25,17 @@ pub struct DocumentElementStyles {
 }
 
 impl DocumentElementStyles {
-    fn combine(current: &DocumentElementStyles, parent: &DocumentElementStyles) -> DocumentElementStyles {
+    fn combine(
+        current: &DocumentElementStyles,
+        parent: &DocumentElementStyles,
+    ) -> DocumentElementStyles {
         DocumentElementStyles {
             positioning: current.positioning,
-            position: (current.position.0 + parent.position.0, current.position.1 + parent.position.1, current.position.2 + parent.position.2),
+            position: (
+                current.position.0 + parent.position.0,
+                current.position.1 + parent.position.1,
+                current.position.2 + parent.position.2,
+            ),
             background_color: current.background_color,
             padding: current.padding,
             font_size: current.font_size,
@@ -113,9 +112,12 @@ impl<'a> DocumentContext<'a> {
     pub fn new() -> Self {
         let mut ids: HashMap<&str, Rc<RefCell<DocumentNode>>> = HashMap::new();
 
-        let root = Rc::new(RefCell::new(DocumentNode::new("root", Box::new(Div::new()))));
+        let root = Rc::new(RefCell::new(DocumentNode::new(
+            "root",
+            Box::new(Div::new()),
+        )));
 
-        ids.insert("root",  root.clone());
+        ids.insert("root", root.clone());
 
         Self {
             root: root,
@@ -128,7 +130,12 @@ impl<'a> DocumentContext<'a> {
 
         self.ids.insert(id, element.clone());
 
-        self.ids.get(parent_id).unwrap().borrow_mut().descendants_mut().push(element);
+        self.ids
+            .get(parent_id)
+            .unwrap()
+            .borrow_mut()
+            .descendants_mut()
+            .push(element);
     }
 
     pub fn select(&self, id: &str) -> Ref<DocumentNode> {
@@ -142,7 +149,9 @@ impl<'a> DocumentContext<'a> {
 
 impl<'a> Drawable for DocumentContext<'a> {
     fn draw(&self, ctx: &mut GraphicsContext, _info: DrawInfo) {
-        self.root.borrow().draw(ctx, &DocumentElementStyles::default());
+        self.root
+            .borrow()
+            .draw(ctx, &DocumentElementStyles::default());
     }
 }
 
@@ -162,17 +171,17 @@ impl DocumentElement for Div {
         info.color(style.background_color);
         info.dest(style.position.0, style.position.1, style.position.2);
 
-        let verts: [Vertex; 4] = Rect{
+        let verts: [Vertex; 4] = Rect {
             x: 0.0,
             y: 0.0,
             w: style.width,
-            h: style.height
-        }.into();
+            h: style.height,
+        }
+        .into();
 
         ctx.update_vertex_data(verts.to_vec());
 
-        ctx
-            .pipe_data
+        ctx.pipe_data
             .sampled_image(0, image.inner().clone(), ctx.samplers[0].clone());
 
         self.draw(ctx, info.into());
@@ -188,7 +197,7 @@ impl Drawable for Div {
 }
 
 pub struct Text {
-    font:  Arc<Font>,
+    font: Arc<Font>,
     inner: String,
 }
 
@@ -211,10 +220,12 @@ impl Drawable for Text {
         ctx.update_vertex_data(QUAD_VERTICES.to_vec());
 
         // Add texture to pipe data
-        ctx
-            .pipe_data
-            .sampled_image(0, self.font.sheet().inner().clone(), ctx.samplers[0].clone());
-        
+        ctx.pipe_data.sampled_image(
+            0,
+            self.font.sheet().inner().clone(),
+            ctx.samplers[0].clone(),
+        );
+
         // Set blend mode
         ctx.set_blend_mode(BlendMode::Alpha);
 
@@ -230,12 +241,12 @@ impl DocumentElement for Text {
         let mut j = 0;
         for r in self.inner.chars() {
             if r == ' ' {
-                i+=1;
+                i += 1;
                 continue;
             }
 
             if r == '\n' {
-                j+=1;
+                j += 1;
                 i = 0;
                 continue;
             }
@@ -250,17 +261,21 @@ impl DocumentElement for Text {
 
             let ruin_size = style.font_size as f32 / 600.0;
             let ruin_spacing = style.letter_spacing as f32 / 800.0;
-            let ruin_separation = (i as f32)*(ruin_size + ruin_spacing);
-            
-            let line_spacing = style.line_height as f32/ 600.0;
-            let line_separation = (j as f32)*(ruin_size + line_spacing)+line_spacing;
+            let ruin_separation = (i as f32) * (ruin_size + ruin_spacing);
 
-            info.translate(ruin_separation + style.position.0, line_separation + style.position.1, 0.0);
+            let line_spacing = style.line_height as f32 / 600.0;
+            let line_separation = (j as f32) * (ruin_size + line_spacing) + line_spacing;
+
+            info.translate(
+                ruin_separation + style.position.0,
+                line_separation + style.position.1,
+                0.0,
+            );
             info.scale(ruin_size);
 
             let data: InstanceData = info.into();
             v.push(data);
-            i+=1;
+            i += 1;
         }
 
         ctx.update_instance_properties(Arc::new(v));
@@ -278,8 +293,8 @@ pub struct Font {
 impl Font {
     pub fn map(&self, r: &char) -> (f32, f32) {
         let i: u32 = (*r).into();
-        let x = (i  - 64 - 1) % self.width as u32;
-        let y = (i  - 64 - 1) / self.width as u32;
+        let x = (i - 64 - 1) % self.width as u32;
+        let y = (i - 64 - 1) / self.width as u32;
         (x as f32, y as f32)
     }
 

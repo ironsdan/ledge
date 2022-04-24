@@ -1,6 +1,6 @@
+use crate::graphics::context::GraphicsContext;
 use cgmath::prelude::*;
 use cgmath::{Deg, Matrix4, Rad, Vector3, Vector4};
-use crate::graphics::context::GraphicsContext;
 
 pub trait Camera {
     fn model_array(&self) -> [[f32; 4]; 4];
@@ -183,13 +183,11 @@ impl Camera for PerspectiveCamera {
         self.view = translation * self.view;
     }
 
-    fn as_mvp(&self) -> [[f32; 4]; 4]{
+    fn as_mvp(&self) -> [[f32; 4]; 4] {
         (self.model * self.view * self.proj).into()
     }
 
-    fn flush(&self, _ctx: &mut GraphicsContext) {
-
-    }
+    fn flush(&self, _ctx: &mut GraphicsContext) {}
 }
 
 pub struct OrthographicCamera {
@@ -278,8 +276,8 @@ impl Camera for OrthographicCamera {
         let translation = Matrix4::from_translation(Vector3::new(0.0, 0.0, amount));
         self.view = translation * self.view;
     }
-    
-    fn as_mvp(&self) -> [[f32; 4]; 4]{
+
+    fn as_mvp(&self) -> [[f32; 4]; 4] {
         // (self.model * self.view * self.proj).into()
         Matrix4::identity().into()
     }

@@ -132,13 +132,11 @@ impl Image {
 
 impl Drawable for Image {
     fn draw(&self, context: &mut GraphicsContext, info: DrawInfo) {
-        context.draw(Box::new(DefaultPipelineData::new(context.device.clone())
-        .vertex_buffer(QUAD_VERTICES.to_vec())
-        .instance_buffer(vec![info.into()])
-        .sampled_image(
-            0,
-            self.inner.clone(),
-            context.samplers[0].clone(),
-        )));
+        context.draw(Box::new(
+            DefaultPipelineData::new(context.device.clone())
+                .vertex_buffer(QUAD_VERTICES.to_vec())
+                .instance_buffer(vec![info.into()])
+                .sampled_image(0, self.inner.clone(), context.samplers[0].clone()),
+        ));
     }
 }

@@ -35,13 +35,11 @@ impl SpriteBatch {
 
 impl Drawable for SpriteBatch {
     fn draw(&self, context: &mut GraphicsContext, _info: DrawInfo) {
-        context.draw(Box::new(DefaultPipelineData::new(context.device.clone())
-        .vertex_buffer(QUAD_VERTICES.to_vec())
-        .instance_buffer(self.sprites.clone())
-        .sampled_image(
-            0,
-            self.image.inner().clone(), 
-            context.samplers[0].clone(),
-        )));
+        context.draw(Box::new(
+            DefaultPipelineData::new(context.device.clone())
+                .vertex_buffer(QUAD_VERTICES.to_vec())
+                .instance_buffer(self.sprites.clone())
+                .sampled_image(0, self.image.inner().clone(), context.samplers[0].clone()),
+        ));
     }
 }

@@ -19,16 +19,16 @@ pub mod sprite;
 use crate::graphics::context::GraphicsContext;
 use vulkano::buffer::BufferAccess;
 
-use cgmath::{prelude::Angle, Matrix, Matrix4, Rad, Deg, Vector3, Vector4};
+use cgmath::{prelude::Angle, Deg, Matrix, Matrix4, Rad, Vector3, Vector4};
 
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
+use vulkano::buffer::BufferUsage;
 use vulkano::buffer::CpuAccessibleBuffer;
-use vulkano::image::view::ImageViewAbstract;
-use vulkano::sampler::Sampler;
 use vulkano::descriptor_set::WriteDescriptorSet;
 use vulkano::device::Device;
-use vulkano::buffer::BufferUsage;
+use vulkano::image::view::ImageViewAbstract;
+use vulkano::sampler::Sampler;
 
 #[derive(Clone, Copy, PartialEq, Hash, Eq)]
 pub enum BlendMode {
@@ -47,7 +47,14 @@ pub trait Drawable {
 }
 
 pub trait PipelineData {
-    fn flush(self: Box<Self>) -> (Vec<Arc<dyn BufferAccess>>, Vec<WriteDescriptorSet>, u32, u32);
+    fn flush(
+        self: Box<Self>,
+    ) -> (
+        Vec<Arc<dyn BufferAccess>>,
+        Vec<WriteDescriptorSet>,
+        u32,
+        u32,
+    );
 }
 
 pub struct DefaultPipelineData {
@@ -60,8 +67,20 @@ pub struct DefaultPipelineData {
 }
 
 impl PipelineData for DefaultPipelineData {
-    fn flush(self: Box<Self>) -> (Vec<Arc<dyn BufferAccess>>, Vec<WriteDescriptorSet>, u32, u32) {
-        (vec![self.vertex_buffer, self.instance_buffer], self.descriptors, self.vertex_count, self.instance_count)
+    fn flush(
+        self: Box<Self>,
+    ) -> (
+        Vec<Arc<dyn BufferAccess>>,
+        Vec<WriteDescriptorSet>,
+        u32,
+        u32,
+    ) {
+        (
+            vec![self.vertex_buffer, self.instance_buffer],
+            self.descriptors,
+            self.vertex_count,
+            self.instance_count,
+        )
     }
 }
 
@@ -69,26 +88,24 @@ impl DefaultPipelineData {
     pub fn buffer(mut self, binding: u32, buffer: Arc<dyn BufferAccess>) -> Self {
         self.descriptors = Vec::new();
 
-        self.descriptors.push(WriteDescriptorSet::buffer(binding, buffer));
+        self.descriptors
+            .push(WriteDescriptorSet::buffer(binding, buffer));
 
         self
     }
 
     pub fn sampled_image(
-        mut self, 
-        binding: u32, 
-        image_view: Arc<dyn ImageViewAbstract>, 
+        mut self,
+        binding: u32,
+        image_view: Arc<dyn ImageViewAbstract>,
         sampler: Arc<Sampler>,
     ) -> Self {
         self.descriptors = Vec::new();
 
-        self.descriptors.push(
-            WriteDescriptorSet::image_view_sampler(
-                binding,
-                image_view,
-                sampler,
-            ),
-        );
+        self.descriptors
+            .push(WriteDescriptorSet::image_view_sampler(
+                binding, image_view, sampler,
+            ));
 
         self
     }
@@ -294,7 +311,7 @@ impl DrawInfo {
     pub fn tex_offset(&mut self, offset: (f32, f32)) {
         self.tex_rect.x = offset.0;
         self.tex_rect.y = offset.1;
-    } 
+    }
 
     pub fn translate(&mut self, x: f32, y: f32, z: f32) {
         self.transform.translate(x, y, z);
@@ -317,7 +334,7 @@ impl DrawInfo {
     }
 
     pub fn dest(&mut self, x: f32, y: f32, z: f32) {
-        self.transform.dest(x,y,z);
+        self.transform.dest(x, y, z);
     }
 }
 
@@ -373,7 +390,7 @@ impl Transform {
                     Vector4::new(0.0, 0.0, 0.0, 1.0),
                 )
                 .transpose()
-            },
+            }
         }
     }
 
@@ -455,7 +472,12 @@ impl From<[f32; 4]> for Color {
 
 impl Color {
     pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
-        Color([r as f32 / 255., g as f32 / 255., b as f32 / 255., a as f32 / 255.])
+        Color([
+            r as f32 / 255.,
+            g as f32 / 255.,
+            b as f32 / 255.,
+            a as f32 / 255.,
+        ])
     }
 
     pub fn black() -> Color {
@@ -529,28 +551,28 @@ impl Default for Rect {
 }
 
 impl Into<[Vertex; 4]> for Rect {
-    fn into(self) -> [Vertex;4] {
-    [
-        Vertex {
-            pos: [0.0, 0.0, 0.0],
-            uv: [0.0, 0.0],
-            vert_color: [1.0, 1.0, 1.0, 1.0],
-        },
-        Vertex {
-            pos: [0.0, self.h*1.0, 0.0],
-            uv: [0.0, 1.0],
-            vert_color: [1.0, 1.0, 1.0, 1.0],
-        },
-        Vertex {
-            pos: [self.w*1.0, 0.0, 0.0],
-            uv: [1.0, 0.0],
-            vert_color: [1.0, 1.0, 1.0, 1.0],
-        },
-        Vertex {
-            pos: [self.w*1.0, self.h*1.0, 0.0],
-            uv: [1.0, 1.0],
-            vert_color: [1.0, 1.0, 1.0, 1.0],
-        },
-    ]
+    fn into(self) -> [Vertex; 4] {
+        [
+            Vertex {
+                pos: [0.0, 0.0, 0.0],
+                uv: [0.0, 0.0],
+                vert_color: [1.0, 1.0, 1.0, 1.0],
+            },
+            Vertex {
+                pos: [0.0, self.h * 1.0, 0.0],
+                uv: [0.0, 1.0],
+                vert_color: [1.0, 1.0, 1.0, 1.0],
+            },
+            Vertex {
+                pos: [self.w * 1.0, 0.0, 0.0],
+                uv: [1.0, 0.0],
+                vert_color: [1.0, 1.0, 1.0, 1.0],
+            },
+            Vertex {
+                pos: [self.w * 1.0, self.h * 1.0, 0.0],
+                uv: [1.0, 1.0],
+                vert_color: [1.0, 1.0, 1.0, 1.0],
+            },
+        ]
     }
 }

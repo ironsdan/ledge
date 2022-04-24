@@ -10,7 +10,7 @@ use vulkano::{
     pipeline::{graphics::vertex_input::BuffersDefinition, graphics::viewport::Viewport},
     render_pass::{Framebuffer, FramebufferCreateInfo, RenderPass},
     sampler::{Filter, Sampler, SamplerAddressMode, SamplerCreateInfo},
-    swapchain::{self, AcquireError, Swapchain, SwapchainCreationError, SwapchainCreateInfo},
+    swapchain::{self, AcquireError, Swapchain, SwapchainCreateInfo, SwapchainCreationError},
     sync::{self, FlushError, GpuFuture},
     Version,
 };
@@ -105,11 +105,12 @@ impl GraphicsContext {
     pub fn new(_conf: Conf) -> (Self, winit::event_loop::EventLoop<()>) {
         let required_extensions = vulkano_win::required_extensions();
         let instance = Instance::new(InstanceCreateInfo {
-            application_name: None, 
-            application_version: Version::V1_1, 
-            enabled_extensions: required_extensions, 
+            application_name: None,
+            application_version: Version::V1_1,
+            enabled_extensions: required_extensions,
             ..Default::default()
-        }).unwrap();
+        })
+        .unwrap();
 
         let event_loop = EventLoop::new();
         let surface = WindowBuilder::new()
@@ -124,7 +125,9 @@ impl GraphicsContext {
             .filter(|&p| p.supported_extensions().is_superset_of(&device_extensions))
             .filter_map(|p| {
                 p.queue_families()
-                    .find(|&q| q.supports_graphics() && q.supports_surface(&surface).unwrap_or(false))
+                    .find(|&q| {
+                        q.supports_graphics() && q.supports_surface(&surface).unwrap_or(false)
+                    })
                     .map(|q| (p, q))
             })
             .min_by_key(|(p, _)| match p.properties().device_type {
@@ -160,14 +163,14 @@ impl GraphicsContext {
             let surface_capabilities = physical_device
                 .surface_capabilities(&surface, Default::default())
                 .unwrap();
-    
+
             let image_format = Some(
                 physical_device
                     .surface_formats(&surface, Default::default())
                     .unwrap()[0]
                     .0,
             );
-    
+
             Swapchain::new(
                 device.clone(),
                 surface.clone(),
@@ -211,11 +214,7 @@ impl GraphicsContext {
             depth_range: 0.0..1.0,
         };
 
-        let framebuffers = window_size_dependent_setup(
-            &images, 
-            render_pass.clone(), 
-            &mut viewport,
-        );
+        let framebuffers = window_size_dependent_setup(&images, render_pass.clone(), &mut viewport);
 
         let mut samplers = Vec::new();
 
@@ -296,15 +295,14 @@ impl GraphicsContext {
         self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 
         if self.recreate_swapchain {
-            let (new_swapchain, new_images) =
-                match self.swapchain.recreate(SwapchainCreateInfo {
-                    image_extent: self.surface.window().inner_size().into(),
-                    ..self.swapchain.create_info()
-                }) {
-                    Ok(r) => r,
-                    Err(SwapchainCreationError::ImageExtentNotSupported { .. }) => return,
-                    Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
-                };
+            let (new_swapchain, new_images) = match self.swapchain.recreate(SwapchainCreateInfo {
+                image_extent: self.surface.window().inner_size().into(),
+                ..self.swapchain.create_info()
+            }) {
+                Ok(r) => r,
+                Err(SwapchainCreationError::ImageExtentNotSupported { .. }) => return,
+                Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
+            };
 
             self.swapchain = new_swapchain;
             self.framebuffers = window_size_dependent_setup(
@@ -330,7 +328,7 @@ impl GraphicsContext {
                 .take()
                 .unwrap()
                 .join(acquire_future)
-                .boxed()
+                .boxed(),
         );
 
         if suboptimal {
@@ -352,10 +350,10 @@ impl GraphicsContext {
             )
             .unwrap();
 
-        self.command_buffer.as_mut().unwrap().set_viewport(
-            0,
-            vec![self.viewport.clone()],
-        );
+        self.command_buffer
+            .as_mut()
+            .unwrap()
+            .set_viewport(0, vec![self.viewport.clone()]);
 
         let shader_handle = self.shaders[0].clone();
         self.command_buffer

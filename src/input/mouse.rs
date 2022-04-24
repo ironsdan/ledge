@@ -27,7 +27,6 @@ impl MouseContext {
         } else {
             self.current_pressed = None;
         }
-        
     }
 }
 

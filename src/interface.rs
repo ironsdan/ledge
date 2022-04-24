@@ -69,8 +69,12 @@ impl Interface {
                     let button = match button {
                         winit::event::MouseButton::Left => crate::input::mouse::MouseButton::Left,
                         winit::event::MouseButton::Right => crate::input::mouse::MouseButton::Right,
-                        winit::event::MouseButton::Middle => crate::input::mouse::MouseButton::Middle,
-                        winit::event::MouseButton::Other(val) => crate::input::mouse::MouseButton::Misc(*val),
+                        winit::event::MouseButton::Middle => {
+                            crate::input::mouse::MouseButton::Middle
+                        }
+                        winit::event::MouseButton::Other(val) => {
+                            crate::input::mouse::MouseButton::Misc(*val)
+                        }
                     };
 
                     let pressed = match state {

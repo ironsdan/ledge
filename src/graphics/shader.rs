@@ -1,25 +1,28 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::graphics::{context::GraphicsContext, BlendMode, PipelineData};
+use vulkano::pipeline::graphics::color_blend::ColorComponents;
+use vulkano::pipeline::graphics::input_assembly::InputAssemblyState;
+use vulkano::pipeline::graphics::input_assembly::PrimitiveTopology;
+use vulkano::pipeline::graphics::viewport::ViewportState;
+use vulkano::pipeline::Pipeline;
 use vulkano::pipeline::PipelineBindPoint;
+use vulkano::pipeline::StateMode;
 use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer},
     descriptor_set::layout::DescriptorSetLayout,
     pipeline::{
-        graphics::color_blend::{AttachmentBlend, ColorBlendState, ColorBlendAttachmentState, BlendFactor, BlendOp, LogicOp},
+        graphics::color_blend::{
+            AttachmentBlend, BlendFactor, BlendOp, ColorBlendAttachmentState, ColorBlendState,
+            LogicOp,
+        },
         graphics::vertex_input::VertexDefinition,
         GraphicsPipeline,
     },
-    shader::EntryPoint,
     render_pass::Subpass,
+    shader::EntryPoint,
 };
-use vulkano::pipeline::Pipeline;
-use vulkano::pipeline::graphics::viewport::ViewportState;
-use vulkano::pipeline::StateMode;
-use vulkano::pipeline::graphics::color_blend::ColorComponents;
-use vulkano::pipeline::graphics::input_assembly::PrimitiveTopology;
-use vulkano::pipeline::graphics::input_assembly::InputAssemblyState;
-use crate::graphics::{context::GraphicsContext, BlendMode, PipelineData};
 
 pub enum VertexTopology {
     PointList,
@@ -68,10 +71,9 @@ impl ShaderHandle for ShaderProgram {
 
         let (buffers, descriptors, v_count, i_count) = pipe_data.flush();
 
-        let set = vulkano::descriptor_set::PersistentDescriptorSet::new(
-            layout.clone(),
-            descriptors,
-        ).unwrap();
+        let set =
+            vulkano::descriptor_set::PersistentDescriptorSet::new(layout.clone(), descriptors)
+                .unwrap();
 
         command_buffer.bind_descriptor_sets(
             PipelineBindPoint::Graphics,
@@ -80,14 +82,9 @@ impl ShaderHandle for ShaderProgram {
             set,
         );
 
-        command_buffer.bind_vertex_buffers(
-            0,
-            buffers,
-        );
+        command_buffer.bind_vertex_buffers(0, buffers);
 
-        command_buffer
-            .draw(v_count, i_count, 0, 0)
-            .unwrap();
+        command_buffer.draw(v_count, i_count, 0, 0).unwrap();
     }
 
     fn blend_mode(&self) -> BlendMode {
@@ -195,10 +192,17 @@ where
         .render_pass(Subpass::from(context.render_pass.clone(), 0).unwrap());
 
     pipeline = match vertex_order {
-        VertexTopology::PointList => pipeline.input_assembly_state(InputAssemblyState::new().topology(PrimitiveTopology::PointList)),
-        VertexTopology::TriangleFan => pipeline.input_assembly_state(InputAssemblyState::new().topology(PrimitiveTopology::TriangleFan)),
-        VertexTopology::TriangleList => pipeline.input_assembly_state(InputAssemblyState::new().topology(PrimitiveTopology::TriangleList)),
-        VertexTopology::TriangleStrip => pipeline.input_assembly_state(InputAssemblyState::new().topology(PrimitiveTopology::TriangleStrip)),
+        VertexTopology::PointList => pipeline
+            .input_assembly_state(InputAssemblyState::new().topology(PrimitiveTopology::PointList)),
+        VertexTopology::TriangleFan => pipeline.input_assembly_state(
+            InputAssemblyState::new().topology(PrimitiveTopology::TriangleFan),
+        ),
+        VertexTopology::TriangleList => pipeline.input_assembly_state(
+            InputAssemblyState::new().topology(PrimitiveTopology::TriangleList),
+        ),
+        VertexTopology::TriangleStrip => pipeline.input_assembly_state(
+            InputAssemblyState::new().topology(PrimitiveTopology::TriangleStrip),
+        ),
     };
 
     pipeline.build(context.device.clone()).unwrap()
@@ -206,7 +210,6 @@ where
 
 impl From<BlendMode> for ColorBlendState {
     fn from(blend_mode: BlendMode) -> Self {
-
         let mut logic_op: Option<StateMode<LogicOp>> = None;
         let mut attach: Option<AttachmentBlend> = None;
         let blend_constants: [f32; 4] = [1.0, 1.0, 1.0, 1.0]; // TODO implement these.
