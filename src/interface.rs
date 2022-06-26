@@ -34,7 +34,7 @@ impl InterfaceBuilder {
 }
 
 pub struct Interface {
-    pub graphics_context: crate::graphics::context::GraphicsContext,
+    pub renderer: crate::graphics::renderer::Renderer,
     pub keyboard_context: crate::input::keyboard::KeyboardContext,
     pub mouse_context: crate::input::mouse::MouseContext,
     pub timer_state: crate::timer::TimerState,
@@ -42,10 +42,10 @@ pub struct Interface {
 
 impl Interface {
     pub fn from_conf(instance_conf: Conf) -> GameResult<(Self, winit::event_loop::EventLoop<()>)> {
-        let (graphics_context, event_loop) =
-            crate::graphics::context::GraphicsContext::new(instance_conf);
+        let (renderer, event_loop) =
+            crate::graphics::renderer::Renderer::new(instance_conf);
         let interface_ctx = Interface {
-            graphics_context,
+            renderer,
             keyboard_context: crate::input::keyboard::KeyboardContext::new(),
             mouse_context: crate::input::mouse::MouseContext::new(),
             timer_state: crate::timer::TimerState::new(),
@@ -59,7 +59,7 @@ impl Interface {
             // Window events.
             winit::event::Event::WindowEvent { event, .. } => match event {
                 winit::event::WindowEvent::Resized(_) => {
-                    self.graphics_context.recreate_swapchain = true;
+                    self.renderer.recreate_swapchain = true;
                 }
                 winit::event::WindowEvent::CursorMoved { position, .. } => {
                     self.mouse_context

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::graphics::{context::GraphicsContext, BlendMode, PipelineData};
+use crate::graphics::{BlendMode, PipelineData};
 use vulkano::pipeline::graphics::color_blend::ColorComponents;
 use vulkano::pipeline::graphics::input_assembly::InputAssemblyState;
 use vulkano::pipeline::graphics::input_assembly::PrimitiveTopology;
@@ -20,10 +20,12 @@ use vulkano::{
         graphics::vertex_input::VertexDefinition,
         GraphicsPipeline,
     },
-    render_pass::Subpass,
+    device::Device,
+    render_pass::{Subpass, RenderPass},
     shader::EntryPoint,
 };
 
+#[derive(Clone, Copy)]
 pub enum VertexTopology {
     PointList,
     TriangleFan,
@@ -42,6 +44,13 @@ pub enum ShaderType {
 
 pub type ShaderId = usize;
 
+pub struct Shader<'s> {
+    pub vertex: EntryPoint<'s>,
+    pub fragment: EntryPoint<'s>,
+    pub topology: VertexTopology,
+    // pub vertex_definition: Vd,
+}
+
 pub struct ShaderProgram {
     pipelines: PipelineObjectSet,
     current_mode: BlendMode,
@@ -51,7 +60,7 @@ pub trait ShaderHandle {
     fn draw(
         &self,
         command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
-        pipe_data: Box<dyn PipelineData>,
+        pipe_data: Box<PipelineData>,
     );
     // fn set_blend_mode(&mut self, mode: BlendMode);
     fn blend_mode(&self) -> BlendMode;
@@ -63,7 +72,7 @@ impl ShaderHandle for ShaderProgram {
     fn draw(
         &self,
         command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
-        pipe_data: Box<dyn PipelineData>,
+        pipe_data: Box<PipelineData>,
     ) {
         command_buffer.bind_pipeline_graphics(self.pipeline().clone());
 
@@ -106,18 +115,21 @@ impl ShaderHandle for ShaderProgram {
 
 impl ShaderProgram {
     pub fn new<Vd>(
-        context: &mut GraphicsContext,
+        device: Arc<Device>,
+        render_pass: Arc<RenderPass>,
         vertex_type: Vd,
         vertex_order: VertexTopology,
         vertex_shader: EntryPoint,
         fragment_shader: EntryPoint,
         blend: BlendMode,
     ) -> Self
+    // ) -> Result<Self, GraphicsPipelineCreationError>
     where
         Vd: VertexDefinition + 'static + Sync + Send,
     {
         let po = new_pipeline(
-            context,
+            device,
+            render_pass,
             vertex_type,
             vertex_order,
             vertex_shader,
@@ -173,12 +185,14 @@ impl PipelineObjectSet {
 }
 
 pub fn new_pipeline<Vd>(
-    context: &mut GraphicsContext,
+    device: Arc<Device>,
+    render_pass: Arc<RenderPass>,
     vertex_type: Vd,
     vertex_order: VertexTopology,
     vertex_shader: EntryPoint,
     fragment_shader: EntryPoint,
     blend: BlendMode,
+// ) -> Result<Arc<GraphicsPipeline>, GraphicsPipelineCreationError>
 ) -> Arc<GraphicsPipeline>
 where
     Vd: VertexDefinition + 'static + Sync + Send,
@@ -189,7 +203,7 @@ where
         .viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
         .fragment_shader(fragment_shader, ())
         .color_blend_state(blend.into())
-        .render_pass(Subpass::from(context.render_pass.clone(), 0).unwrap());
+        .render_pass(Subpass::from(render_pass.clone(), 0).unwrap());
 
     pipeline = match vertex_order {
         VertexTopology::PointList => pipeline
@@ -205,7 +219,7 @@ where
         ),
     };
 
-    pipeline.build(context.device.clone()).unwrap()
+    pipeline.build(device.clone()).unwrap()
 }
 
 impl From<BlendMode> for ColorBlendState {

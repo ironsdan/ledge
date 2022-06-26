@@ -18,3 +18,4 @@ png = "0.17.2"
 rand = "0.8.4"
 bytemuck = { version = "1.7", features = ["derive", "extern_crate_std", "min_const_generics"] }
 cgmath = "0.18.0"
+anyhow = "1.0.58"

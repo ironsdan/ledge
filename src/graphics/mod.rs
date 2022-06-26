@@ -3,7 +3,7 @@
 pub mod camera;
 /// The main Vulkan interface, holds backend components and
 /// contextual information such as device, queue, and swapchain information.
-pub mod context;
+// pub mod context;
 /// Holds all graphics error enums.
 // pub mod error;
 /// TODO: A module dedicated to images, used for textures and other image related things.
@@ -12,11 +12,15 @@ pub mod image;
 /// This module has a lot of intense types from Vulkano wrapped in less scary interfaces that are not as troublesome to deal with
 pub mod shader;
 
-pub mod sprite;
+// pub mod sprite;
+
+pub mod renderer;
+
+pub mod render_pass;
 
 // pub mod text;
 
-use crate::graphics::context::GraphicsContext;
+// use crate::graphics::context::GraphicsContext;
 use vulkano::buffer::BufferAccess;
 
 use cgmath::{prelude::Angle, Deg, Matrix, Matrix4, Rad, Vector3, Vector4};
@@ -26,9 +30,13 @@ use std::sync::Arc;
 use vulkano::buffer::BufferUsage;
 use vulkano::buffer::CpuAccessibleBuffer;
 use vulkano::descriptor_set::WriteDescriptorSet;
-use vulkano::device::Device;
+use vulkano::device::{Device, Queue};
 use vulkano::image::view::ImageViewAbstract;
 use vulkano::sampler::Sampler;
+use vulkano::command_buffer::{AutoCommandBufferBuilder, SecondaryAutoCommandBuffer};
+use crate::graphics::shader::ShaderHandle;
+
+use anyhow::Result;
 
 #[derive(Clone, Copy, PartialEq, Hash, Eq)]
 pub enum BlendMode {
@@ -43,21 +51,11 @@ pub enum BlendMode {
 }
 
 pub trait Drawable {
-    fn draw(&self, context: &mut GraphicsContext, info: DrawInfo);
+    // fn draw(&self, context: &mut Renderer, info: DrawInfo);
+    fn draw(&self, queue: Arc<Queue>, shader_handle: &Box<dyn ShaderHandle>, info: DrawInfo) -> Result<SecondaryAutoCommandBuffer>;
 }
 
-pub trait PipelineData {
-    fn flush(
-        self: Box<Self>,
-    ) -> (
-        Vec<Arc<dyn BufferAccess>>,
-        Vec<WriteDescriptorSet>,
-        u32,
-        u32,
-    );
-}
-
-pub struct DefaultPipelineData {
+pub struct PipelineData {
     device: Arc<Device>,
     pub vertex_buffer: Arc<dyn BufferAccess>,
     pub vertex_count: u32,
@@ -66,9 +64,11 @@ pub struct DefaultPipelineData {
     pub descriptors: Vec<WriteDescriptorSet>,
 }
 
-impl PipelineData for DefaultPipelineData {
+
+
+impl PipelineData {
     fn flush(
-        self: Box<Self>,
+        self,
     ) -> (
         Vec<Arc<dyn BufferAccess>>,
         Vec<WriteDescriptorSet>,
@@ -82,9 +82,7 @@ impl PipelineData for DefaultPipelineData {
             self.instance_count,
         )
     }
-}
 
-impl DefaultPipelineData {
     pub fn buffer(mut self, binding: u32, buffer: Arc<dyn BufferAccess>) -> Self {
         self.descriptors = Vec::new();
 
@@ -136,8 +134,8 @@ impl DefaultPipelineData {
         self
     }
 
-    fn new(device: Arc<vulkano::device::Device>) -> DefaultPipelineData {
-        DefaultPipelineData {
+    fn new(device: Arc<vulkano::device::Device>) -> Self {
+        Self {
             device: device.clone(),
             vertex_buffer: CpuAccessibleBuffer::from_iter(
                 device.clone(),
@@ -160,23 +158,6 @@ impl DefaultPipelineData {
     }
 }
 
-pub fn begin_frame(ctx: &mut GraphicsContext, color: Color) {
-    ctx.begin_frame(color);
-}
-
-pub fn draw<D, T>(ctx: &mut GraphicsContext, drawable: &D, info: T)
-where
-    D: Drawable,
-    T: Into<DrawInfo>,
-{
-    drawable.draw(ctx, info.into());
-}
-
-// TODO add result.
-pub fn present(ctx: &mut GraphicsContext) {
-    ctx.present();
-}
-
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Zeroable, Pod)]
 pub struct Vertex {
@@ -194,6 +175,8 @@ pub struct InstanceData {
     color: [f32; 4],
     transform: [[f32; 4]; 4],
 }
+
+vulkano::impl_vertex!(InstanceData, src, color, transform);
 
 impl From<DrawInfo> for InstanceData {
     fn from(info: DrawInfo) -> InstanceData {
@@ -237,8 +220,6 @@ const QUAD_VERTICES: [Vertex; 4] = [
         vert_color: [1.0, 1.0, 1.0, 1.0],
     },
 ];
-
-vulkano::impl_vertex!(InstanceData, src, color, transform);
 
 pub mod vs {
     vulkano_shaders::shader! { ty: "vertex", path: "src/graphics/shaders/texture.vert", }

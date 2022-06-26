@@ -1,4 +1,3 @@
-use crate::graphics::context::GraphicsContext;
 use cgmath::prelude::*;
 use cgmath::{Deg, Matrix4, Rad, Vector3, Vector4};
 
@@ -26,8 +25,6 @@ pub trait Camera {
     fn translate_z(&mut self, amount: f32);
 
     fn as_mvp(&self) -> [[f32; 4]; 4];
-
-    fn flush(&self, ctx: &mut GraphicsContext);
 }
 
 #[allow(unused)]
@@ -186,8 +183,6 @@ impl Camera for PerspectiveCamera {
     fn as_mvp(&self) -> [[f32; 4]; 4] {
         (self.model * self.view * self.proj).into()
     }
-
-    fn flush(&self, _ctx: &mut GraphicsContext) {}
 }
 
 pub struct OrthographicCamera {
@@ -281,8 +276,20 @@ impl Camera for OrthographicCamera {
         // (self.model * self.view * self.proj).into()
         Matrix4::identity().into()
     }
+}
 
-    fn flush(&self, _ctx: &mut GraphicsContext) {
-        // ctx.pipe_data.descriptors
+#[derive(Clone, Copy)]
+pub struct Camera2D {
+
+}
+
+impl Camera2D {
+    pub fn as_mvp(&self) -> [[f32; 4]; 4]{
+        [
+            [1.0,0.0,0.0,0.0],
+            [0.0,1.0,0.0,0.0],
+            [0.0,0.0,1.0,0.0],
+            [0.0,0.0,0.0,1.0],
+        ]
     }
 }
